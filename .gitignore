@@ -1,0 +1,207 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows system files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# PowerShell specific
+*.ps1xml
+*.psc1
+*.psd1
+*.pssc
+*.psrc
+*.ps1
+!Scripts/*.ps1
+*.psm1
+*.ps1.config
+*.ps1.log
+*.ps1.error
+*.ps1.output
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Backup files
+*.bak
+*.backup
+*~
+*.swp
+*.tmp
+*.temp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options directory
+.vs/
+
+# Windows image file caches
+Thumbs.db:encryptable
+ehthumbs.db:encryptable
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# VS Code directories
+.vscode/
+.history/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# PowerShell Module files
+*.psd1
+*.psm1
+*.ps1xml
+*.psc1
+*.pssc
+
+# PowerShell Profile
+Microsoft.PowerShell_profile.ps1
+
+# PowerShell Transcripts
+*.transcript
+
+# PowerShell Help Files
+*.help.txt
+*.help.xml
+
+# PowerShell Debug Files
+*.ps1.debug
+*.ps1.error
+*.ps1.output
+
+# PowerShell Session Files
+*.ps1.session
+*.ps1.history
+
+# PowerShell Module Cache
+ModuleAnalysisCache
+
+# PowerShell Script Analyzer
+PSScriptAnalyzerSettings.psd1
+
+# PowerShell Test Results
+TestResults/
+
+# PowerShell Coverage Reports
+*.coverage.xml
+*.coverage.json
+
+# PowerShell Profile Backup
+*.ps1.bak
+*.ps1.old
+
+# PowerShell Script Backup
+*.ps1.bak
+*.ps1.old
+
+# PowerShell Script Logs
+*.ps1.log
+*.ps1.error
+*.ps1.output
+
+# PowerShell Script Cache
+*.ps1.cache
+
+# PowerShell Script Temp
+*.ps1.tmp
+*.ps1.temp
+
+# PowerShell Script Lock
+*.ps1.lock
+
+# PowerShell Script State
+*.ps1.state
+
+# PowerShell Script Config
+*.ps1.config
+
+# PowerShell Script Backup
+*.ps1.bak
+*.ps1.old
+
+# PowerShell Script Logs
+*.ps1.log
+*.ps1.error
+*.ps1.output
+
+# PowerShell Script Cache
+*.ps1.cache
+
+# PowerShell Script Temp
+*.ps1.tmp
+*.ps1.temp
+
+# PowerShell Script Lock
+*.ps1.lock
+
+# PowerShell Script State
+*.ps1.state
+
+# PowerShell Script Config
+*.ps1.config
