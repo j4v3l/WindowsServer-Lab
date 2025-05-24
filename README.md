@@ -67,7 +67,7 @@ The tutorials are organized in a logical sequence from initial setup to advanced
    - Best practices
    - Lessons learned
 
-#### Advanced Topics (9-14)
+#### Advanced Topics (9-15)
 
 9. [Security Hardening](LabSetupTutorials/09_Security_Hardening.md)
    - Security best practices
@@ -99,6 +99,11 @@ The tutorials are organized in a logical sequence from initial setup to advanced
     - Client configuration
     - End-user management
 
+15. [DHCP Server Setup](LabSetupTutorials/15_DHCP_Server_Setup.md)
+    - DHCP role installation
+    - Scope configuration
+    - Reservations, exclusions, and best practices
+
 ### Management Scripts
 
 The Scripts directory contains PowerShell scripts that complement the tutorials:
@@ -108,6 +113,7 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Lab Setup Script](Scripts/Lab_Setup.ps1) - Initial lab environment setup
 - [Lab Finish Setup Script](Scripts/Lab-FinishSetup.ps1) - Post-installation configuration
 - [Create Lab Users Script](Scripts/Create-LabUsers.ps1) - User account creation
+- [DHCP Setup Script](Scripts/DHCP_Setup.ps1) - DHCP server installation and configuration
 
 #### Management Scripts
 
@@ -121,7 +127,7 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 1. Start with the Core Setup and Administration tutorials (1-4)
 2. Move to Maintenance and Troubleshooting (5-6)
 3. Practice with Lab Scenarios (7-8)
-4. Advance to Advanced Topics (9-14)
+4. Advance to Advanced Topics (9-15)
 
 ## Getting Started
 
