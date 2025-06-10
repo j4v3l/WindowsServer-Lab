@@ -1,5 +1,12 @@
+# Windows Server Lab Environment - .gitignore
+
+# =============================================================================
+# SYSTEM FILES (Block these)
+# =============================================================================
+
 # macOS system files
 .DS_Store
+**/.DS_Store
 .AppleDouble
 .LSOverride
 Icon
@@ -20,25 +27,11 @@ ehthumbs_vista.db
 *.stackdump
 [Dd]esktop.ini
 $RECYCLE.BIN/
-*.cab
-*.msi
-*.msm
-*.msp
 *.lnk
 
-# PowerShell specific
-*.ps1xml
-*.psc1
-*.psd1
-*.pssc
-*.psrc
-*.ps1
-!Scripts/*.ps1
-*.psm1
-*.ps1.config
-*.ps1.log
-*.ps1.error
-*.ps1.output
+# =============================================================================
+# TEMPORARY & LOG FILES (Block these)
+# =============================================================================
 
 # Logs and databases
 *.log
@@ -54,9 +47,32 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 
-# IDE and editor files
+# PowerShell temporary files
+*.ps1.log
+*.ps1.error
+*.ps1.output
+*.ps1.cache
+*.ps1.tmp
+*.ps1.temp
+*.ps1.lock
+*.ps1.state
+*.ps1.config
+*.ps1.bak
+*.ps1.old
+*.ps1.debug
+*.ps1.session
+*.ps1.history
+*.transcript
+
+# =============================================================================
+# IDE & DEVELOPMENT FILES (Block these)
+# =============================================================================
+
+# Visual Studio / VS Code
 .vscode/
+.vs/
 .idea/
+.history/
 *.sln
 *.suo
 *.user
@@ -86,23 +102,6 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
-# Visual Studio cache/options directory
-.vs/
-
-# Windows image file caches
-Thumbs.db:encryptable
-ehthumbs.db:encryptable
-
-# Folder config file
-Desktop.ini
-
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
-# VS Code directories
-.vscode/
-.history/
-
 # Windows Installer files
 *.cab
 *.msi
@@ -110,98 +109,63 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
-# Windows shortcuts
-*.lnk
+# =============================================================================
+# POWERSHELL FILES (Selective blocking with exceptions)
+# =============================================================================
 
-# PowerShell Module files
-# *.psd1
-# *.psm1
+# Block PowerShell temporary and config files
 *.ps1xml
 *.psc1
 *.pssc
-
-# PowerShell Profile
+*.psrc
 Microsoft.PowerShell_profile.ps1
+PSScriptAnalyzerSettings.psd1
+ModuleAnalysisCache
 
-# PowerShell Transcripts
-*.transcript
-
-# PowerShell Help Files
+# Block PowerShell test and coverage files
+TestResults/
+*.coverage.xml
+*.coverage.json
 *.help.txt
 *.help.xml
 
-# PowerShell Debug Files
-*.ps1.debug
-*.ps1.error
-*.ps1.output
+# =============================================================================
+# ALLOW PROJECT FILES (Exceptions to above rules)
+# =============================================================================
 
-# PowerShell Session Files
-*.ps1.session
-*.ps1.history
+# Allow PowerShell project scripts and modules
+!Scripts/*.ps1
+!Scripts/*.psd1
+!Scripts/*.psm1
+!Demo/Scripts/*.ps1
+!Demo/**/*.ps1
+!LabSetupTutorials/*.ps1
 
-# PowerShell Module Cache
-ModuleAnalysisCache
+# Allow documentation and configuration files
+!*.md
+!*.txt
+!*.json
+!*.yml
+!*.yaml
+!LICENSE
+!VERSION
+!CHANGELOG*
+!CONTRIBUTING*
 
-# PowerShell Script Analyzer
-PSScriptAnalyzerSettings.psd1
+# =============================================================================
+# PROJECT-SPECIFIC EXCEPTIONS
+# =============================================================================
 
-# PowerShell Test Results
-TestResults/
+# Allow specific project files that might match blocked patterns
+!Scripts/WindowsServerLab.psd1
+!Scripts/WindowsServerLab.psm1
+!Demo/Scripts/Deploy-AsgardLab.ps1
 
-# PowerShell Coverage Reports
-*.coverage.xml
-*.coverage.json
+# =============================================================================
+# KEEP EMPTY DIRECTORIES
+# =============================================================================
 
-# PowerShell Profile Backup
-*.ps1.bak
-*.ps1.old
-
-# PowerShell Script Backup
-*.ps1.bak
-*.ps1.old
-
-# PowerShell Script Logs
-*.ps1.log
-*.ps1.error
-*.ps1.output
-
-# PowerShell Script Cache
-*.ps1.cache
-
-# PowerShell Script Temp
-*.ps1.tmp
-*.ps1.temp
-
-# PowerShell Script Lock
-*.ps1.lock
-
-# PowerShell Script State
-*.ps1.state
-
-# PowerShell Script Config
-*.ps1.config
-
-# PowerShell Script Backup
-*.ps1.bak
-*.ps1.old
-
-# PowerShell Script Logs
-*.ps1.log
-*.ps1.error
-*.ps1.output
-
-# PowerShell Script Cache
-*.ps1.cache
-
-# PowerShell Script Temp
-*.ps1.tmp
-*.ps1.temp
-
-# PowerShell Script Lock
-*.ps1.lock
-
-# PowerShell Script State
-*.ps1.state
-
-# PowerShell Script Config
-*.ps1.config
+# Keep important empty directories
+!Scripts/.gitkeep
+!Demo/Scripts/.gitkeep
+!LabSetupTutorials/.gitkeep

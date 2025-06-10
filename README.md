@@ -2,6 +2,12 @@
 
 This repository contains comprehensive documentation and scripts for setting up and managing a Windows Server lab environment. The content is organized into two main sections: Lab Setup Tutorials and Management Scripts.
 
+## 🏰 **Epic Demo Available!**
+
+**NEW**: Experience the complete power of this lab environment with our **[Asgard Technologies Demo](Demo/README.md)** - a Norse mythology-themed enterprise setup featuring 25 VMs, complete organizational structure, and professional-grade configurations. Perfect for demonstrations, learning, and showcasing Windows Server capabilities!
+
+👉 **[Get Started with the Demo](Demo/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!
+
 ## ⚠️ Important Disclaimer
 
 **This is a work in progress and is intended for educational and development purposes only.**

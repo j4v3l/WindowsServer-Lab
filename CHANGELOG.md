@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-06-09
+
+### Added - Demo Organization & Code Cleanup
+
+- **🏰 Asgard Technologies Demo**: Complete Norse mythology-themed enterprise demo
+- **Clean Project Structure**: Organized all demo materials into dedicated `Demo/` directory
+- **Comprehensive Demo Documentation**: Epic demo guide with 25 VMs, 25 users, 4 networks
+- **Demo Management**: Automated deployment and management scripts for demo environment
+- **Hardware Optimization**: Performance guides optimized for high-end hardware specifications
+
+### Changed
+
+- **Project Organization**: Moved all demo-specific files to `Demo/` directory structure
+- **Main README**: Added prominent demo section with quick access to Asgard Technologies
+- **File Structure**: Clean separation between core lab tools and demo materials
+- **Documentation**: Enhanced main project documentation with clear demo integration
+
+### Demo Structure
+
+```
+Demo/
+├── README.md                   # Complete demo overview
+├── Scripts/Deploy-AsgardLab.ps1  # Main deployment script  
+├── Documentation/              # Technical documentation
+│   ├── DEMO_SETUP_GUIDE.md     # Complete setup guide
+│   └── HARDWARE_PERFORMANCE_GUIDE.md  # Hardware optimization
+└── Guides/                     # Quick-start guides
+    └── QUICK_START_ASGARD.md   # 3-step deployment guide
+```
+
+### Demo Features
+
+- **25 Virtual Machines**: 5 servers + 20 workstations with Norse mythology names
+- **Complete Organization**: Asgard Technologies cybersecurity company with 5 departments
+- **Network Architecture**: 4-tier networking (Production, Management, Clients, DMZ)
+- **Professional Deployment**: 30-60 minute automated setup on high-end hardware
+- **Educational Value**: Comprehensive Windows Server feature demonstration
+
 ## [1.0.0] - 2025-06-09
 
 ### Added
