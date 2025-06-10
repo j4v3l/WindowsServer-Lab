@@ -3,7 +3,7 @@
 
 # Module Configuration
 $ModuleRoot = $PSScriptRoot
-$ModuleVersion = "1.0.0"
+$ModuleVersion = "1.1.0"
 
 # Import required modules with error handling
 try {

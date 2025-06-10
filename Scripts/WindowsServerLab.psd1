@@ -8,7 +8,7 @@
 RootModule = 'WindowsServerLab.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.1.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -129,7 +129,7 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
-# Windows Server Lab Environment v1.0.0
+# Windows Server Lab Environment v1.1.0
 
 ## Features
 - Complete Hyper-V lab setup and management
@@ -138,6 +138,14 @@ PrivateData = @{
 - Group Policy management automation
 - System monitoring and health checks
 - Comprehensive validation and testing tools
+- **NEW**: Organized Demo environment with Asgard Technologies showcase
+
+## Demo Environment (NEW in v1.1.0)
+- Complete Norse mythology-themed enterprise demo
+- 25 VMs (5 servers + 20 workstations) with professional naming
+- 4-tier network architecture (Production, Management, Clients, DMZ)
+- Automated deployment scripts in Demo/ directory
+- Comprehensive documentation and quick-start guides
 
 ## Requirements
 - Windows 10/11 Pro/Enterprise or Windows Server
@@ -150,6 +158,7 @@ PrivateData = @{
 2. Create lab environment: New-LabEnvironment
 3. Validate setup: Test-LabEnvironment
 4. Start lab VMs: Start-LabVMs
+5. Deploy demo: Check Demo/ directory for Asgard Technologies setup
 '@
 
         # Prerelease string of this module
