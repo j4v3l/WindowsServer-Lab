@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/j4v3l/WindowsServer-Lab/blob/main/README.md
+    about: Check out our comprehensive documentation and guides
+  - name: 💬 Discussions
+    url: https://github.com/j4v3l/WindowsServer-Lab/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔒 Security Issues
+    url: https://github.com/j4v3l/WindowsServer-Lab/security/advisories/new
+    about: Report security vulnerabilities privately 

@@ -1,0 +1,211 @@
+name: CI/CD - PowerShell Lab Validation
+
+on:
+  push:
+    branches: [ main, dev, development ]
+  pull_request:
+    branches: [ main, dev, development ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate PowerShell Scripts
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Install PSScriptAnalyzer
+      shell: pwsh
+      run: |
+        Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck -Scope CurrentUser
+        
+    - name: Analyze PowerShell Scripts
+      shell: pwsh
+      run: |
+        $scripts = Get-ChildItem -Path . -Recurse -Include "*.ps1", "*.psm1", "*.psd1" | Where-Object {
+            $_.FullName -notlike "*\.git\*"
+        }
+        
+        Write-Host "Found $($scripts.Count) PowerShell files to analyze"
+        
+        $totalIssues = 0
+        foreach ($script in $scripts) {
+            Write-Host "Analyzing: $($script.Name)"
+            $issues = Invoke-ScriptAnalyzer -Path $script.FullName -Severity @('Error', 'Warning')
+            
+            if ($issues) {
+                $totalIssues += $issues.Count
+                Write-Host "  Issues found: $($issues.Count)" -ForegroundColor Red
+                foreach ($issue in $issues) {
+                    Write-Host "    [$($issue.Severity)] Line $($issue.Line): $($issue.Message)"
+                }
+            } else {
+                Write-Host "  No issues found" -ForegroundColor Green
+            }
+        }
+        
+        if ($totalIssues -gt 0) {
+            Write-Host "Total issues found: $totalIssues"
+            
+            # Count errors vs warnings
+            $errorCount = 0
+            foreach ($script in $scripts) {
+                $errors = Invoke-ScriptAnalyzer -Path $script.FullName -Severity Error
+                $errorCount += $errors.Count
+            }
+            
+            if ($errorCount -gt 0) {
+                Write-Host "Critical errors found: $errorCount" -ForegroundColor Red
+                exit 1
+            } else {
+                Write-Host "Only warnings found, continuing..."
+            }
+        } else {
+            Write-Host "All scripts passed analysis!" -ForegroundColor Green
+        }
+
+    - name: Test Module Integrity
+      shell: pwsh
+      run: |
+        if (Test-Path "Scripts/Test-ModuleIntegrity.ps1") {
+            Write-Host "Running module integrity test..."
+            
+            Set-Location Scripts
+            try {
+                .\Test-ModuleIntegrity.ps1
+                Write-Host "Module integrity test passed!" -ForegroundColor Green
+            }
+            catch {
+                Write-Host "Module integrity test failed: $($_.Exception.Message)" -ForegroundColor Red
+                exit 1
+            }
+            finally {
+                Set-Location ..
+            }
+        } else {
+            Write-Host "Module integrity test script not found, skipping..."
+        }
+
+    - name: Validate Documentation
+      shell: pwsh
+      run: |
+        $requiredDocs = @('README.md', 'CHANGELOG.md', 'LICENSE', 'CONTRIBUTING.md')
+        $missingDocs = @()
+        
+        foreach ($doc in $requiredDocs) {
+            if (Test-Path $doc) {
+                Write-Host "Found: $doc" -ForegroundColor Green
+            } else {
+                $missingDocs += $doc
+                Write-Host "Missing: $doc" -ForegroundColor Yellow
+            }
+        }
+        
+        if ($missingDocs.Count -gt 0) {
+            Write-Host "Missing documentation files: $($missingDocs -join ', ')"
+        } else {
+            Write-Host "All required documentation present!"
+        }
+
+    - name: Validate Demo Directory Structure
+      shell: pwsh
+      run: |
+        Write-Host "Validating Demo directory structure..." -ForegroundColor Cyan
+        
+        $demoRequiredFiles = @(
+            'Demo/README.md',
+            'Demo/Scripts/Deploy-AsgardLab.ps1',
+            'Demo/Documentation/DEMO_SETUP_GUIDE.md',
+            'Demo/Documentation/HARDWARE_PERFORMANCE_GUIDE.md',
+            'Demo/Guides/QUICK_START_ASGARD.md'
+        )
+        
+        $missingFiles = @()
+        $foundFiles = @()
+        
+        foreach ($file in $demoRequiredFiles) {
+            if (Test-Path $file) {
+                $foundFiles += $file
+                Write-Host "✅ Found: $file" -ForegroundColor Green
+            } else {
+                $missingFiles += $file
+                Write-Host "❌ Missing: $file" -ForegroundColor Red
+            }
+        }
+        
+        Write-Host "`nDemo Structure Validation Summary:" -ForegroundColor Cyan
+        Write-Host "✅ Found files: $($foundFiles.Count)" -ForegroundColor Green
+        Write-Host "❌ Missing files: $($missingFiles.Count)" -ForegroundColor Yellow
+        
+        if ($missingFiles.Count -gt 0) {
+            Write-Host "`nMissing Demo files:" -ForegroundColor Yellow
+            $missingFiles | ForEach-Object { Write-Host "  - $_" }
+            Write-Host "`nDemo structure validation failed!" -ForegroundColor Red
+            exit 1
+        } else {
+            Write-Host "✅ Demo directory structure is compliant!" -ForegroundColor Green
+        }
+
+    - name: Validate Version Consistency
+      shell: pwsh
+      run: |
+        Write-Host "Validating version consistency across files..." -ForegroundColor Cyan
+        
+        # Get version from VERSION file
+        $versionFile = Get-Content "VERSION" -Raw
+        $expectedVersion = $versionFile.Trim()
+        Write-Host "Expected version from VERSION file: $expectedVersion" -ForegroundColor Cyan
+        
+        # Check PowerShell module manifest
+        if (Test-Path "Scripts/WindowsServerLab.psd1") {
+            $manifestContent = Get-Content "Scripts/WindowsServerLab.psd1" -Raw
+            if ($manifestContent -match "ModuleVersion\s*=\s*'([^']+)'") {
+                $manifestVersion = $matches[1]
+                if ($manifestVersion -eq $expectedVersion) {
+                    Write-Host "✅ Module manifest version matches: $manifestVersion" -ForegroundColor Green
+                } else {
+                    Write-Host "❌ Module manifest version mismatch: Expected $expectedVersion, found $manifestVersion" -ForegroundColor Red
+                    exit 1
+                }
+            }
+        }
+        
+        # Check PowerShell module file
+        if (Test-Path "Scripts/WindowsServerLab.psm1") {
+            $moduleContent = Get-Content "Scripts/WindowsServerLab.psm1" -Raw
+            if ($moduleContent -match '\$ModuleVersion\s*=\s*"([^"]+)"') {
+                $moduleVersion = $matches[1]
+                if ($moduleVersion -eq $expectedVersion) {
+                    Write-Host "✅ Module file version matches: $moduleVersion" -ForegroundColor Green
+                } else {
+                    Write-Host "❌ Module file version mismatch: Expected $expectedVersion, found $moduleVersion" -ForegroundColor Red  
+                    exit 1
+                }
+            }
+        }
+        
+        Write-Host "✅ All version references are consistent!" -ForegroundColor Green
+
+  security-scan:
+    name: Security Scan
+    runs-on: windows-latest
+    needs: validate
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Run DevSkim Security Analyzer
+      uses: microsoft/DevSkim-Action@v1
+      with:
+        directory-to-scan: .
+        
+    - name: Upload DevSkim Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: devskim-results
+        path: .gdn/
+        retention-days: 30 

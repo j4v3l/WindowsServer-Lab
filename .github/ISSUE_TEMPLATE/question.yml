@@ -1,0 +1,103 @@
+name: Question or Help
+description: Ask a question or get help with the Windows Server Lab Environment
+title: "[QUESTION] "
+labels: ["question", "help wanted"]
+projects: ["j4v3l/1"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reaching out! Please provide as much detail as possible so we can help you effectively.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What's your question?
+      description: Please describe what you're trying to accomplish or what you need help with
+      placeholder: Clearly describe your question or what you're trying to achieve
+    validations:
+      required: true
+
+  - type: dropdown
+    id: question-category
+    attributes:
+      label: Question Category
+      description: What area does your question relate to?
+      options:
+        - Lab Setup & Prerequisites
+        - Active Directory Configuration
+        - DNS & Network Configuration
+        - DHCP Server Setup
+        - Group Policy Management
+        - Security & Hardening
+        - Hyper-V & Virtual Machines
+        - PowerShell Scripts & Automation
+        - Backup & Restore
+        - System Monitoring
+        - Documentation & Guides
+        - Demo Environment (Asgard Technologies)
+        - CI/CD & GitHub Actions
+        - General/Other
+    validations:
+      required: true
+
+  - type: input
+    id: environment-info
+    attributes:
+      label: Environment Information
+      description: What environment are you working with?
+      placeholder: Windows Server 2022, Windows 11, Hyper-V, VMware, etc.
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: What have you tried?
+      description: Please describe any steps you've already taken or solutions you've attempted
+      placeholder: List any troubleshooting steps, documentation you've reviewed, or solutions you've tried
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages or Logs
+      description: If you're experiencing errors, please include any error messages or relevant logs
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe what you thought would happen or what you're trying to achieve
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: documentation-check
+    attributes:
+      label: Documentation Check
+      description: Have you checked the existing documentation?
+      options:
+        - label: I have read the README.md
+          required: false
+        - label: I have checked the relevant tutorial guides
+          required: false
+        - label: I have reviewed the demo setup guides
+          required: false
+        - label: I have searched existing issues
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true 
