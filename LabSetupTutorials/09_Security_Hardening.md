@@ -30,7 +30,7 @@
    ```powershell
    # Enable Windows Firewall
    Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
-   
+
    # Block all inbound by default
    Set-NetFirewallProfile -DefaultInboundAction Block
    ```
@@ -58,13 +58,22 @@
 3. **Administrative Accounts**
 
    ```powershell
-   # Create separate admin accounts
+   # Create separate admin accounts with secure password prompt
+   $AdminPassword = Read-Host -AsSecureString -Prompt "Enter secure password for admin account"
+
    New-ADUser -Name "Admin_John" `
               -SamAccountName "admin.john" `
               -UserPrincipalName "admin.john@domain.com" `
-              -AccountPassword (ConvertTo-SecureString "ComplexP@ssw0rd" -AsPlainText -Force) `
-              -Enabled $true
+              -AccountPassword $AdminPassword `
+              -Enabled $true `
+              -ChangePasswordAtLogon $true
    ```
+
+   **Security Benefits:**
+
+   - ✅ No hardcoded passwords in security configurations
+   - ✅ Secure password entry for administrative accounts
+   - ✅ Forces password change on first login
 
 ## 🛡️ Advanced Security Features
 
@@ -133,7 +142,7 @@
    ```powershell
    # Enable object access auditing
    auditpol /set /subcategory:"Object Access" /success:enable /failure:enable
-   
+
    # Enable account management auditing
    auditpol /set /subcategory:"Account Management" /success:enable /failure:enable
    ```
@@ -151,7 +160,7 @@
 2. **Export Security Logs**
 
    ```powershell
-   Get-EventLog -LogName Security -Newest 1000 | 
+   Get-EventLog -LogName Security -Newest 1000 |
    Export-Csv -Path "C:\Logs\SecurityAudit.csv"
    ```
 
@@ -160,6 +169,7 @@
 ### 1. Security Compliance Manager
 
 1. **Download Baselines**
+
    - Microsoft Security Compliance Toolkit
    - Industry-specific baselines
    - Custom security policies
@@ -191,6 +201,7 @@
 ### 1. Preparation
 
 1. **Create Response Plan**
+
    - Document procedures
    - Define roles
    - Establish communication
@@ -221,7 +232,7 @@
 
    ```powershell
    # Export event logs
-   Get-EventLog -LogName Security -Newest 1000 | 
+   Get-EventLog -LogName Security -Newest 1000 |
    Export-Csv -Path "C:\Investigation\SecurityLogs.csv"
    ```
 
@@ -230,6 +241,7 @@
 ### 1. Security Policies
 
 1. **Document Standards**
+
    - Password requirements
    - Access controls
    - Security procedures
@@ -244,6 +256,7 @@
 ### 2. Compliance Records
 
 1. **Maintain Logs**
+
    - Security events
    - Configuration changes
    - Access attempts
@@ -253,9 +266,9 @@
 
    ```powershell
    # Create security report
-   Get-EventLog -LogName Security -Newest 1000 | 
-   Group-Object -Property EventID | 
-   Select-Object Name,Count | 
+   Get-EventLog -LogName Security -Newest 1000 |
+   Group-Object -Property EventID |
+   Select-Object Name,Count |
    Export-Csv -Path "C:\Reports\SecurityReport.csv"
    ```
 

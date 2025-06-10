@@ -37,11 +37,11 @@ function Write-Log {
 
 # Validation Results
 $script:ValidationResults = @{
-    TotalTests = 0
-    PassedTests = 0
-    FailedTests = 0
+    TotalTests   = 0
+    PassedTests  = 0
+    FailedTests  = 0
     WarningTests = 0
-    Issues = @()
+    Issues       = @()
 }
 
 function Test-Prerequisites {
@@ -53,7 +53,8 @@ function Test-Prerequisites {
     if ($psVersion.Major -ge 5) {
         Write-Log "PowerShell version: $($psVersion.ToString())" "SUCCESS"
         $script:ValidationResults.PassedTests++
-    } else {
+    }
+    else {
         Write-Log "PowerShell version too old: $($psVersion.ToString()). Requires 5.0 or later." "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "PowerShell version too old"
@@ -64,7 +65,8 @@ function Test-Prerequisites {
     if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
         Write-Log "Running as Administrator" "SUCCESS"
         $script:ValidationResults.PassedTests++
-    } else {
+    }
+    else {
         Write-Log "Not running as Administrator" "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "Not running as Administrator"
@@ -77,12 +79,14 @@ function Test-Prerequisites {
         if ($hyperVFeature.State -eq "Enabled") {
             Write-Log "Hyper-V is enabled" "SUCCESS"
             $script:ValidationResults.PassedTests++
-        } else {
+        }
+        else {
             Write-Log "Hyper-V is not enabled" "WARNING"
             $script:ValidationResults.WarningTests++
             $script:ValidationResults.Issues += "Hyper-V not enabled"
         }
-    } catch {
+    }
+    catch {
         Write-Log "Cannot check Hyper-V status: $($_.Exception.Message)" "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "Cannot check Hyper-V status"
@@ -107,7 +111,8 @@ function Test-HyperVConfiguration {
                 if ($switch) {
                     Write-Log "Virtual switch exists: $switchName ($($switch.SwitchType))" "SUCCESS"
                     $script:ValidationResults.PassedTests++
-                } else {
+                }
+                else {
                     Write-Log "Virtual switch missing: $switchName" "WARNING"
                     $script:ValidationResults.WarningTests++
                     $script:ValidationResults.Issues += "Missing virtual switch: $switchName"
@@ -120,14 +125,15 @@ function Test-HyperVConfiguration {
             if ($nat) {
                 Write-Log "NAT configuration exists: $($nat.InternalIPInterfaceAddressPrefix)" "SUCCESS"
                 $script:ValidationResults.PassedTests++
-            } else {
+            }
+            else {
                 Write-Log "NAT configuration missing for management network" "WARNING"
                 $script:ValidationResults.WarningTests++
                 $script:ValidationResults.Issues += "Missing NAT configuration"
             }
             
             # Test VMs
-            $labVMs = Get-VM | Where-Object {$_.Name -like "*LAB*"}
+            $labVMs = Get-VM | Where-Object { $_.Name -like "*LAB*" }
             $script:ValidationResults.TotalTests++
             if ($labVMs) {
                 Write-Log "Lab VMs found: $($labVMs.Count) VMs" "SUCCESS"
@@ -145,18 +151,21 @@ function Test-HyperVConfiguration {
                         }
                     }
                 }
-            } else {
+            }
+            else {
                 Write-Log "No lab VMs found" "WARNING"
                 $script:ValidationResults.WarningTests++
                 $script:ValidationResults.Issues += "No lab VMs found"
             }
             
-        } else {
+        }
+        else {
             Write-Log "Hyper-V PowerShell module not available" "ERROR"
             $script:ValidationResults.FailedTests++
             $script:ValidationResults.Issues += "Hyper-V PowerShell module not available"
         }
-    } catch {
+    }
+    catch {
         Write-Log "Error testing Hyper-V configuration: $($_.Exception.Message)" "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "Error testing Hyper-V configuration"
@@ -189,30 +198,35 @@ function Test-ActiveDirectoryEnvironment {
                         if ($ou) {
                             Write-Log "OU exists: $ouName" "SUCCESS"
                             $script:ValidationResults.PassedTests++
-                        } else {
+                        }
+                        else {
                             Write-Log "OU missing: $ouName" "WARNING"
                             $script:ValidationResults.WarningTests++
                             $script:ValidationResults.Issues += "Missing OU: $ouName"
                         }
-                    } catch {
+                    }
+                    catch {
                         Write-Log "Cannot check OU: $ouName - $($_.Exception.Message)" "WARNING"
                         $script:ValidationResults.WarningTests++
                         $script:ValidationResults.Issues += "Cannot check OU: $ouName"
                     }
                 }
                 
-            } catch {
+            }
+            catch {
                 Write-Log "Cannot connect to domain (may not be domain-joined): $($_.Exception.Message)" "WARNING"
                 $script:ValidationResults.WarningTests++
                 $script:ValidationResults.Issues += "Cannot connect to domain"
             }
             
-        } else {
+        }
+        else {
             Write-Log "Active Directory PowerShell module not available (expected on domain controllers)" "WARNING"
             $script:ValidationResults.WarningTests++
             $script:ValidationResults.Issues += "AD PowerShell module not available"
         }
-    } catch {
+    }
+    catch {
         Write-Log "Error testing Active Directory environment: $($_.Exception.Message)" "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "Error testing Active Directory"
@@ -224,7 +238,7 @@ function Test-NetworkConfiguration {
     
     # Test network adapters
     $script:ValidationResults.TotalTests++
-    $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
+    $adapters = Get-NetAdapter | Where-Object { $_.Status -eq "Up" }
     if ($adapters) {
         Write-Log "Active network adapters: $($adapters.Count)" "SUCCESS"
         $script:ValidationResults.PassedTests++
@@ -232,7 +246,8 @@ function Test-NetworkConfiguration {
         foreach ($adapter in $adapters) {
             Write-Log "  $($adapter.Name): $($adapter.LinkSpeed)" "DEBUG"
         }
-    } else {
+    }
+    else {
         Write-Log "No active network adapters found" "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "No active network adapters"
@@ -244,7 +259,8 @@ function Test-NetworkConfiguration {
         $dnsTest = Resolve-DnsName -Name "microsoft.com" -ErrorAction Stop
         Write-Log "DNS resolution working" "SUCCESS"
         $script:ValidationResults.PassedTests++
-    } catch {
+    }
+    catch {
         Write-Log "DNS resolution failed: $($_.Exception.Message)" "ERROR"
         $script:ValidationResults.FailedTests++
         $script:ValidationResults.Issues += "DNS resolution failed"
@@ -253,16 +269,20 @@ function Test-NetworkConfiguration {
     # Test internet connectivity
     $script:ValidationResults.TotalTests++
     try {
-        $pingTest = Test-NetConnection -ComputerName "8.8.8.8" -Port 53 -InformationLevel Quiet -ErrorAction Stop
+        # Use a configurable DNS server for testing
+        $testDNSServer = "8.8.8.8"  # Google DNS - can be parameterized if needed
+        $pingTest = Test-NetConnection -ComputerName $testDNSServer -Port 53 -InformationLevel Quiet -ErrorAction Stop
         if ($pingTest) {
-            Write-Log "Internet connectivity available" "SUCCESS"
+            Write-Log "Internet connectivity available (tested against $testDNSServer)" "SUCCESS"
             $script:ValidationResults.PassedTests++
-        } else {
+        }
+        else {
             Write-Log "Internet connectivity issues" "WARNING"
             $script:ValidationResults.WarningTests++
             $script:ValidationResults.Issues += "Internet connectivity issues"
         }
-    } catch {
+    }
+    catch {
         Write-Log "Cannot test internet connectivity: $($_.Exception.Message)" "WARNING"
         $script:ValidationResults.WarningTests++
         $script:ValidationResults.Issues += "Cannot test internet connectivity"
@@ -293,12 +313,14 @@ function Test-ScriptFiles {
             try {
                 $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $fullPath -Raw), [ref]$null)
                 Write-Log "  Script syntax valid: $scriptName" "DEBUG"
-            } catch {
+            }
+            catch {
                 Write-Log "  Script syntax error in $scriptName`: $($_.Exception.Message)" "WARNING"
                 $script:ValidationResults.WarningTests++
                 $script:ValidationResults.Issues += "Script syntax error: $scriptName"
             }
-        } else {
+        }
+        else {
             Write-Log "Script missing: $scriptName" "WARNING"
             $script:ValidationResults.WarningTests++
             $script:ValidationResults.Issues += "Missing script: $scriptName"
@@ -315,7 +337,8 @@ function Show-ValidationSummary {
     
     $successRate = if ($script:ValidationResults.TotalTests -gt 0) { 
         [math]::Round(($script:ValidationResults.PassedTests / $script:ValidationResults.TotalTests) * 100, 1) 
-    } else { 0 }
+    }
+    else { 0 }
     Write-Log "Success Rate: $successRate%" "INFO"
     
     if ($script:ValidationResults.Issues.Count -gt 0) {
@@ -327,9 +350,11 @@ function Show-ValidationSummary {
     
     if ($script:ValidationResults.FailedTests -eq 0 -and $script:ValidationResults.WarningTests -eq 0) {
         Write-Log "`n🎉 All tests passed! Lab environment is properly configured." "SUCCESS"
-    } elseif ($script:ValidationResults.FailedTests -eq 0) {
+    }
+    elseif ($script:ValidationResults.FailedTests -eq 0) {
         Write-Log "`n⚠️  Lab environment is mostly configured but has some warnings." "WARNING"
-    } else {
+    }
+    else {
         Write-Log "`n❌ Lab environment has critical issues that need attention." "ERROR"
     }
     
@@ -362,7 +387,8 @@ try {
     # Return exit code based on results
     if ($script:ValidationResults.FailedTests -gt 0) {
         exit 1
-    } else {
+    }
+    else {
         exit 0
     }
 }

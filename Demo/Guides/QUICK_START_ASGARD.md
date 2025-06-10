@@ -68,7 +68,7 @@ Restart-Computer
 cd "C:\path\to\WindowsServer"
 
 # Deploy the complete environment (this creates 25 VMs with enhanced specs!)
-# Optimized for Ryzen 7900X with 64GB RAM
+# You'll be prompted for secure passwords during deployment
 .\Scripts\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ISOPath "C:\path\to\WindowsServer.iso"
 
 # Or deploy with custom settings
@@ -77,6 +77,28 @@ cd "C:\path\to\WindowsServer"
 # 💡 Performance Tip: Store VMs on your 1TB NVMe for best performance!
 # Total RAM allocation: ~90GB (well within your 64GB + swap capabilities)
 ```
+
+### **🔒 Security Password Requirements**
+
+During deployment, you'll be prompted for:
+
+1. **Safe Mode Password** (DSRM Recovery)
+
+   - Used for domain controller recovery operations
+   - Must meet complexity requirements (8+ chars, mixed case, numbers, symbols)
+   - Keep this password secure and documented
+
+2. **Default User Password** (All 25 Norse Users)
+   - Applied to all mythology-themed user accounts
+   - Users will be required to change password on first login
+   - Must meet domain password policy requirements
+
+**Security Benefits:**
+
+- ✅ No hardcoded passwords in any scripts
+- ✅ Secure password entry using PowerShell SecureString
+- ✅ Runtime validation ensures password compliance
+- ✅ Zero critical security vulnerabilities (PSScriptAnalyzer validated)
 
 ---
 
@@ -88,7 +110,7 @@ cd "C:\path\to\WindowsServer"
 2. **Install Windows Server 2019/2022**
 3. **Configure as Domain Controller**:
    - Domain: `asgard.local`
-   - Safe Mode Password: `P@ssw0rd123!`
+   - Safe Mode Password: Use the same secure password you entered during deployment
 
 ### **Phase 2: Run AD Configuration**
 
@@ -114,7 +136,7 @@ C:\VMs\Asgard\Configure-AsgardAD.ps1
 #### **IT Operations** (Odin's Realm)
 
 - **odin.allfather** - CTO & Domain Admin
-- **thor.thunderer** - Senior Systems Engineer  
+- **thor.thunderer** - Senior Systems Engineer
 - **loki.trickster** - Junior Developer (Intern)
 - **hermod.messenger** - Network Administrator
 - **tyr.brave** - Security Analyst
@@ -322,4 +344,4 @@ You've successfully deployed **Asgard Technologies** - the most epic Windows Ser
 
 **🏰 Welcome to Asgard Technologies - Where IT Meets Legend! ⚡**
 
-*"In the halls of Asgard, every server tells a story, every user has a purpose, and every network connection is a bridge between realms."*
+_"In the halls of Asgard, every server tells a story, every user has a purpose, and every network connection is a bridge between realms."_

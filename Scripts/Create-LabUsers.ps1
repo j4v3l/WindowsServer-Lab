@@ -1,137 +1,178 @@
-# Configuration
-$domainDN = 'DC=lab,DC=local'
-$domainName = 'lab.local'
-$defaultPassword = ConvertTo-SecureString 'P@ssw0rd123' -AsPlainText -Force
-$cleanup = $false  # Set to $true to delete all created lab objects
+# Create Lab Users Script
+# This script creates users for the Windows Server lab environment
 
-# Lab objects
-$ous = @('IT', 'HR', 'Interns')
-
-$users = @(
-    @{ OU = 'IT'; UserName = 'thor'; Name = 'Thor Odinson'; IsAdmin = $false },
-    @{ OU = 'Interns'; UserName = 'loki'; Name = 'Loki Laufeyson'; IsAdmin = $false }
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $false)]
+    [System.Security.SecureString]$DefaultUserPassword,
+    
+    [Parameter(Mandatory = $false)]
+    [switch]$Force
 )
 
-$computers = @(
-    @{ Name = 'CL-THOR'; OU = 'IT' },
-    @{ Name = 'CL-LOKI'; OU = 'Interns' }
-)
-
-$groupMap = @{
-    'IT' = @('thor')
-    'Interns' = @('loki')
-}
-
+# Import Active Directory module
 Import-Module ActiveDirectory
-Import-Module GroupPolicy
 
-if ($cleanup) {
-    Write-Host "`n🧹 Cleanup mode enabled..."
-
-    # Remove users
-    foreach ($user in $users) {
-        if (Get-ADUser -Filter "SamAccountName -eq '$($user.UserName)'" -ErrorAction SilentlyContinue) {
-            Remove-ADUser -Identity $user.UserName -Confirm:$false
-            Write-Host ("Deleted user {0}" -f $user.UserName)
-        }
-    }
-
-    # Remove groups
-    foreach ($group in $groupMap.Keys) {
-        $gname = "GRP-$group"
-        if (Get-ADGroup -Filter "Name -eq '$gname'" -ErrorAction SilentlyContinue) {
-            Remove-ADGroup -Identity $gname -Confirm:$false
-            Write-Host ("Deleted group {0}" -f $gname)
-        }
-    }
-
-    # Remove computers
-    foreach ($comp in $computers) {
-        if (Get-ADComputer -Filter "SamAccountName -eq '$($comp.Name)$'" -ErrorAction SilentlyContinue) {
-            Remove-ADComputer -Identity $comp.Name -Confirm:$false
-            Write-Host ("Deleted computer {0}" -f $comp.Name)
-        }
-    }
-
-    # Remove linked GPOs
-    foreach ($ou in $ous) {
-        $gpoName = "GPO_$ou"
-        if (Get-GPO -Name $gpoName -ErrorAction SilentlyContinue) {
-            Remove-GPO -Name $gpoName
-            Write-Host ("Deleted GPO {0}" -f $gpoName)
-        }
-    }
-
-    # Remove OUs - remove protection first
-    foreach ($ou in $ous) {
-        $ouDN = "OU=$ou,$domainDN"
-        try {
-            Set-ADOrganizationalUnit -Identity $ouDN -ProtectedFromAccidentalDeletion $false
-            Remove-ADOrganizationalUnit -Identity $ouDN -Recursive -Confirm:$false
-            Write-Host ("Deleted OU {0}" -f $ou)
-        }
-        catch {
-            Write-Warning ("Couldn't delete OU {0} - check for lingering objects" -f $ou)
-        }
-    }
-
-    return
+# Get secure password if not provided
+if (-not $DefaultUserPassword) {
+    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    $DefaultUserPassword = Read-Host -AsSecureString
 }
 
-# Create OUs
+# Validate password is provided
+if (-not $DefaultUserPassword) {
+    Write-Error "Default user password is required. Exiting."
+    exit 1
+}
+
+# Define the domain
+$domain = "lab.local"
+$domainDN = "DC=lab,DC=local"
+
+# Create OUs if they don't exist
+$ous = @("IT", "HR", "Sales", "Marketing", "Finance")
+
+Write-Information "Creating organizational units..." -InformationAction Continue
 foreach ($ou in $ous) {
-    $ouPath = "OU=$ou,$domainDN"
-    if (-not (Get-ADOrganizationalUnit -Filter "Name -eq '$ou'" -SearchBase $domainDN -ErrorAction SilentlyContinue)) {
-        New-ADOrganizationalUnit -Name $ou -Path $domainDN
-        Write-Host ("Created OU {0}" -f $ou)
+    try {
+        $ouPath = "OU=$ou,$domainDN"
+        if (-not (Get-ADOrganizationalUnit -Filter "Name -eq '$ou'" -SearchBase $domainDN -ErrorAction SilentlyContinue)) {
+            New-ADOrganizationalUnit -Name $ou -Path $domainDN -ErrorAction Stop
+            Write-Information "Created OU: $ou" -InformationAction Continue
+        }
+        else {
+            Write-Information "OU already exists: $ou" -InformationAction Continue
+        }
+    }
+    catch {
+        Write-Warning "Failed to create OU $ou : $($_.Exception.Message)"
     }
 }
 
-# Create users
+# Define users to create
+$users = @(
+    @{
+        FirstName   = "Thor"
+        LastName    = "Odinson"
+        Username    = "thor"
+        Department  = "IT"
+        Title       = "System Administrator"
+        Description = "Senior System Administrator"
+    },
+    @{
+        FirstName   = "Freya"
+        LastName    = "Njord"
+        Username    = "freya"
+        Department  = "HR"
+        Title       = "HR Manager"
+        Description = "Human Resources Manager"
+    },
+    @{
+        FirstName   = "Sif"
+        LastName    = "Thorsdottir"
+        Username    = "sif"
+        Department  = "Sales"
+        Title       = "Sales Representative"
+        Description = "Senior Sales Representative"
+    },
+    @{
+        FirstName   = "Heimdall"
+        LastName    = "Bifrost"
+        Username    = "heimdall"
+        Department  = "Marketing"
+        Title       = "Marketing Specialist"
+        Description = "Digital Marketing Specialist"
+    },
+    @{
+        FirstName   = "Frigg"
+        LastName    = "Fjorgyn"
+        Username    = "frigg"
+        Department  = "Finance"
+        Title       = "Financial Analyst"
+        Description = "Senior Financial Analyst"
+    }
+)
+
+Write-Information "Creating user accounts..." -InformationAction Continue
+
 foreach ($user in $users) {
-    $ouPath = "OU=$($user.OU),$domainDN"
-    $sam = $user.UserName
-    $upn = "$sam@$domainName"
-
-    if (-not (Get-ADUser -Filter "SamAccountName -eq '$sam'" -ErrorAction SilentlyContinue)) {
-        New-ADUser -SamAccountName $sam `
-                   -Name $user.Name `
-                   -UserPrincipalName $upn `
-                   -DisplayName $user.Name `
-                   -Path $ouPath `
-                   -AccountPassword $defaultPassword `
-                   -Enabled $true `
-                   -ChangePasswordAtLogon $false
-        Write-Host ("Created user {0}" -f $sam)
+    $ouPath = "OU=$($user.Department),$domainDN"
+    $upn = "$($user.Username)@$domain"
+    $displayName = "$($user.FirstName) $($user.LastName)"
+    
+    try {
+        # Check if user already exists
+        if (Get-ADUser -Filter "SamAccountName -eq '$($user.Username)'" -ErrorAction SilentlyContinue) {
+            Write-Information "User already exists: $($user.Username)" -InformationAction Continue
+            continue
+        }
+        
+        # Create the user
+        New-ADUser -Name $displayName `
+            -GivenName $user.FirstName `
+            -Surname $user.LastName `
+            -SamAccountName $user.Username `
+            -UserPrincipalName $upn `
+            -DisplayName $displayName `
+            -Description $user.Description `
+            -Department $user.Department `
+            -Title $user.Title `
+            -Path $ouPath `
+            -AccountPassword $DefaultUserPassword `
+            -Enabled $true `
+            -ChangePasswordAtLogon $false `
+            -ErrorAction Stop
+        
+        Write-Information "Created user: $($user.Username) ($displayName)" -InformationAction Continue
+        
+    }
+    catch {
+        Write-Warning "Failed to create user $($user.Username) : $($_.Exception.Message)"
     }
 }
 
-# Create computers
-foreach ($comp in $computers) {
-    $compPath = "OU=$($comp.OU),$domainDN"
-    if (-not (Get-ADComputer -Filter "SamAccountName -eq '$($comp.Name)$'" -ErrorAction SilentlyContinue)) {
-        New-ADComputer -Name $comp.Name -SamAccountName $comp.Name -Path $compPath -Enabled $true
-        Write-Host ("Created computer {0}" -f $comp.Name)
-    }
-}
-
-# Create groups and add members
-foreach ($ou in $groupMap.Keys) {
+# Create department groups
+Write-Information "Creating department groups..." -InformationAction Continue
+foreach ($ou in $ous) {
     $groupName = "GRP-$ou"
-    $groupPath = "OU=$ou,$domainDN"
-
-    if (-not (Get-ADGroup -Filter "Name -eq '$groupName'" -SearchBase $groupPath -ErrorAction SilentlyContinue)) {
-        New-ADGroup -Name $groupName -GroupScope Global -GroupCategory Security -Path $groupPath
-        Write-Host ("Created group {0}" -f $groupName)
+    $ouPath = "OU=$ou,$domainDN"
+    
+    try {
+        # Check if group already exists
+        if (Get-ADGroup -Filter "Name -eq '$groupName'" -ErrorAction SilentlyContinue) {
+            Write-Information "Group already exists: $groupName" -InformationAction Continue
+            continue
+        }
+        
+        # Create the group
+        New-ADGroup -Name $groupName `
+            -GroupScope Global `
+            -GroupCategory Security `
+            -Description "Security group for $ou department" `
+            -Path $ouPath `
+            -ErrorAction Stop
+        
+        Write-Information "Created group: $groupName" -InformationAction Continue
+        
     }
-
-    foreach ($user in $groupMap[$ou]) {
-        try {
-            Add-ADGroupMember -Identity $groupName -Members $user
-            Write-Host ("Added {0} to {1}" -f $user, $groupName)
-        }
-        catch {
-            Write-Warning ("Failed to add {0} to {1}" -f $user, $groupName)
-        }
+    catch {
+        Write-Warning "Failed to create group $groupName : $($_.Exception.Message)"
     }
 }
+
+# Add users to their respective department groups
+Write-Information "Adding users to department groups..." -InformationAction Continue
+foreach ($user in $users) {
+    $groupName = "GRP-$($user.Department)"
+    
+    try {
+        Add-ADGroupMember -Identity $groupName -Members $user.Username -ErrorAction Stop
+        Write-Information "Added $($user.Username) to $groupName" -InformationAction Continue
+    }
+    catch {
+        Write-Warning "Failed to add $($user.Username) to $groupName : $($_.Exception.Message)"
+    }
+}
+
+Write-Output "Lab users creation completed successfully!"
+Write-Information "Created $($users.Count) users and $($ous.Count) department groups." -InformationAction Continue

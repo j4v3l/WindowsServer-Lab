@@ -24,7 +24,10 @@ param(
     [string]$DomainName = "olympus.local",
     [string]$VMPath = "C:\VMs\Olympus",
     [string]$ISOPath = "",
-    [string]$SafeModePassword = "P@ssw0rd123!",
+    [Parameter(Mandatory = $false)]
+    [System.Security.SecureString]$SafeModePassword,
+    [Parameter(Mandatory = $false)]
+    [System.Security.SecureString]$DefaultUserPassword,
     [switch]$SkipVMs = $false,
     [switch]$SkipNetworking = $false,
     [switch]$SkipAD = $false,
@@ -34,6 +37,23 @@ param(
 # Enhanced logging and error handling
 $ErrorActionPreference = "Stop"
 $LogPath = Join-Path $env:TEMP "Olympus-Lab-Deployment.log"
+
+# Get secure passwords if not provided
+if (-not $SafeModePassword) {
+    Write-Host "Please enter the Safe Mode (DSRM) password for domain controllers:" -ForegroundColor Yellow
+    $SafeModePassword = Read-Host -AsSecureString
+}
+
+if (-not $DefaultUserPassword) {
+    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    $DefaultUserPassword = Read-Host -AsSecureString
+}
+
+# Validate passwords are provided
+if (-not $SafeModePassword -or -not $DefaultUserPassword) {
+    Write-Error "Both Safe Mode and Default User passwords are required. Exiting."
+    exit 1
+}
 
 function Write-OlympusLog {
     param(
@@ -91,7 +111,7 @@ function New-OlympusNetworks {
         }
         
         # Create Production Network (External)
-        $physicalAdapters = Get-NetAdapter -Physical | Where-Object {$_.Status -eq "Up"}
+        $physicalAdapters = Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" }
         if ($physicalAdapters.Count -gt 0) {
             $targetAdapter = $physicalAdapters | Select-Object -First 1
             New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName $targetAdapter.Name -AllowManagementOS $true -ErrorAction SilentlyContinue
@@ -154,7 +174,8 @@ function New-OlympusVM {
         if ($existingVM -and -not $Force) {
             Write-OlympusLog "VM $VMName already exists" "WARNING"
             return $true
-        } elseif ($existingVM -and $Force) {
+        }
+        elseif ($existingVM -and $Force) {
             Write-OlympusLog "Removing existing VM: $VMName" "WARNING"
             Stop-VM -Name $VMName -Force -ErrorAction SilentlyContinue
             Remove-VM -Name $VMName -Force
@@ -213,44 +234,44 @@ function New-OlympusServers {
     
     $servers = @(
         @{
-            Name = "ZEUS-DC01"
+            Name        = "ZEUS-DC01"
             Description = "Primary Domain Controller - King of the Gods"
-            Memory = 8GB
-            VHDSize = 100GB
-            CPUCount = 4
-            Networks = @("OLYMPUS-Production", "OLYMPUS-Management")
+            Memory      = 8GB
+            VHDSize     = 100GB
+            CPUCount    = 4
+            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
         },
         @{
-            Name = "HERA-DC02"
+            Name        = "HERA-DC02"
             Description = "Secondary Domain Controller - Queen of the Gods"
-            Memory = 6GB
-            VHDSize = 80GB
-            CPUCount = 3
-            Networks = @("OLYMPUS-Production", "OLYMPUS-Management")
+            Memory      = 6GB
+            VHDSize     = 80GB
+            CPUCount    = 3
+            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
         },
         @{
-            Name = "HERMES-FS01"
+            Name        = "HERMES-FS01"
             Description = "File Server - Messenger of the Gods"
-            Memory = 8GB
-            VHDSize = 200GB
-            CPUCount = 4
-            Networks = @("OLYMPUS-Production", "OLYMPUS-Management")
+            Memory      = 8GB
+            VHDSize     = 200GB
+            CPUCount    = 4
+            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
         },
         @{
-            Name = "APOLLO-WEB01"
+            Name        = "APOLLO-WEB01"
             Description = "Web/Application Server - God of Light and Knowledge"
-            Memory = 6GB
-            VHDSize = 100GB
-            CPUCount = 3
-            Networks = @("OLYMPUS-Production", "OLYMPUS-DMZ", "OLYMPUS-Management")
+            Memory      = 6GB
+            VHDSize     = 100GB
+            CPUCount    = 3
+            Networks    = @("OLYMPUS-Production", "OLYMPUS-DMZ", "OLYMPUS-Management")
         },
         @{
-            Name = "ATHENA-SEC01"
+            Name        = "ATHENA-SEC01"
             Description = "Security Server - Goddess of Wisdom and Warfare"
-            Memory = 8GB
-            VHDSize = 150GB
-            CPUCount = 4
-            Networks = @("OLYMPUS-Production", "OLYMPUS-Management")
+            Memory      = 8GB
+            VHDSize     = 150GB
+            CPUCount    = 4
+            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
         }
     )
     
@@ -303,6 +324,12 @@ function New-OlympusADScript {
 # ⚡ OLYMPUS SYSTEMS - Active Directory Configuration Script
 # Run this script on ZEUS-DC01 after promoting to Domain Controller
 
+# Get the default user password (this should be passed as a parameter)
+if (-not `$DefaultUserPassword) {
+    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    `$DefaultUserPassword = Read-Host -AsSecureString
+}
+
 # Configure DNS Forwarders
 Add-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1
 
@@ -331,39 +358,39 @@ New-ADGroup -Name "GRP-Domain_Admins_Olympus" -GroupScope Global -GroupCategory 
 New-ADGroup -Name "GRP-Security_Admins" -GroupScope Global -GroupCategory Security -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Create User Accounts - Divine Council (IT Operations)
-New-ADUser -Name "Zeus Supreme" -SamAccountName "zeus.supreme" -UserPrincipalName "zeus.supreme@olympus.local" -DisplayName "Zeus Supreme" -Department "Divine Council" -Title "CEO & Domain Admin" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Poseidon Seas" -SamAccountName "poseidon.seas" -UserPrincipalName "poseidon.seas@olympus.local" -DisplayName "Poseidon Seas" -Department "Divine Council" -Title "Senior Systems Engineer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Hades Underworld" -SamAccountName "hades.underworld" -UserPrincipalName "hades.underworld@olympus.local" -DisplayName "Hades Underworld" -Department "Divine Council" -Title "Database Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Hermes Messenger" -SamAccountName "hermes.messenger" -UserPrincipalName "hermes.messenger@olympus.local" -DisplayName "Hermes Messenger" -Department "Divine Council" -Title "Network Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Dionysus Wine" -SamAccountName "dionysus.wine" -UserPrincipalName "dionysus.wine@olympus.local" -DisplayName "Dionysus Wine" -Department "Divine Council" -Title "Junior Developer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
+New-ADUser -Name "Zeus Supreme" -SamAccountName "zeus.supreme" -UserPrincipalName "zeus.supreme@olympus.local" -DisplayName "Zeus Supreme" -Department "Divine Council" -Title "CEO & Domain Admin" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Poseidon Seas" -SamAccountName "poseidon.seas" -UserPrincipalName "poseidon.seas@olympus.local" -DisplayName "Poseidon Seas" -Department "Divine Council" -Title "Senior Systems Engineer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Hades Underworld" -SamAccountName "hades.underworld" -UserPrincipalName "hades.underworld@olympus.local" -DisplayName "Hades Underworld" -Department "Divine Council" -Title "Database Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Hermes Messenger" -SamAccountName "hermes.messenger" -UserPrincipalName "hermes.messenger@olympus.local" -DisplayName "Hermes Messenger" -Department "Divine Council" -Title "Network Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Dionysus Wine" -SamAccountName "dionysus.wine" -UserPrincipalName "dionysus.wine@olympus.local" -DisplayName "Dionysus Wine" -Department "Divine Council" -Title "Junior Developer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
 
 # Create User Accounts - War Strategists (Cybersecurity)
-New-ADUser -Name "Athena Wisdom" -SamAccountName "athena.wisdom" -UserPrincipalName "athena.wisdom@olympus.local" -DisplayName "Athena Wisdom" -Department "War Strategists" -Title "CTO & CISO" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Ares War" -SamAccountName "ares.war" -UserPrincipalName "ares.war@olympus.local" -DisplayName "Ares War" -Department "War Strategists" -Title "Security Operations Manager" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Nike Victory" -SamAccountName "nike.victory" -UserPrincipalName "nike.victory@olympus.local" -DisplayName "Nike Victory" -Department "War Strategists" -Title "Incident Response Lead" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Kratos Strength" -SamAccountName "kratos.strength" -UserPrincipalName "kratos.strength@olympus.local" -DisplayName "Kratos Strength" -Department "War Strategists" -Title "Penetration Tester" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Bia Force" -SamAccountName "bia.force" -UserPrincipalName "bia.force@olympus.local" -DisplayName "Bia Force" -Department "War Strategists" -Title "SOC Analyst" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
+New-ADUser -Name "Athena Wisdom" -SamAccountName "athena.wisdom" -UserPrincipalName "athena.wisdom@olympus.local" -DisplayName "Athena Wisdom" -Department "War Strategists" -Title "CTO & CISO" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Ares War" -SamAccountName "ares.war" -UserPrincipalName "ares.war@olympus.local" -DisplayName "Ares War" -Department "War Strategists" -Title "Security Operations Manager" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Nike Victory" -SamAccountName "nike.victory" -UserPrincipalName "nike.victory@olympus.local" -DisplayName "Nike Victory" -Department "War Strategists" -Title "Incident Response Lead" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Kratos Strength" -SamAccountName "kratos.strength" -UserPrincipalName "kratos.strength@olympus.local" -DisplayName "Kratos Strength" -Department "War Strategists" -Title "Penetration Tester" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Bia Force" -SamAccountName "bia.force" -UserPrincipalName "bia.force@olympus.local" -DisplayName "Bia Force" -Department "War Strategists" -Title "SOC Analyst" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
 
 # Create User Accounts - Innovation Forge (R&D)
-New-ADUser -Name "Apollo Light" -SamAccountName "apollo.light" -UserPrincipalName "apollo.light@olympus.local" -DisplayName "Apollo Light" -Department "Innovation Forge" -Title "Head of Innovation" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Artemis Hunt" -SamAccountName "artemis.hunt" -UserPrincipalName "artemis.hunt@olympus.local" -DisplayName "Artemis Hunt" -Department "Innovation Forge" -Title "AI Research Scientist" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Hephaestus Forge" -SamAccountName "hephaestus.forge" -UserPrincipalName "hephaestus.forge@olympus.local" -DisplayName "Hephaestus Forge" -Department "Innovation Forge" -Title "Senior Developer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Prometheus Fire" -SamAccountName "prometheus.fire" -UserPrincipalName "prometheus.fire@olympus.local" -DisplayName "Prometheus Fire" -Department "Innovation Forge" -Title "Data Scientist" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Daedalus Craft" -SamAccountName "daedalus.craft" -UserPrincipalName "daedalus.craft@olympus.local" -DisplayName "Daedalus Craft" -Department "Innovation Forge" -Title "DevOps Engineer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
+New-ADUser -Name "Apollo Light" -SamAccountName "apollo.light" -UserPrincipalName "apollo.light@olympus.local" -DisplayName "Apollo Light" -Department "Innovation Forge" -Title "Head of Innovation" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Artemis Hunt" -SamAccountName "artemis.hunt" -UserPrincipalName "artemis.hunt@olympus.local" -DisplayName "Artemis Hunt" -Department "Innovation Forge" -Title "AI Research Scientist" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Hephaestus Forge" -SamAccountName "hephaestus.forge" -UserPrincipalName "hephaestus.forge@olympus.local" -DisplayName "Hephaestus Forge" -Department "Innovation Forge" -Title "Senior Developer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Prometheus Fire" -SamAccountName "prometheus.fire" -UserPrincipalName "prometheus.fire@olympus.local" -DisplayName "Prometheus Fire" -Department "Innovation Forge" -Title "Data Scientist" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Daedalus Craft" -SamAccountName "daedalus.craft" -UserPrincipalName "daedalus.craft@olympus.local" -DisplayName "Daedalus Craft" -Department "Innovation Forge" -Title "DevOps Engineer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
 
 # Create User Accounts - Abundance Treasury (Finance)
-New-ADUser -Name "Hera Queen" -SamAccountName "hera.queen" -UserPrincipalName "hera.queen@olympus.local" -DisplayName "Hera Queen" -Department "Abundance Treasury" -Title "CFO" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Demeter Harvest" -SamAccountName "demeter.harvest" -UserPrincipalName "demeter.harvest@olympus.local" -DisplayName "Demeter Harvest" -Department "Abundance Treasury" -Title "Financial Analyst" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Plutus Wealth" -SamAccountName "plutus.wealth" -UserPrincipalName "plutus.wealth@olympus.local" -DisplayName "Plutus Wealth" -Department "Abundance Treasury" -Title "Accounting Manager" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Tyche Fortune" -SamAccountName "tyche.fortune" -UserPrincipalName "tyche.fortune@olympus.local" -DisplayName "Tyche Fortune" -Department "Abundance Treasury" -Title "Risk Analyst" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Nemesis Balance" -SamAccountName "nemesis.balance" -UserPrincipalName "nemesis.balance@olympus.local" -DisplayName "Nemesis Balance" -Department "Abundance Treasury" -Title "Compliance Officer" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
+New-ADUser -Name "Hera Queen" -SamAccountName "hera.queen" -UserPrincipalName "hera.queen@olympus.local" -DisplayName "Hera Queen" -Department "Abundance Treasury" -Title "CFO" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Demeter Harvest" -SamAccountName "demeter.harvest" -UserPrincipalName "demeter.harvest@olympus.local" -DisplayName "Demeter Harvest" -Department "Abundance Treasury" -Title "Financial Analyst" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Plutus Wealth" -SamAccountName "plutus.wealth" -UserPrincipalName "plutus.wealth@olympus.local" -DisplayName "Plutus Wealth" -Department "Abundance Treasury" -Title "Accounting Manager" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Tyche Fortune" -SamAccountName "tyche.fortune" -UserPrincipalName "tyche.fortune@olympus.local" -DisplayName "Tyche Fortune" -Department "Abundance Treasury" -Title "Risk Analyst" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Nemesis Balance" -SamAccountName "nemesis.balance" -UserPrincipalName "nemesis.balance@olympus.local" -DisplayName "Nemesis Balance" -Department "Abundance Treasury" -Title "Compliance Officer" -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
 
 # Create User Accounts - Harmony Relations (HR)
-New-ADUser -Name "Aphrodite Harmony" -SamAccountName "aphrodite.harmony" -UserPrincipalName "aphrodite.harmony@olympus.local" -DisplayName "Aphrodite Harmony" -Department "Harmony Relations" -Title "HR Director" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Eros Love" -SamAccountName "eros.love" -UserPrincipalName "eros.love@olympus.local" -DisplayName "Eros Love" -Department "Harmony Relations" -Title "Talent Acquisition" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Psyche Soul" -SamAccountName "psyche.soul" -UserPrincipalName "psyche.soul@olympus.local" -DisplayName "Psyche Soul" -Department "Harmony Relations" -Title "Training Coordinator" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Harmonia Peace" -SamAccountName "harmonia.peace" -UserPrincipalName "harmonia.peace@olympus.local" -DisplayName "Harmonia Peace" -Department "Harmony Relations" -Title "Employee Relations" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
-New-ADUser -Name "Iris Rainbow" -SamAccountName "iris.rainbow" -UserPrincipalName "iris.rainbow@olympus.local" -DisplayName "Iris Rainbow" -Department "Harmony Relations" -Title "Communications Specialist" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled `$true
+New-ADUser -Name "Aphrodite Harmony" -SamAccountName "aphrodite.harmony" -UserPrincipalName "aphrodite.harmony@olympus.local" -DisplayName "Aphrodite Harmony" -Department "Harmony Relations" -Title "HR Director" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Eros Love" -SamAccountName "eros.love" -UserPrincipalName "eros.love@olympus.local" -DisplayName "Eros Love" -Department "Harmony Relations" -Title "Talent Acquisition" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Psyche Soul" -SamAccountName "psyche.soul" -UserPrincipalName "psyche.soul@olympus.local" -DisplayName "Psyche Soul" -Department "Harmony Relations" -Title "Training Coordinator" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Harmonia Peace" -SamAccountName "harmonia.peace" -UserPrincipalName "harmonia.peace@olympus.local" -DisplayName "Harmonia Peace" -Department "Harmony Relations" -Title "Employee Relations" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+New-ADUser -Name "Iris Rainbow" -SamAccountName "iris.rainbow" -UserPrincipalName "iris.rainbow@olympus.local" -DisplayName "Iris Rainbow" -Department "Harmony Relations" -Title "Communications Specialist" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
 
 # Add users to groups
 Add-ADGroupMember -Identity "GRP-Divine_Council" -Members "zeus.supreme", "poseidon.seas", "hades.underworld", "hermes.messenger", "dionysus.wine"
@@ -455,7 +482,8 @@ try {
     if ($result) {
         Write-OlympusLog "Deployment completed successfully" "SUCCESS"
         exit 0
-    } else {
+    }
+    else {
         Write-OlympusLog "Deployment failed" "ERROR"
         exit 1
     }

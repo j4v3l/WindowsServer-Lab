@@ -36,16 +36,19 @@ The tutorials are organized in a logical sequence from initial setup to advanced
 #### Core Setup and Administration (1-4)
 
 1. [Lab Environment Setup](LabSetupTutorials/01_Setup_Lab_Environment.md)
+
    - Initial environment configuration
    - Basic infrastructure setup
    - Prerequisites for all other tutorials
 
 2. [Active Directory Management](LabSetupTutorials/02_Manage_Users_Computers_AD.md)
+
    - User and computer management
    - Active Directory basics
    - Required for all user/group management
 
 3. [AD Groups Management](LabSetupTutorials/03_AD_Groups_Management.md)
+
    - Group creation and management
    - Group policy considerations
    - Builds on AD Management
@@ -58,6 +61,7 @@ The tutorials are organized in a logical sequence from initial setup to advanced
 #### Maintenance and Troubleshooting (5-6)
 
 5. [Troubleshooting Guide](LabSetupTutorials/05_Troubleshooting.md)
+
    - Common issues and solutions
    - Diagnostic procedures
    - Reference for all other tutorials
@@ -70,6 +74,7 @@ The tutorials are organized in a logical sequence from initial setup to advanced
 #### Practical Applications (7-8)
 
 7. [Lab Scenarios](LabSetupTutorials/07_Lab_Scenarios.md)
+
    - Common lab configurations
    - Use case examples
    - Practical applications of previous tutorials
@@ -82,36 +87,43 @@ The tutorials are organized in a logical sequence from initial setup to advanced
 #### Advanced Topics (9-15)
 
 9. [Security Hardening](LabSetupTutorials/09_Security_Hardening.md)
+
    - Security best practices
    - System hardening procedures
    - Advanced security concepts
 
 10. [Automation and Scripting](LabSetupTutorials/10_Automation_and_Scripting.md)
+
     - Automation strategies
     - Scripting guidelines
     - PowerShell automation
 
 11. [Naming Conventions](LabSetupTutorials/11_Naming_Conventions.md)
+
     - Standard naming schemes
     - Best practices
     - Organization standards
 
 12. [Disaster Recovery](LabSetupTutorials/12_Disaster_Recovery.md)
+
     - Backup and recovery procedures
     - Business continuity planning
     - Critical operations
 
 13. [Additional Servers Setup](LabSetupTutorials/13_Additional_Servers_Setup.md)
+
     - Server role configuration
     - Additional services setup
     - Advanced server deployment
 
 14. [Additional Clients Setup](LabSetupTutorials/14_Additional_Clients_Setup.md)
+
     - Client deployment
     - Client configuration
     - End-user management
 
 15. [DHCP Server Setup](LabSetupTutorials/15_DHCP_Server_Setup.md)
+
     - DHCP role installation
     - Scope configuration
     - Reservations, exclusions, and best practices
@@ -141,6 +153,43 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
 - [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
 - [Hyper-V Management Script](Scripts/Hyper-V_Management.ps1) - Hyper-V lab lifecycle management
+
+## 🔒 Security Features
+
+### Secure Password Management
+
+All scripts in this lab environment follow security best practices:
+
+- **No Hardcoded Passwords**: All passwords are prompted securely at runtime
+- **SecureString Handling**: Passwords are handled using PowerShell's SecureString type
+- **Runtime Prompts**: Users are prompted for passwords when needed:
+  - Safe Mode (DSRM) passwords for domain controllers
+  - Default passwords for user account creation
+  - Administrative passwords for service accounts
+
+### Example Usage with Secure Passwords
+
+```powershell
+# When running scripts, you'll be prompted for passwords:
+.\Scripts\Lab_Setup.ps1
+# Prompts: "Please enter the default password for new user accounts:"
+
+# For automated scenarios, you can pre-provide SecureString parameters:
+$securePassword = Read-Host -AsSecureString -Prompt "Enter password"
+.\Scripts\Create-LabUsers.ps1 -DefaultUserPassword $securePassword
+
+# Demo environment scripts also follow the same pattern:
+.\Demo\Scripts\Deploy-AsgardLab.ps1
+# Prompts for both Safe Mode and Default User passwords
+```
+
+### Security Compliance
+
+- ✅ **No plaintext passwords in code**
+- ✅ **PSScriptAnalyzer validated** (0 critical security errors)
+- ✅ **Secure parameter handling**
+- ✅ **Runtime password validation**
+- ✅ **Proper error handling for security operations**
 
 ## Learning Path
 
@@ -172,7 +221,7 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
    ```powershell
    # Import the module
    Import-Module .\Scripts\WindowsServerLab.psd1 -Force
-   
+
    # Verify module loaded
    Get-Command -Module WindowsServerLab
    ```
@@ -182,13 +231,20 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
    ```powershell
    # Test prerequisites first
    Test-LabEnvironment -Detailed
-   
-   # Create complete lab environment
+
+   # Create complete lab environment (you'll be prompted for passwords)
    New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
-   
+
    # Check lab status
    Get-LabStatus
    ```
+
+   **Security Note:** All scripts now use secure password prompts instead of hardcoded passwords. You'll be prompted to enter:
+
+   - **Safe Mode Password**: For domain controller restore mode
+   - **Default User Password**: For new user accounts
+
+   Passwords are entered securely and never stored in plain text.
 
 ### Manual Setup Options
 
@@ -209,18 +265,18 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 
 Once the module is imported, you have access to these commands:
 
-| Command | Description |
-|---------|-------------|
-| `New-LabEnvironment` | Create complete lab environment |
-| `Test-LabEnvironment` | Validate lab configuration |
-| `Start-LabVMs` | Start all or specific lab VMs |
-| `Stop-LabVMs` | Stop all or specific lab VMs |
-| `Get-LabStatus` | Get current lab status |
-| `New-LabUsers` | Create lab users and OUs |
-| `Invoke-LabSecurityAudit` | Run security audit |
-| `Set-LabGroupPolicy` | Configure Group Policy |
-| `Set-LabConfiguration` | Modify lab settings |
-| `Get-LabConfiguration` | Get current lab settings |
+| Command                   | Description                     |
+| ------------------------- | ------------------------------- |
+| `New-LabEnvironment`      | Create complete lab environment |
+| `Test-LabEnvironment`     | Validate lab configuration      |
+| `Start-LabVMs`            | Start all or specific lab VMs   |
+| `Stop-LabVMs`             | Stop all or specific lab VMs    |
+| `Get-LabStatus`           | Get current lab status          |
+| `New-LabUsers`            | Create lab users and OUs        |
+| `Invoke-LabSecurityAudit` | Run security audit              |
+| `Set-LabGroupPolicy`      | Configure Group Policy          |
+| `Set-LabConfiguration`    | Modify lab settings             |
+| `Get-LabConfiguration`    | Get current lab settings        |
 
 ## Contributing
 
@@ -237,7 +293,7 @@ We welcome contributions! Our project includes comprehensive templates and commu
 Use our structured issue templates for better assistance:
 
 - **[Bug Reports](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=bug_report.yml)**: Detailed environment and reproduction steps
-- **[Feature Requests](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=feature_request.yml)**: Categorized with priority assessment  
+- **[Feature Requests](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=feature_request.yml)**: Categorized with priority assessment
 - **[Questions](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=question.yml)**: Help with guided troubleshooting
 
 ### 🔒 Security & Safety

@@ -63,10 +63,12 @@ function Get-LabVMs {
     
     if ($SpecificVM) {
         return Get-VM -Name $SpecificVM -ErrorAction SilentlyContinue
-    } elseif ($All) {
+    }
+    elseif ($All) {
         return Get-VM
-    } else {
-        return Get-VM | Where-Object {$_.Name -like "*LAB*" -or $_.Name -like "DC1*" -or $_.Name -like "FS1*" -or $_.Name -like "WEB1*" -or $_.Name -like "CL1*"}
+    }
+    else {
+        return Get-VM | Where-Object { $_.Name -like "*LAB*" -or $_.Name -like "DC1*" -or $_.Name -like "FS1*" -or $_.Name -like "WEB1*" -or $_.Name -like "CL1*" }
     }
 }
 
@@ -86,14 +88,15 @@ function Show-VMStatus {
         $memory = "{0:N1} GB" -f ($vm.MemoryAssigned / 1GB)
         $uptime = if ($vm.Uptime) { 
             "{0:dd}d {0:hh}h {0:mm}m" -f $vm.Uptime 
-        } else { 
+        }
+        else { 
             "N/A" 
         }
         
         $vmData += [PSCustomObject]@{
-            Name = $vm.Name
-            State = $vm.State
-            CPUs = $vm.ProcessorCount
+            Name   = $vm.Name
+            State  = $vm.State
+            CPUs   = $vm.ProcessorCount
             Memory = $memory
             Uptime = $uptime
             Status = $vm.Status
@@ -116,9 +119,9 @@ function Show-VMStatus {
     
     # Resource Usage Summary
     Write-ColorOutput "`nResource Usage:" $InfoColor
-    $totalMemory = ($vms | Where-Object {$_.State -eq "Running"} | Measure-Object MemoryAssigned -Sum).Sum / 1GB
-    $totalCPUs = ($vms | Where-Object {$_.State -eq "Running"} | Measure-Object ProcessorCount -Sum).Sum
-    $runningVMs = ($vms | Where-Object {$_.State -eq "Running"}).Count
+    $totalMemory = ($vms | Where-Object { $_.State -eq "Running" } | Measure-Object MemoryAssigned -Sum).Sum / 1GB
+    $totalCPUs = ($vms | Where-Object { $_.State -eq "Running" } | Measure-Object ProcessorCount -Sum).Sum
+    $runningVMs = ($vms | Where-Object { $_.State -eq "Running" }).Count
     
     Write-ColorOutput "  Running VMs: $runningVMs" $DebugColor
     Write-ColorOutput "  Total Memory Assigned: $($totalMemory.ToString('N1')) GB" $DebugColor
@@ -142,7 +145,8 @@ function Start-LabVMs {
             catch {
                 Write-ColorOutput "✗ Failed to start $($vm.Name): $($_.Exception.Message)" $ErrorColor
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "⚠ $($vm.Name) is already $($vm.State)" $WarningColor
         }
     }
@@ -181,7 +185,8 @@ function Stop-LabVMs {
                     Write-ColorOutput "✗ Failed to stop $($vm.Name): $($_.Exception.Message)" $ErrorColor
                 }
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "⚠ $($vm.Name) is already $($vm.State)" $WarningColor
         }
     }
@@ -204,7 +209,8 @@ function Restart-LabVMs {
             catch {
                 Write-ColorOutput "✗ Failed to restart $($vm.Name): $($_.Exception.Message)" $ErrorColor
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "⚠ $($vm.Name) is not running (State: $($vm.State))" $WarningColor
         }
     }
@@ -254,7 +260,8 @@ function Restore-LabVMs {
                 $cp = $checkpoints[$i]
                 Write-ColorOutput "  [$i] $($cp.Name) - $($cp.CreationTime)" $DebugColor
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "$($vm.Name): No checkpoints available" $WarningColor
         }
     }
@@ -289,7 +296,7 @@ function Show-NetworkDiagnostics {
     Write-ColorOutput "`nVirtual Switches:" $InfoColor
     $switches = Get-VMSwitch
     foreach ($switch in $switches) {
-        $vmCount = (Get-VM | Get-VMNetworkAdapter | Where-Object {$_.SwitchName -eq $switch.Name}).Count
+        $vmCount = (Get-VM | Get-VMNetworkAdapter | Where-Object { $_.SwitchName -eq $switch.Name }).Count
         Write-ColorOutput "  $($switch.Name) [$($switch.SwitchType)] - $vmCount VMs connected" $DebugColor
         
         if ($switch.SwitchType -eq "External") {
@@ -302,7 +309,7 @@ function Show-NetworkDiagnostics {
     
     # Network Adapters with IP Configuration
     Write-ColorOutput "`nHost Network Adapters:" $InfoColor
-    $adapters = Get-NetAdapter | Where-Object {$_.Name -like "*vEthernet*"}
+    $adapters = Get-NetAdapter | Where-Object { $_.Name -like "*vEthernet*" }
     foreach ($adapter in $adapters) {
         $ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
         $status = "$($adapter.Status)"
@@ -319,7 +326,8 @@ function Show-NetworkDiagnostics {
         foreach ($nat in $nats) {
             Write-ColorOutput "  $($nat.Name): $($nat.InternalIPInterfaceAddressPrefix)" $DebugColor
         }
-    } else {
+    }
+    else {
         Write-ColorOutput "  No NAT configurations found" $WarningColor
     }
     
@@ -341,11 +349,11 @@ function Show-NetworkDiagnostics {
     # Connectivity Tests
     Write-ColorOutput "`nConnectivity Tests:" $InfoColor
     $testHosts = @("8.8.8.8", "1.1.1.1", "google.com")
-    foreach ($host in $testHosts) {
-        $result = Test-NetConnection -ComputerName $host -InformationLevel Quiet -WarningAction SilentlyContinue
+    foreach ($testHost in $testHosts) {
+        $result = Test-NetConnection -ComputerName $testHost -InformationLevel Quiet -WarningAction SilentlyContinue
         $status = if ($result) { "✓ Success" } else { "✗ Failed" }
         $color = if ($result) { $InfoColor } else { $ErrorColor }
-        Write-ColorOutput "  $host`: $status" $color
+        Write-ColorOutput "  $testHost`: $status" $color
     }
 }
 
@@ -395,7 +403,8 @@ function Invoke-Cleanup {
                     Write-ColorOutput "✗ Failed to optimize VHD $($vhd.Path): $($_.Exception.Message)" $ErrorColor
                 }
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "⚠ Skipping $($vm.Name) - VM must be turned off for VHD optimization" $WarningColor
         }
     }
@@ -423,7 +432,7 @@ function Show-PerformanceMonitor {
             
             # VM Performance
             Write-ColorOutput "`nVM Performance:" $InfoColor
-            $vms = Get-LabVMs | Where-Object {$_.State -eq "Running"}
+            $vms = Get-LabVMs | Where-Object { $_.State -eq "Running" }
             foreach ($vm in $vms) {
                 $vmCpu = Get-Counter "\Hyper-V Hypervisor Virtual Processor($($vm.Name):Hv VP *)\% Guest Run Time" -SampleInterval 1 -MaxSamples 1 -ErrorAction SilentlyContinue
                 if ($vmCpu) {

@@ -33,19 +33,25 @@ You need to migrate 50 users from one OU to another while maintaining their grou
 2. Create test users:
 
    ```powershell
+   # Get secure password for test users
+   $SecurePassword = Read-Host -AsSecureString -Prompt "Enter password for test users"
+
    for ($i=1; $i -le 50; $i++) {
        New-ADUser -Name "User$i" `
                   -SamAccountName "user$i" `
                   -Path "OU=SourceOU,DC=lab,DC=local" `
-                  -AccountPassword (ConvertTo-SecureString "P@ssw0rd123" -AsPlainText -Force) `
-                  -Enabled $true
+                  -AccountPassword $SecurePassword `
+                  -Enabled $true `
+                  -ChangePasswordAtLogon $true
    }
    ```
+
+   **Security Note:** This approach ensures no hardcoded passwords and prompts for secure password entry.
 
 3. Migrate users:
 
    ```powershell
-   Get-ADUser -Filter * -SearchBase "OU=SourceOU,DC=lab,DC=local" | 
+   Get-ADUser -Filter * -SearchBase "OU=SourceOU,DC=lab,DC=local" |
    ForEach-Object {
        Move-ADObject -Identity $_.DistinguishedName -TargetPath "OU=DestinationOU,DC=lab,DC=local"
    }
@@ -72,6 +78,7 @@ Test a new GPO that will deploy a shared printer to all users in the IT departme
    ```
 
 3. Configure printer settings:
+
    - Open GPO Editor
    - Navigate to User Configuration
    - Add shared printer
@@ -97,6 +104,7 @@ Simulate a domain controller failure and practice recovery procedures.
    ```
 
 2. Simulate failure:
+
    - Stop AD services
    - Corrupt system files
    - Disable network adapter

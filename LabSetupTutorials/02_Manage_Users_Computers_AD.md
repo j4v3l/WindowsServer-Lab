@@ -28,6 +28,7 @@ Think of user accounts like digital ID cards. Each user needs one to:
 OUs are like folders that help organize your users and computers.
 
 1. Open Active Directory Users and Computers:
+
    - Press `Windows + R`
    - Type `dsa.msc`
    - Press Enter
@@ -55,12 +56,18 @@ Let's create a user account for John in the IT department:
    ```
 
 3. Click Next
-4. Set a password:
+4. Set a secure password:
 
    ```
-   Password: P@ssw0rd123
+   Password: [Enter a secure password meeting domain policy]
    Check: "User must change password at next logon"
    ```
+
+   **Password Requirements:**
+
+   - At least 8 characters (or as configured in domain policy)
+   - Mix of uppercase, lowercase, numbers, and symbols
+   - Not based on username or dictionary words
 
 5. Click Finish
 
@@ -141,17 +148,26 @@ Computer accounts are like user accounts for machines. They help:
 Here's a PowerShell script to create multiple users (save as `Create-Users.ps1`):
 
 ```powershell
-# Create IT Users
+# Create IT Users with secure password prompts
+$SecurePassword = Read-Host -AsSecureString -Prompt "Enter default password for new users"
+
 New-ADUser -Name "John Smith" -GivenName "John" -Surname "Smith" `
     -SamAccountName "john.smith" -UserPrincipalName "john.smith@lab.local" `
-    -Path "OU=IT,DC=lab,DC=local" -AccountPassword (ConvertTo-SecureString "P@ssw0rd123" -AsPlainText -Force) `
+    -Path "OU=IT,DC=lab,DC=local" -AccountPassword $SecurePassword `
     -Enabled $true -ChangePasswordAtLogon $true
 
 New-ADUser -Name "Sarah Johnson" -GivenName "Sarah" -Surname "Johnson" `
     -SamAccountName "sarah.johnson" -UserPrincipalName "sarah.johnson@lab.local" `
-    -Path "OU=IT,DC=lab,DC=local" -AccountPassword (ConvertTo-SecureString "P@ssw0rd123" -AsPlainText -Force) `
+    -Path "OU=IT,DC=lab,DC=local" -AccountPassword $SecurePassword `
     -Enabled $true -ChangePasswordAtLogon $true
 ```
+
+**Security Benefits:**
+
+- ✅ No hardcoded passwords in scripts
+- ✅ Password entered securely as SecureString
+- ✅ Can reuse secure password for multiple user creation
+- ✅ Follows PowerShell security best practices
 
 ## 🎯 Common Tasks
 

@@ -70,6 +70,7 @@ Think of a virtual machine (VM) as a computer within your computer. Here's how t
 If you followed the [Hyper-V Setup Guide](16_Hyper-V_Setup_and_Configuration.md), your VM should have two network adapters:
 
 1. **External Adapter** (for internet access):
+
    - IP Address: 192.168.1.100 (or your network range)
    - Subnet Mask: 255.255.255.0
    - Default Gateway: 192.168.1.1 (your router)
@@ -117,8 +118,9 @@ Active Directory is like a phone book for your network - it keeps track of all u
    - Click "Next"
 2. Set a Directory Services Restore Mode (DSRM) password:
    - This is like a master key for your domain
-   - Use a strong password and write it down
-   - Example: `P@ssw0rd123!`
+   - Use a strong password and write it down securely
+   - **Important**: This password is required when using the automated lab scripts
+   - Requirements: At least 8 characters with complexity (uppercase, lowercase, numbers, symbols)
 3. Click "Next" through the remaining steps
 4. Click "Install"
 5. The server will restart automatically
@@ -143,6 +145,45 @@ You've just set up your first Windows Server domain! This is the foundation for:
 - Creating shared resources
 - And much more!
 
+## 🤖 Automated Setup Alternative
+
+Instead of manual setup, you can use our automated PowerShell scripts:
+
+### Using the Lab Setup Scripts
+
+```powershell
+# Navigate to the Scripts directory
+cd Scripts
+
+# Run the automated lab setup (you'll be prompted for passwords)
+.\Lab_Setup.ps1
+
+# Or run individual components
+.\Create-LabUsers.ps1          # Creates users and groups
+.\Lab-FinishSetup.ps1          # Completes post-installation setup
+```
+
+### Password Requirements for Automated Scripts
+
+When using the automated scripts, you'll be prompted for:
+
+1. **Safe Mode Password** (same as DSRM password above)
+
+   - Used for domain controller recovery
+   - Must meet complexity requirements
+
+2. **Default User Password** (for newly created accounts)
+   - Applied to all lab user accounts
+   - Users will be prompted to change on first login
+   - Must meet domain password policy
+
+### Security Benefits
+
+- 🔒 **No hardcoded passwords** in any scripts
+- 🔐 **Secure password entry** using PowerShell's SecureString
+- ✅ **Runtime validation** ensures passwords meet requirements
+- 🛡️ **Security audit compliant** (0 critical vulnerabilities)
+
 ## 📚 Next Steps
 
 - Learn how to create users and computers in [02_Manage_Users_Computers_AD.md](02_Manage_Users_Computers_AD.md)
@@ -152,10 +193,12 @@ You've just set up your first Windows Server domain! This is the foundation for:
 ## ❓ Common Issues and Solutions
 
 1. **Can't connect to the internet?**
+
    - Check your network adapter settings
    - Make sure your IP settings are correct
 
 2. **Installation fails?**
+
    - Make sure you have enough disk space
    - Verify your ISO file isn't corrupted
 

@@ -24,7 +24,10 @@ param(
     [string]$DomainName = "asgard.local",
     [string]$VMPath = "C:\VMs\Asgard",
     [string]$ISOPath = "",
-    [string]$SafeModePassword = "P@ssw0rd123!",
+    [Parameter(Mandatory = $false)]
+    [System.Security.SecureString]$SafeModePassword,
+    [Parameter(Mandatory = $false)]
+    [System.Security.SecureString]$DefaultUserPassword,
     [switch]$SkipVMs = $false,
     [switch]$SkipNetworking = $false,
     [switch]$SkipAD = $false,
@@ -34,6 +37,23 @@ param(
 # Enhanced logging and error handling
 $ErrorActionPreference = "Stop"
 $LogPath = Join-Path $env:TEMP "Asgard-Lab-Deployment.log"
+
+# Get secure passwords if not provided
+if (-not $SafeModePassword) {
+    Write-Host "Please enter the Safe Mode (DSRM) password for domain controllers:" -ForegroundColor Yellow
+    $SafeModePassword = Read-Host -AsSecureString
+}
+
+if (-not $DefaultUserPassword) {
+    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    $DefaultUserPassword = Read-Host -AsSecureString
+}
+
+# Validate passwords are provided
+if (-not $SafeModePassword -or -not $DefaultUserPassword) {
+    Write-Error "Both Safe Mode and Default User passwords are required. Exiting."
+    exit 1
+}
 
 function Write-AsgardLog {
     param(
@@ -92,7 +112,7 @@ function New-AsgardNetworks {
         }
         
         # Create Production Network (External)
-        $physicalAdapters = Get-NetAdapter -Physical | Where-Object {$_.Status -eq "Up"}
+        $physicalAdapters = Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" }
         if ($physicalAdapters.Count -gt 0) {
             $targetAdapter = $physicalAdapters | Select-Object -First 1
             New-VMSwitch -Name "ASGARD-Production" -NetAdapterName $targetAdapter.Name -AllowManagementOS $true -ErrorAction SilentlyContinue
@@ -155,7 +175,8 @@ function New-AsgardVM {
         if ($existingVM -and -not $Force) {
             Write-AsgardLog "VM $VMName already exists" "WARNING"
             return $true
-        } elseif ($existingVM -and $Force) {
+        }
+        elseif ($existingVM -and $Force) {
             Write-AsgardLog "Removing existing VM: $VMName" "WARNING"
             Stop-VM -Name $VMName -Force -ErrorAction SilentlyContinue
             Remove-VM -Name $VMName -Force
@@ -222,43 +243,43 @@ function New-AsgardServers {
     # Define server specifications (Optimized for 64GB RAM, 24 threads)
     $servers = @(
         @{
-            Name = "ODIN-DC01"
-            Memory = 8GB
-            VHDSize = 80GB
-            CPUCount = 4
-            Networks = @("ASGARD-Production", "ASGARD-Management")
+            Name        = "ODIN-DC01"
+            Memory      = 8GB
+            VHDSize     = 80GB
+            CPUCount    = 4
+            Networks    = @("ASGARD-Production", "ASGARD-Management")
             Description = "Primary Domain Controller - Odin's Throne"
         },
         @{
-            Name = "FRIGG-DC02"
-            Memory = 6GB
-            VHDSize = 80GB
-            CPUCount = 3
-            Networks = @("ASGARD-Production", "ASGARD-Management")
+            Name        = "FRIGG-DC02"
+            Memory      = 6GB
+            VHDSize     = 80GB
+            CPUCount    = 3
+            Networks    = @("ASGARD-Production", "ASGARD-Management")
             Description = "Secondary Domain Controller - Frigg's Wisdom"
         },
         @{
-            Name = "HEIMDALL-FS01"
-            Memory = 8GB
-            VHDSize = 200GB
-            CPUCount = 4
-            Networks = @("ASGARD-Production", "ASGARD-Management")
+            Name        = "HEIMDALL-FS01"
+            Memory      = 8GB
+            VHDSize     = 200GB
+            CPUCount    = 4
+            Networks    = @("ASGARD-Production", "ASGARD-Management")
             Description = "File Server - Heimdall's Vault"
         },
         @{
-            Name = "BALDER-WEB01"
-            Memory = 6GB
-            VHDSize = 100GB
-            CPUCount = 3
-            Networks = @("ASGARD-Production", "ASGARD-DMZ", "ASGARD-Management")
+            Name        = "BALDER-WEB01"
+            Memory      = 6GB
+            VHDSize     = 100GB
+            CPUCount    = 3
+            Networks    = @("ASGARD-Production", "ASGARD-DMZ", "ASGARD-Management")
             Description = "Web/Application Server - Balder's Light"
         },
         @{
-            Name = "VIDAR-SEC01"
-            Memory = 8GB
-            VHDSize = 150GB
-            CPUCount = 4
-            Networks = @("ASGARD-Production", "ASGARD-Management")
+            Name        = "VIDAR-SEC01"
+            Memory      = 8GB
+            VHDSize     = 150GB
+            CPUCount    = 4
+            Networks    = @("ASGARD-Production", "ASGARD-Management")
             Description = "Security & Monitoring - Vidar's Vengeance"
         }
     )
@@ -395,13 +416,11 @@ $users = @(
     @{Username="sigyn.faithful"; Name="Sigyn Faithful"; Department="Human_Resources"; Title="Employee Relations"; IsAdmin=$false}
 )
 
-$defaultPassword = ConvertTo-SecureString "AsgardP@ss123!" -AsPlainText -Force
-
 foreach ($user in $users) {
     $ouPath = "OU=$($user.Department),OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     $upn = "$($user.Username)@asgard.local"
     
-    New-ADUser -Name $user.Name -SamAccountName $user.Username -UserPrincipalName $upn -DisplayName $user.Name -Title $user.Title -Department $user.Department -Path $ouPath -AccountPassword $defaultPassword -Enabled $true -ChangePasswordAtLogon $false
+    New-ADUser -Name $user.Name -SamAccountName $user.Username -UserPrincipalName $upn -DisplayName $user.Name -Title $user.Title -Department $user.Department -Path $ouPath -AccountPassword $DefaultUserPassword -Enabled $true -ChangePasswordAtLogon $false
     
     # Add to department group
     Add-ADGroupMember -Identity "GRP-$($user.Department.Replace('_', ''))" -Members $user.Username -ErrorAction SilentlyContinue

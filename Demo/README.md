@@ -26,7 +26,7 @@ Greek mythology-themed Windows Server lab with advanced cloud integration and AI
 
 ### **⚡ Olympus Systems** (Advanced users)
 
-- **Focus**: Advanced cloud integration and AI/ML capabilities  
+- **Focus**: Advanced cloud integration and AI/ML capabilities
 - **Theme**: Greek mythology (Zeus, Athena, Apollo, etc.)
 - **Specialty**: Hybrid cloud, AI/ML pipelines, modern workloads
 - **📂 Location**: `Demo/Olympus/`
@@ -49,7 +49,7 @@ Demo/
 ├── README.md                          # This file - Demo environments overview
 ├── Scripts/                           # Asgard deployment and management scripts
 │   └── Deploy-AsgardLab.ps1          # Asgard deployment script
-├── Documentation/                     # Asgard technical documentation  
+├── Documentation/                     # Asgard technical documentation
 │   ├── DEMO_SETUP_GUIDE.md           # Asgard complete setup guide
 │   └── HARDWARE_PERFORMANCE_GUIDE.md # Hardware optimization guide
 ├── Guides/                           # Asgard quick-start and user guides
@@ -72,8 +72,18 @@ Demo/
 cd Demo/Scripts
 
 # Deploy the complete Asgard Technologies environment (25 VMs!)
+# You'll be prompted for secure passwords during deployment
 .\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ISOPath "C:\path\to\WindowsServer.iso"
 ```
+
+### **🔒 Security Requirements**
+
+The deployment script will prompt you for:
+
+- **Safe Mode Password**: For domain controller recovery
+- **Default User Password**: For all 25 Norse mythology user accounts
+
+All passwords are handled securely with no hardcoded credentials.
 
 ### **What You Get**
 
@@ -125,7 +135,7 @@ cd Demo/Scripts
 #### **Departments**
 
 1. **IT Operations** (Odin's Realm) - 5 users
-2. **Cybersecurity** (Heimdall's Watch) - 5 users  
+2. **Cybersecurity** (Heimdall's Watch) - 5 users
 3. **Research & Development** (Freya's Workshop) - 5 users
 4. **Finance & Administration** (Frigg's Treasury) - 5 users
 5. **Human Resources** (Sif's Domain) - 5 users
@@ -138,7 +148,7 @@ cd Demo/Scripts
 - **freya.seidr** - Head of R&D
 - **frigg.queen** - CFO
 - **sif.golden** - HR Director
-- *...and many more epic characters!*
+- _...and many more epic characters!_
 
 ---
 
@@ -146,19 +156,19 @@ cd Demo/Scripts
 
 ### **Server Infrastructure**
 
-| Server | Role | Specs | Purpose |
-|--------|------|-------|---------|
-| **ODIN-DC01** | Primary DC | 8GB/4CPU | Active Directory, DNS, DHCP |
-| **FRIGG-DC02** | Secondary DC | 6GB/3CPU | AD Replication, Backup |
-| **HEIMDALL-FS01** | File Server | 8GB/4CPU | File Storage, Shares, Backup |
-| **BALDER-WEB01** | Web Server | 6GB/3CPU | IIS, .NET, Applications |
-| **VIDAR-SEC01** | Security | 8GB/4CPU | WSUS, Monitoring, Security |
+| Server            | Role         | Specs    | Purpose                      |
+| ----------------- | ------------ | -------- | ---------------------------- |
+| **ODIN-DC01**     | Primary DC   | 8GB/4CPU | Active Directory, DNS, DHCP  |
+| **FRIGG-DC02**    | Secondary DC | 6GB/3CPU | AD Replication, Backup       |
+| **HEIMDALL-FS01** | File Server  | 8GB/4CPU | File Storage, Shares, Backup |
+| **BALDER-WEB01**  | Web Server   | 6GB/3CPU | IIS, .NET, Applications      |
+| **VIDAR-SEC01**   | Security     | 8GB/4CPU | WSUS, Monitoring, Security   |
 
 ### **Network Architecture**
 
 ```
 Production:  10.0.10.0/24  (Servers)
-Management:  10.0.100.0/24 (Admin Access) 
+Management:  10.0.100.0/24 (Admin Access)
 Clients:     10.0.20.0/22  (Workstations)
 DMZ:         10.0.50.0/24  (External Services)
 ```
@@ -166,7 +176,7 @@ DMZ:         10.0.50.0/24  (External Services)
 ### **Features Demonstrated**
 
 - ✅ Active Directory Domain Services
-- ✅ DNS & DHCP Configuration  
+- ✅ DNS & DHCP Configuration
 - ✅ File Shares & Permissions
 - ✅ Group Policy Management
 - ✅ Security Groups & User Management
@@ -193,7 +203,7 @@ DMZ:         10.0.50.0/24  (External Services)
 The demo environment supports any Windows Server scenario:
 
 - Multi-domain forests
-- Site-to-site replication  
+- Site-to-site replication
 - Certificate services
 - Web applications
 - Database services
@@ -207,7 +217,7 @@ The demo environment supports any Windows Server scenario:
 
 - **CPU**: AMD Ryzen 7900X (12 cores, 24 threads)
 - **RAM**: 64GB DDR5
-- **Storage**: 1TB NVMe SSD  
+- **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
 - **OS**: Windows 11 Pro with Hyper-V
 
@@ -262,7 +272,7 @@ Get-Counter "\Memory\Available MBytes"
 This demo showcases features from:
 
 - **📖 LabSetupTutorials/**: Step-by-step learning guides
-- **⚙️ Scripts/**: Core automation and management scripts  
+- **⚙️ Scripts/**: Core automation and management scripts
 - **📋 Documentation**: Contributing guidelines and project info
 
 ### **Using Core Scripts**
@@ -290,7 +300,7 @@ The demo leverages core project scripts:
 
 - Active Directory management
 - DNS/DHCP configuration
-- File server administration  
+- File server administration
 - Group policy creation
 - Security hardening
 - Performance monitoring
@@ -323,4 +333,4 @@ The **Asgard Technologies** demo represents the pinnacle of Windows Server lab e
 
 ---
 
-*For questions or contributions, see the main project's CONTRIBUTING.md file.*
+_For questions or contributions, see the main project's CONTRIBUTING.md file._

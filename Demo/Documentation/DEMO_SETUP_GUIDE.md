@@ -17,19 +17,21 @@
 
 ### **IP Address Scheme**
 
-| Network Zone | CIDR | Purpose | VLAN |
-|--------------|------|---------|------|
-| **Production** | `10.0.10.0/24` | Core servers and services | 10 |
-| **Management** | `10.0.100.0/24` | Administrative access | 100 |
-| **Client Networks** | `10.0.20.0/22` | Department workstations | 20-23 |
-| **DMZ** | `10.0.50.0/24` | External-facing services | 50 |
-| **IoT/Devices** | `10.0.60.0/24` | Printers, cameras, sensors | 60 |
+| Network Zone        | CIDR            | Purpose                    | VLAN  |
+| ------------------- | --------------- | -------------------------- | ----- |
+| **Production**      | `10.0.10.0/24`  | Core servers and services  | 10    |
+| **Management**      | `10.0.100.0/24` | Administrative access      | 100   |
+| **Client Networks** | `10.0.20.0/22`  | Department workstations    | 20-23 |
+| **DMZ**             | `10.0.50.0/24`  | External-facing services   | 50    |
+| **IoT/Devices**     | `10.0.60.0/24`  | Printers, cameras, sensors | 60    |
 
 ### **Virtual Switch Configuration**
 
+**Important Note:** When creating external VM switches, use `-NetAdapterName` instead of `-SwitchType External`. The `-AllowManagementOS $true` parameter allows the host OS to also use the network adapter.
+
 ```powershell
-# Core Production Network
-New-VMSwitch -Name "ASGARD-Production" -SwitchType External -NetAdapterName "Ethernet"
+# Core Production Network (External Switch)
+New-VMSwitch -Name "ASGARD-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
 
 # Management Network
 New-VMSwitch -Name "ASGARD-Management" -SwitchType Internal
@@ -390,15 +392,62 @@ HR Scope: 10.0.24.0/24 (Range: 10.0.24.100-200)
 
 ---
 
+## 🔒 **Security Configuration**
+
+### **Password Requirements**
+
+All Asgard Technologies lab environments now use secure password management:
+
+#### **Deployment Passwords**
+
+When using the automated deployment scripts, you'll be prompted for:
+
+1. **Safe Mode Password (DSRM)**
+
+   - Used for domain controller recovery operations
+   - Must meet complexity requirements (8+ chars, mixed case, numbers, symbols)
+   - Required for both ODIN-DC01 and FRIGG-DC02
+
+2. **Default User Password**
+   - Applied to all 25 Norse mythology user accounts
+   - Users must change password on first login
+   - Must meet domain password policy requirements
+
+#### **Security Benefits**
+
+- ✅ **No hardcoded passwords** in any scripts or documentation
+- ✅ **SecureString handling** for all password operations
+- ✅ **Runtime validation** ensures password complexity
+- ✅ **PSScriptAnalyzer compliant** (0 critical security issues)
+
+### **Domain Password Policy**
+
+The lab implements enterprise-grade password policies:
+
+```powershell
+# Applied automatically during domain setup
+Minimum Password Length: 12 characters
+Password Complexity: Required
+Maximum Password Age: 90 days
+Minimum Password Age: 1 day
+Password History: 24 passwords
+Account Lockout Threshold: 5 attempts
+Account Lockout Duration: 30 minutes
+```
+
+---
+
 ## 🚀 **Automated Setup Scripts**
 
 ### **1. Create the Complete Environment**
 
 ```powershell
 # Run this script to create the entire Asgard Technologies lab
-.\Scripts\WindowsServerLab.psm1
-New-AsgardLabEnvironment -DomainName "asgard.local" -VMPath "C:\VMs\Asgard"
+# You'll be prompted for secure passwords during deployment
+.\Scripts\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ISOPath "C:\path\to\WindowsServer.iso"
 ```
+
+**Security Note:** The deployment script will prompt for passwords securely - no credentials are stored in plain text.
 
 ### **2. Individual Setup Commands**
 
@@ -496,21 +545,25 @@ Set-AsgardGroupPolicies
 This lab environment allows you to practice:
 
 1. **Active Directory Management**
+
    - User and computer management
    - Group policy configuration
    - Domain controller setup
 
 2. **Network Services**
+
    - DNS configuration
    - DHCP management
    - Network troubleshooting
 
 3. **File Services**
+
    - Share permissions
    - NTFS security
    - File server management
 
 4. **Security Hardening**
+
    - Group policy security
    - User access control
    - Audit configuration

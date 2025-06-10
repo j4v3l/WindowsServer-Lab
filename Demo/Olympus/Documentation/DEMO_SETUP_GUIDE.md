@@ -17,19 +17,21 @@
 
 ### **IP Address Scheme**
 
-| Network Zone | CIDR | Purpose | VLAN |
-|--------------|------|---------|------|
-| **Production** | `10.0.10.0/24` | Core servers and services | 10 |
-| **Management** | `10.0.100.0/24` | Administrative access | 100 |
-| **Client Networks** | `10.0.20.0/22` | Department workstations | 20-23 |
-| **DMZ** | `10.0.50.0/24` | External-facing services | 50 |
-| **IoT/Devices** | `10.0.60.0/24` | Printers, cameras, sensors | 60 |
+| Network Zone        | CIDR            | Purpose                    | VLAN  |
+| ------------------- | --------------- | -------------------------- | ----- |
+| **Production**      | `10.0.10.0/24`  | Core servers and services  | 10    |
+| **Management**      | `10.0.100.0/24` | Administrative access      | 100   |
+| **Client Networks** | `10.0.20.0/22`  | Department workstations    | 20-23 |
+| **DMZ**             | `10.0.50.0/24`  | External-facing services   | 50    |
+| **IoT/Devices**     | `10.0.60.0/24`  | Printers, cameras, sensors | 60    |
 
 ### **Virtual Switch Configuration**
 
+**Important Note:** When creating external VM switches, use `-NetAdapterName` instead of `-SwitchType External`. The `-AllowManagementOS $true` parameter allows the host OS to also use the network adapter.
+
 ```powershell
-# Core Production Network
-New-VMSwitch -Name "OLYMPUS-Production" -SwitchType External -NetAdapterName "Ethernet"
+# Core Production Network (External Switch)
+New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
 
 # Management Network
 New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal
@@ -385,21 +387,21 @@ Configuration OlympusBaseConfiguration {
     param(
         [string[]]$ComputerName
     )
-    
+
     Node $ComputerName {
         # Enable Windows Features
         WindowsFeature Hyper-V {
             Ensure = "Present"
             Name = "Hyper-V"
         }
-        
+
         # Configure Services
         Service DHCP {
             Name = "DHCPServer"
             State = "Running"
             StartupType = "Automatic"
         }
-        
+
         # Security Settings
         Registry DisableUAC {
             Key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
