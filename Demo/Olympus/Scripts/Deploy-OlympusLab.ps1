@@ -23,7 +23,9 @@
 param(
     [string]$DomainName = "olympus.local",
     [string]$VMPath = "C:\VMs\Olympus",
-    [string]$ISOPath = "",
+    [string]$ServerISOPath = "",
+    [string]$ClientISOPath = "",
+    [string]$ISOPath = "", # Legacy parameter for backward compatibility
     [Parameter(Mandatory = $false)]
     [System.Security.SecureString]$SafeModePassword,
     [Parameter(Mandatory = $false)]
@@ -37,6 +39,23 @@ param(
 # Enhanced logging and error handling
 $ErrorActionPreference = "Stop"
 $LogPath = Join-Path $env:TEMP "Olympus-Lab-Deployment.log"
+
+# Handle legacy ISOPath parameter for backward compatibility
+if ($ISOPath -and (-not $ServerISOPath -and -not $ClientISOPath)) {
+    Write-Host "⚠️  Using legacy ISOPath for both servers and clients. Consider using -ServerISOPath and -ClientISOPath for better control." -ForegroundColor Yellow
+    $ServerISOPath = $ISOPath
+    $ClientISOPath = $ISOPath
+}
+
+# Validate ISO paths
+if ($ServerISOPath -and !(Test-Path $ServerISOPath)) {
+    Write-Error "Server ISO file not found: $ServerISOPath"
+    exit 1
+}
+if ($ClientISOPath -and !(Test-Path $ClientISOPath)) {
+    Write-Error "Client ISO file not found: $ClientISOPath"
+    exit 1
+}
 
 # Get secure passwords if not provided
 if (-not $SafeModePassword) {
@@ -165,7 +184,8 @@ function New-OlympusVM {
         [int64]$VHDSize,
         [int]$CPUCount,
         [string[]]$NetworkSwitches,
-        [string]$Description
+        [string]$Description,
+        [string]$ISOPath = ""
     )
     
     try {
@@ -217,6 +237,12 @@ function New-OlympusVM {
         $dvdDrive = Get-VMDvdDrive -VMName $VMName
         if ($dvdDrive) {
             Set-VMFirmware -VMName $VMName -FirstBootDevice $dvdDrive
+        }
+        
+        # Attach ISO if provided
+        if ($ISOPath -and (Test-Path $ISOPath)) {
+            Set-VMDvdDrive -VMName $VMName -Path $ISOPath
+            Write-OlympusLog "Attached ISO to $VMName`: $(Split-Path $ISOPath -Leaf)" "SUCCESS"
         }
         
         Write-OlympusLog "Created VM: $VMName" "SUCCESS"
@@ -276,7 +302,7 @@ function New-OlympusServers {
     )
     
     foreach ($server in $servers) {
-        $result = New-OlympusVM -VMName $server.Name -Memory $server.Memory -VHDSize $server.VHDSize -CPUCount $server.CPUCount -NetworkSwitches $server.Networks -Description $server.Description
+        $result = New-OlympusVM -VMName $server.Name -Memory $server.Memory -VHDSize $server.VHDSize -CPUCount $server.CPUCount -NetworkSwitches $server.Networks -Description $server.Description -ISOPath $ServerISOPath
         if (-not $result) {
             Write-OlympusLog "Failed to create server: $($server.Name)" "ERROR"
             return $false
@@ -304,7 +330,7 @@ function New-OlympusWorkstations {
             $vmName = "$($dept.Users[$i])-WS$(($i+1).ToString('00'))"
             $description = "$($dept.Name) Workstation - $($dept.Users[$i])"
             
-            $result = New-OlympusVM -VMName $vmName -Memory 4GB -VHDSize 60GB -CPUCount 2 -NetworkSwitches @("OLYMPUS-Clients") -Description $description
+            $result = New-OlympusVM -VMName $vmName -Memory 4GB -VHDSize 60GB -CPUCount 2 -NetworkSwitches @("OLYMPUS-Clients") -Description $description -ISOPath $ClientISOPath
             if (-not $result) {
                 Write-OlympusLog "Failed to create workstation: $vmName" "ERROR"
                 return $false
@@ -418,6 +444,8 @@ function Start-OlympusDeployment {
     Write-OlympusLog "Starting Olympus Systems lab deployment..." "INFO"
     Write-OlympusLog "Domain: $DomainName" "INFO"
     Write-OlympusLog "VM Path: $VMPath" "INFO"
+    if ($ServerISOPath) { Write-OlympusLog "Server ISO: $(Split-Path $ServerISOPath -Leaf)" "INFO" }
+    if ($ClientISOPath) { Write-OlympusLog "Client ISO: $(Split-Path $ClientISOPath -Leaf)" "INFO" }
     Write-OlympusLog "Log Path: $LogPath" "INFO"
     
     # Create VM directory

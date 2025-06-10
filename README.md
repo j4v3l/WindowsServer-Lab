@@ -178,9 +178,15 @@ All scripts in this lab environment follow security best practices:
 $securePassword = Read-Host -AsSecureString -Prompt "Enter password"
 .\Scripts\Create-LabUsers.ps1 -DefaultUserPassword $securePassword
 
-# Demo environment scripts also follow the same pattern:
-.\Demo\Scripts\Deploy-AsgardLab.ps1
+# Demo environment scripts with dual ISO support:
+.\Demo\Scripts\Deploy-AsgardLab.ps1 -ServerISOPath "C:\ISOs\WindowsServer2025.iso" -ClientISOPath "C:\ISOs\Windows10.iso"
 # Prompts for both Safe Mode and Default User passwords
+
+# Olympus deployment with separate ISOs:
+.\Demo\Olympus\Scripts\Deploy-OlympusLab.ps1 -ServerISOPath "C:\ISOs\WindowsServer2025.iso" -ClientISOPath "C:\ISOs\Windows10.iso"
+
+# Legacy single ISO mode (backward compatibility):
+.\Demo\Scripts\Deploy-AsgardLab.ps1 -ISOPath "C:\ISOs\WindowsServer.iso"
 ```
 
 ### Security Compliance
@@ -232,12 +238,21 @@ $securePassword = Read-Host -AsSecureString -Prompt "Enter password"
    # Test prerequisites first
    Test-LabEnvironment -Detailed
 
-   # Create complete lab environment (you'll be prompted for passwords)
+   # Create complete lab environment with separate ISOs (you'll be prompted for passwords)
+   New-LabEnvironment -VMPath "C:\VMs" -ServerISOPath "C:\path\to\WindowsServer2025.iso" -ClientISOPath "C:\path\to\Windows10.iso"
+
+   # Or use legacy single ISO for both (backward compatibility)
    New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
 
    # Check lab status
    Get-LabStatus
    ```
+
+   **🔧 ISO Requirements:**
+
+   - **Server ISO**: Windows Server 2019/2022/2025 for domain controllers and servers
+   - **Client ISO**: Windows 10/11 for workstation VMs
+   - **Legacy Mode**: Single ISO can be used for all VMs (backward compatibility)
 
    **Security Note:** All scripts now use secure password prompts instead of hardcoded passwords. You'll be prompted to enter:
 

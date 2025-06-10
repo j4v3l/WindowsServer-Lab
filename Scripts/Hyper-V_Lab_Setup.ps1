@@ -7,7 +7,9 @@
 [CmdletBinding()]
 param(
     [string]$VMPath = "C:\VMs",
-    [string]$ISOPath = "",
+    [string]$ServerISOPath = "",
+    [string]$ClientISOPath = "",
+    [string]$ISOPath = "", # Legacy parameter for backward compatibility
     [string]$PhysicalAdapter = "Ethernet",
     [string]$DomainName = "lab.local",
     [switch]$CreateSwitchesOnly = $false,
@@ -17,6 +19,23 @@ param(
 # Enhanced Error Handling Configuration
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# Handle legacy ISOPath parameter for backward compatibility
+if ($ISOPath -and (-not $ServerISOPath -and -not $ClientISOPath)) {
+    Write-Host "⚠️  Using legacy ISOPath for both servers and clients. Consider using -ServerISOPath and -ClientISOPath for better control." -ForegroundColor Yellow
+    $ServerISOPath = $ISOPath
+    $ClientISOPath = $ISOPath
+}
+
+# Validate ISO paths
+if ($ServerISOPath -and !(Test-Path $ServerISOPath)) {
+    Write-Log "Server ISO file not found: $ServerISOPath" "WARNING"
+    Write-Log "Servers will be created without ISO attached" "INFO"
+}
+if ($ClientISOPath -and !(Test-Path $ClientISOPath)) {
+    Write-Log "Client ISO file not found: $ClientISOPath" "WARNING"
+    Write-Log "Clients will be created without ISO attached" "INFO"
+}
 
 # Logging Configuration
 $LogPath = Join-Path $env:TEMP "HyperV-Lab-Setup.log"
@@ -128,11 +147,12 @@ function New-LabVirtualSwitches {
         $externalSwitch = Get-VMSwitch -Name "LAB-External" -ErrorAction SilentlyContinue
         if (-not $externalSwitch) {
             # Get physical adapters
-            $physicalAdapters = Get-NetAdapter -Physical | Where-Object {$_.Status -eq "Up"}
+            $physicalAdapters = Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" }
             if ($physicalAdapters.Count -eq 0) {
                 Write-ColorOutput "WARNING: No active physical network adapters found." $WarningColor
-            } else {
-                $targetAdapter = $physicalAdapters | Where-Object {$_.Name -like "*$PhysicalAdapter*"} | Select-Object -First 1
+            }
+            else {
+                $targetAdapter = $physicalAdapters | Where-Object { $_.Name -like "*$PhysicalAdapter*" } | Select-Object -First 1
                 if (-not $targetAdapter) {
                     $targetAdapter = $physicalAdapters | Select-Object -First 1
                     Write-ColorOutput "Using adapter: $($targetAdapter.Name)" $InfoColor
@@ -141,7 +161,8 @@ function New-LabVirtualSwitches {
                 New-VMSwitch -Name "LAB-External" -NetAdapterName $targetAdapter.Name -AllowManagementOS $true
                 Write-ColorOutput "✓ Created External Switch: LAB-External" $InfoColor
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "✓ External Switch already exists: LAB-External" $DebugColor
         }
         
@@ -161,7 +182,8 @@ function New-LabVirtualSwitches {
                 New-NetIPAddress -IPAddress 192.168.100.1 -PrefixLength 24 -InterfaceIndex $mgmtAdapter.ifIndex -ErrorAction SilentlyContinue
                 Write-ColorOutput "✓ Configured Management Network: 192.168.100.1/24" $InfoColor
             }
-        } else {
+        }
+        else {
             Write-ColorOutput "✓ Internal Switch already exists: LAB-Management" $DebugColor
         }
         
@@ -170,7 +192,8 @@ function New-LabVirtualSwitches {
         if (-not $privateSwitch) {
             New-VMSwitch -Name "LAB-Isolated" -SwitchType Private
             Write-ColorOutput "✓ Created Private Switch: LAB-Isolated" $InfoColor
-        } else {
+        }
+        else {
             Write-ColorOutput "✓ Private Switch already exists: LAB-Isolated" $DebugColor
         }
         
@@ -196,7 +219,8 @@ function New-LabVirtualMachine {
         [int64]$VHDSize = 80GB,
         [int]$CPUCount = 2,
         [string[]]$NetworkSwitches = @("LAB-External", "LAB-Management"),
-        [string]$Description = ""
+        [string]$Description = "",
+        [string]$ISOPath = ""
     )
     
     Write-ColorOutput "Creating VM: $VMName" $InfoColor
@@ -207,7 +231,8 @@ function New-LabVirtualMachine {
         if ($existingVM -and -not $Force) {
             Write-ColorOutput "VM $VMName already exists. Use -Force to recreate." $WarningColor
             return $false
-        } elseif ($existingVM -and $Force) {
+        }
+        elseif ($existingVM -and $Force) {
             Write-ColorOutput "Removing existing VM: $VMName" $WarningColor
             Stop-VM -Name $VMName -Force -ErrorAction SilentlyContinue
             Remove-VM -Name $VMName -Force
@@ -268,6 +293,12 @@ function New-LabVirtualMachine {
         # Configure automatic checkpoints (disable for lab environment)
         Set-VM -Name $VMName -AutomaticCheckpointsEnabled $false
         
+        # Attach ISO if provided
+        if ($ISOPath -and (Test-Path $ISOPath)) {
+            Set-VMDvdDrive -VMName $VMName -Path $ISOPath
+            Write-ColorOutput "✓ ISO attached to $VMName`: $(Split-Path $ISOPath -Leaf)" $InfoColor
+        }
+        
         Write-ColorOutput "✓ VM Created: $VMName" $InfoColor
         Write-ColorOutput "  Memory: $($Memory/1GB)GB (Dynamic: $([Math]::Max(512MB, $Memory / 2)/1GB)GB - $($Memory * 2/1GB)GB)" $DebugColor
         Write-ColorOutput "  CPUs: $CPUCount" $DebugColor
@@ -300,48 +331,57 @@ function Set-VMISOImage {
 function New-CompleteLabEnvironment {
     Write-ColorOutput "Creating complete lab environment..." $InfoColor
     
-    # Define VMs to create
+    # Define VMs to create with their types for ISO assignment
     $labVMs = @(
         @{
-            Name = "DC1-LAB"
-            Memory = 4GB
-            VHDSize = 80GB
-            CPUCount = 2
-            Networks = @("LAB-External", "LAB-Management")
+            Name        = "DC1-LAB"
+            Memory      = 4GB
+            VHDSize     = 80GB
+            CPUCount    = 2
+            Networks    = @("LAB-External", "LAB-Management")
             Description = "Primary Domain Controller for $DomainName"
+            Type        = "Server"
         },
         @{
-            Name = "FS1-LAB"
-            Memory = 2GB
-            VHDSize = 100GB
-            CPUCount = 2
-            Networks = @("LAB-External", "LAB-Management")
+            Name        = "FS1-LAB"
+            Memory      = 2GB
+            VHDSize     = 100GB
+            CPUCount    = 2
+            Networks    = @("LAB-External", "LAB-Management")
             Description = "File Server for lab environment"
+            Type        = "Server"
         },
         @{
-            Name = "WEB1-LAB"
-            Memory = 2GB
-            VHDSize = 60GB
-            CPUCount = 2
-            Networks = @("LAB-External", "LAB-Management")
+            Name        = "WEB1-LAB"
+            Memory      = 2GB
+            VHDSize     = 60GB
+            CPUCount    = 2
+            Networks    = @("LAB-External", "LAB-Management")
             Description = "Web Server for lab applications"
+            Type        = "Server"
         },
         @{
-            Name = "CL1-LAB"
-            Memory = 2GB
-            VHDSize = 60GB
-            CPUCount = 2
-            Networks = @("LAB-External")
+            Name        = "CL1-LAB"
+            Memory      = 2GB
+            VHDSize     = 60GB
+            CPUCount    = 2
+            Networks    = @("LAB-External")
             Description = "Windows 10/11 Client for testing"
+            Type        = "Client"
         }
     )
     
     foreach ($vm in $labVMs) {
-        $success = New-LabVirtualMachine -VMName $vm.Name -Memory $vm.Memory -VHDSize $vm.VHDSize -CPUCount $vm.CPUCount -NetworkSwitches $vm.Networks -Description $vm.Description
-        
-        if ($success -and $ISOPath) {
-            Set-VMISOImage -VMName $vm.Name -ISOPath $ISOPath
+        # Determine which ISO to use based on VM type
+        $isoToUse = ""
+        if ($vm.Type -eq "Server" -and $ServerISOPath) {
+            $isoToUse = $ServerISOPath
         }
+        elseif ($vm.Type -eq "Client" -and $ClientISOPath) {
+            $isoToUse = $ClientISOPath
+        }
+        
+        $success = New-LabVirtualMachine -VMName $vm.Name -Memory $vm.Memory -VHDSize $vm.VHDSize -CPUCount $vm.CPUCount -NetworkSwitches $vm.Networks -Description $vm.Description -ISOPath $isoToUse
     }
 }
 
@@ -350,7 +390,7 @@ function Show-LabSummary {
     
     # Show virtual switches
     Write-ColorOutput "`nVirtual Switches:" $InfoColor
-    $switches = Get-VMSwitch | Where-Object {$_.Name -like "LAB-*"}
+    $switches = Get-VMSwitch | Where-Object { $_.Name -like "LAB-*" }
     foreach ($switch in $switches) {
         Write-ColorOutput "  ✓ $($switch.Name) ($($switch.SwitchType))" $DebugColor
     }
@@ -372,13 +412,14 @@ function Show-LabSummary {
     
     # Show VMs
     Write-ColorOutput "`nVirtual Machines:" $InfoColor
-    $labVMs = Get-VM | Where-Object {$_.Name -like "*LAB*"}
+    $labVMs = Get-VM | Where-Object { $_.Name -like "*LAB*" }
     if ($labVMs) {
         foreach ($vm in $labVMs) {
-            $vmNetworks = (Get-VMNetworkAdapter -VMName $vm.Name | ForEach-Object {$_.SwitchName}) -join ", "
+            $vmNetworks = (Get-VMNetworkAdapter -VMName $vm.Name | ForEach-Object { $_.SwitchName }) -join ", "
             Write-ColorOutput "  ✓ $($vm.Name) - $($vm.State) - Networks: $vmNetworks" $DebugColor
         }
-    } else {
+    }
+    else {
         Write-ColorOutput "  No lab VMs found." $WarningColor
     }
     

@@ -23,7 +23,9 @@
 param(
     [string]$DomainName = "asgard.local",
     [string]$VMPath = "C:\VMs\Asgard",
-    [string]$ISOPath = "",
+    [string]$ServerISOPath = "",
+    [string]$ClientISOPath = "",
+    [string]$ISOPath = "", # Legacy parameter for backward compatibility
     [Parameter(Mandatory = $false)]
     [System.Security.SecureString]$SafeModePassword,
     [Parameter(Mandatory = $false)]
@@ -37,6 +39,23 @@ param(
 # Enhanced logging and error handling
 $ErrorActionPreference = "Stop"
 $LogPath = Join-Path $env:TEMP "Asgard-Lab-Deployment.log"
+
+# Handle legacy ISOPath parameter for backward compatibility
+if ($ISOPath -and (-not $ServerISOPath -and -not $ClientISOPath)) {
+    Write-Host "⚠️  Using legacy ISOPath for both servers and clients. Consider using -ServerISOPath and -ClientISOPath for better control." -ForegroundColor Yellow
+    $ServerISOPath = $ISOPath
+    $ClientISOPath = $ISOPath
+}
+
+# Validate ISO paths
+if ($ServerISOPath -and !(Test-Path $ServerISOPath)) {
+    Write-Error "Server ISO file not found: $ServerISOPath"
+    exit 1
+}
+if ($ClientISOPath -and !(Test-Path $ClientISOPath)) {
+    Write-Error "Client ISO file not found: $ClientISOPath"
+    exit 1
+}
 
 # Get secure passwords if not provided
 if (-not $SafeModePassword) {
@@ -166,7 +185,8 @@ function New-AsgardVM {
         [int64]$VHDSize,
         [int]$CPUCount,
         [string[]]$NetworkSwitches,
-        [string]$Description
+        [string]$Description,
+        [string]$ISOPath = ""
     )
     
     try {
@@ -226,6 +246,7 @@ function New-AsgardVM {
         # Attach ISO if provided
         if ($ISOPath -and (Test-Path $ISOPath)) {
             Set-VMDvdDrive -VMName $VMName -Path $ISOPath
+            Write-AsgardLog "Attached ISO to $VMName`: $(Split-Path $ISOPath -Leaf)" "SUCCESS"
         }
         
         Write-AsgardLog "Created VM: $VMName" "SUCCESS"
@@ -285,7 +306,7 @@ function New-AsgardServers {
     )
     
     foreach ($server in $servers) {
-        $success = New-AsgardVM -VMName $server.Name -Memory $server.Memory -VHDSize $server.VHDSize -CPUCount $server.CPUCount -NetworkSwitches $server.Networks -Description $server.Description
+        $success = New-AsgardVM -VMName $server.Name -Memory $server.Memory -VHDSize $server.VHDSize -CPUCount $server.CPUCount -NetworkSwitches $server.Networks -Description $server.Description -ISOPath $ServerISOPath
         if (-not $success) {
             Write-AsgardLog "Failed to create server: $($server.Name)" "ERROR"
         }
@@ -329,7 +350,7 @@ function New-AsgardWorkstations {
     )
     
     foreach ($ws in $workstations) {
-        $success = New-AsgardVM -VMName $ws.Name -Memory $ws.Memory -VHDSize $ws.VHDSize -CPUCount 2 -NetworkSwitches $ws.Networks -Description $ws.Description
+        $success = New-AsgardVM -VMName $ws.Name -Memory $ws.Memory -VHDSize $ws.VHDSize -CPUCount 2 -NetworkSwitches $ws.Networks -Description $ws.Description -ISOPath $ClientISOPath
         if (-not $success) {
             Write-AsgardLog "Failed to create workstation: $($ws.Name)" "ERROR"
         }
@@ -536,7 +557,8 @@ try {
     Write-AsgardLog "Starting Asgard Technologies lab deployment..." "INFO"
     Write-AsgardLog "Domain: $DomainName" "INFO"
     Write-AsgardLog "VM Path: $VMPath" "INFO"
-    Write-AsgardLog "ISO Path: $ISOPath" "INFO"
+    if ($ServerISOPath) { Write-AsgardLog "Server ISO: $(Split-Path $ServerISOPath -Leaf)" "INFO" }
+    if ($ClientISOPath) { Write-AsgardLog "Client ISO: $(Split-Path $ClientISOPath -Leaf)" "INFO" }
     
     # Create VM directory
     if (!(Test-Path $VMPath)) {

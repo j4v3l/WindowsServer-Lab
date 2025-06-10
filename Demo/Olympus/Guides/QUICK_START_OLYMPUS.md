@@ -67,12 +67,15 @@ Restart-Computer
 # Navigate to your WindowsServer project
 cd "C:\path\to\WindowsServer"
 
-# Deploy the complete environment (this creates 25 VMs with enhanced specs!)
+# RECOMMENDED: Deploy with separate ISOs (this creates 25 VMs with enhanced specs!)
 # You'll be prompted for secure passwords during deployment
-.\Olympus\Scripts\Deploy-OlympusLab.ps1 -VMPath "C:\VMs\Olympus" -ISOPath "C:\path\to\WindowsServer.iso"
+.\Demo\Olympus\Scripts\Deploy-OlympusLab.ps1 -VMPath "C:\VMs\Olympus" -ServerISOPath "C:\ISOs\en-us_windows_server_2025_x64_dvd_b7ec10f3.iso" -ClientISOPath "C:\ISOs\en-us_windows_10_consumer_editions_version_22h2_x64_dvd_8da72ab3.iso"
 
 # Or deploy with custom settings
-.\Olympus\Scripts\Deploy-OlympusLab.ps1 -DomainName "olympus.local" -VMPath "D:\VMs\Olympus" -ISOPath "D:\ISOs\WinServer2022.iso"
+.\Demo\Olympus\Scripts\Deploy-OlympusLab.ps1 -DomainName "olympus.local" -VMPath "D:\VMs\Olympus" -ServerISOPath "D:\ISOs\WindowsServer2025.iso" -ClientISOPath "D:\ISOs\Windows10.iso"
+
+# LEGACY: Single ISO mode (backward compatibility)
+.\Demo\Olympus\Scripts\Deploy-OlympusLab.ps1 -VMPath "C:\VMs\Olympus" -ISOPath "C:\ISOs\WindowsServer.iso"
 
 # 💡 Performance Tip: Store VMs on your 1TB NVMe for best performance!
 # Total RAM allocation: ~90GB (well within your 64GB + swap capabilities)

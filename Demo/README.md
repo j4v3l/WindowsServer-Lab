@@ -71,10 +71,20 @@ Demo/
 # Navigate to the demo scripts
 cd Demo/Scripts
 
-# Deploy the complete Asgard Technologies environment (25 VMs!)
-# You'll be prompted for secure passwords during deployment
+# Deploy with separate ISOs for servers and clients (RECOMMENDED)
+.\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ServerISOPath "C:\path\to\WindowsServer2025.iso" -ClientISOPath "C:\path\to\Windows10.iso"
+
+# Or use legacy single ISO mode (backward compatibility)
 .\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ISOPath "C:\path\to\WindowsServer.iso"
 ```
+
+### **🔧 ISO Requirements**
+
+For optimal deployment, use separate ISOs:
+
+- **Server ISO**: Windows Server 2019/2022/2025 for domain controllers and servers
+- **Client ISO**: Windows 10/11 22H2+ for workstation VMs
+- **Legacy Mode**: Single ISO can be used for all VMs (backward compatibility)
 
 ### **🔒 Security Requirements**
 

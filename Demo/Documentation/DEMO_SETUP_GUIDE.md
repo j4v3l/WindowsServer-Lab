@@ -442,10 +442,18 @@ Account Lockout Duration: 30 minutes
 ### **1. Create the Complete Environment**
 
 ```powershell
-# Run this script to create the entire Asgard Technologies lab
-# You'll be prompted for secure passwords during deployment
+# RECOMMENDED: Deploy with separate ISOs for optimal performance
+.\Scripts\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ServerISOPath "C:\ISOs\WindowsServer2025.iso" -ClientISOPath "C:\ISOs\Windows10.iso"
+
+# LEGACY: Single ISO mode (backward compatibility)
 .\Scripts\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ISOPath "C:\path\to\WindowsServer.iso"
 ```
+
+**🔧 ISO Requirements:**
+
+- **Server ISO**: Windows Server 2019/2022/2025 for domain controllers and servers
+- **Client ISO**: Windows 10/11 22H2+ for workstation VMs
+- **Legacy Mode**: Single ISO can be used for all VMs (backward compatibility)
 
 **Security Note:** The deployment script will prompt for passwords securely - no credentials are stored in plain text.
 
