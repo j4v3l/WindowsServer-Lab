@@ -2,11 +2,17 @@
 
 This repository contains comprehensive documentation and scripts for setting up and managing a Windows Server lab environment. The content is organized into two main sections: Lab Setup Tutorials and Management Scripts.
 
-## 🏰 **Epic Demo Available!**
+## 🏰 **Epic Demos Available!**
 
-**NEW**: Experience the complete power of this lab environment with our **[Asgard Technologies Demo](Demo/README.md)** - a Norse mythology-themed enterprise setup featuring 25 VMs, complete organizational structure, and professional-grade configurations. Perfect for demonstrations, learning, and showcasing Windows Server capabilities!
+**NEW**: Experience the complete power of this lab environment with our comprehensive demo environments:
 
-👉 **[Get Started with the Demo](Demo/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!
+- **[Asgard Technologies Demo](Demo/README.md)** - Norse mythology-themed enterprise setup featuring 25 VMs, complete organizational structure, and professional-grade configurations
+- **[Olympus Systems Demo](Demo/Olympus/README.md)** - Greek mythology-themed enterprise setup with advanced cloud integration and AI/ML capabilities
+
+Both demos provide realistic enterprise environments perfect for demonstrations, learning, and showcasing Windows Server capabilities!
+
+👉 **[Get Started with Asgard Demo](Demo/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!  
+👉 **[Get Started with Olympus Demo](Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)** - Deploy in 30-60 minutes!
 
 ## ⚠️ Important Disclaimer
 
@@ -150,8 +156,8 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 1. **Clone the repository:**
 
    ```powershell
-   git clone https://github.com/yourusername/WindowsServer.git
-   cd WindowsServer
+   git clone https://github.com/j4v3l/WindowsServer-Lab.git
+   cd WindowsServer-Lab
    ```
 
 2. **Test module integrity (optional):**
@@ -218,63 +224,34 @@ Once the module is imported, you have access to these commands:
 
 ## Contributing
 
-We welcome contributions to improve this project. Please follow these guidelines when contributing:
+We welcome contributions! Our project includes comprehensive templates and community guidelines:
 
-### Pull Request Process
+### 📝 How to Contribute
 
-1. **Fork and Clone**
-   - Fork the repository
-   - Clone your fork locally
-   - Create a new branch for your changes
+- **[Contributing Guidelines](CONTRIBUTING.md)**: Detailed code standards, PR process, and development setup
+- **[Code of Conduct](.github/CODE_OF_CONDUCT.md)**: Community standards with educational focus
+- **[Support Resources](.github/SUPPORT.md)**: Multiple ways to get help and connect with the community
 
-2. **Development**
-   - Make your changes in a new branch
-   - Follow existing code style and formatting
-   - Update documentation as needed
-   - Test your changes thoroughly
+### 🐛 Reporting Issues
 
-3. **Commit Guidelines**
-   - Use clear, descriptive commit messages
-   - Reference issues and pull requests in commit messages
-   - Keep commits focused and atomic
+Use our structured issue templates for better assistance:
 
-4. **Pull Request**
-   - Push your changes to your fork
-   - Create a pull request against the main branch
-   - Fill out the PR template completely
-   - Link any related issues
+- **[Bug Reports](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=bug_report.yml)**: Detailed environment and reproduction steps
+- **[Feature Requests](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=feature_request.yml)**: Categorized with priority assessment  
+- **[Questions](https://github.com/j4v3l/WindowsServer-Lab/issues/new?template=question.yml)**: Help with guided troubleshooting
 
-5. **Review Process**
-   - All PRs require at least one review
-   - Address review comments promptly
-   - Keep the PR up to date with the main branch
+### 🔒 Security & Safety
 
-### Contribution Standards
+- **[Security Policy](.github/SECURITY.md)**: Vulnerability reporting and lab security best practices
+- **Private Disclosure**: Security issues handled confidentially through GitHub security advisories
+- **Lab Isolation**: Guidelines for secure lab environment setup and network isolation
 
-- **Code Quality**
-  - Follow PowerShell best practices
-  - Include error handling
-  - Add comments for complex logic
-  - Maintain consistent formatting
+### 🤝 Community Guidelines
 
-- **Documentation**
-  - Update relevant markdown files
-  - Include examples where appropriate
-  - Document any new dependencies
-  - Update the table of contents if needed
-
-- **Testing**
-  - Test in a development environment
-  - Include test cases for new features
-  - Verify backward compatibility
-  - Document test procedures
-
-### Getting Help
-
-- Open an issue for bugs or feature requests
-- Use the issue template provided
-- Include steps to reproduce for bugs
-- Provide environment details when relevant
+- **Respectful Communication**: Professional and welcoming interactions
+- **Educational Focus**: No question is too basic - we all learn together
+- **Knowledge Sharing**: Help others and share your lab experiences
+- **Code Quality**: Follow PowerShell best practices and include proper documentation
 
 ## License
 
