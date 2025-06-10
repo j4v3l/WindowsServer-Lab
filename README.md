@@ -104,6 +104,12 @@ The tutorials are organized in a logical sequence from initial setup to advanced
     - Scope configuration
     - Reservations, exclusions, and best practices
 
+16. [Hyper-V Setup and Configuration](LabSetupTutorials/16_Hyper-V_Setup_and_Configuration.md)
+    - Hyper-V installation and configuration
+    - Virtual switch creation and management
+    - Advanced networking and security
+    - VM creation and optimization
+
 ### Management Scripts
 
 The Scripts directory contains PowerShell scripts that complement the tutorials:
@@ -114,6 +120,7 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Lab Finish Setup Script](Scripts/Lab-FinishSetup.ps1) - Post-installation configuration
 - [Create Lab Users Script](Scripts/Create-LabUsers.ps1) - User account creation
 - [DHCP Setup Script](Scripts/DHCP_Setup.ps1) - DHCP server installation and configuration
+- [Hyper-V Lab Setup Script](Scripts/Hyper-V_Lab_Setup.ps1) - Complete Hyper-V lab environment setup
 
 #### Management Scripts
 
@@ -121,6 +128,7 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Security Audit Script](Scripts/SecurityAudit.ps1) - Security assessment
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
 - [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
+- [Hyper-V Management Script](Scripts/Hyper-V_Management.ps1) - Hyper-V lab lifecycle management
 
 ## Learning Path
 
@@ -131,10 +139,76 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 
 ## Getting Started
 
+### Quick Installation (PowerShell Module)
+
+1. **Clone the repository:**
+
+   ```powershell
+   git clone https://github.com/yourusername/WindowsServer.git
+   cd WindowsServer
+   ```
+
+2. **Test module integrity (optional):**
+
+   ```powershell
+   # Validate module structure and consistency
+   .\Scripts\Test-ModuleIntegrity.ps1
+   ```
+
+3. **Import the PowerShell module:**
+
+   ```powershell
+   # Import the module
+   Import-Module .\Scripts\WindowsServerLab.psd1 -Force
+   
+   # Verify module loaded
+   Get-Command -Module WindowsServerLab
+   ```
+
+4. **Create your lab environment:**
+
+   ```powershell
+   # Test prerequisites first
+   Test-LabEnvironment -Detailed
+   
+   # Create complete lab environment
+   New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
+   
+   # Check lab status
+   Get-LabStatus
+   ```
+
+### Manual Setup Options
+
+#### For Hyper-V Users (Recommended)
+
+1. Start with the [Hyper-V Quick Start Guide](LabSetupTutorials/00_Hyper-V_Quick_Start.md) for rapid setup
+2. Or follow the detailed [Hyper-V Setup and Configuration](LabSetupTutorials/16_Hyper-V_Setup_and_Configuration.md) guide
+3. Then proceed with [Lab Environment Setup](LabSetupTutorials/01_Setup_Lab_Environment.md)
+
+#### For VirtualBox/VMware Users
+
 1. Begin with the [Lab Environment Setup](LabSetupTutorials/01_Setup_Lab_Environment.md) guide
 2. Follow the tutorials in sequence
 3. Use the provided scripts to automate common tasks
 4. Refer to the troubleshooting guide for common issues
+
+### PowerShell Module Commands
+
+Once the module is imported, you have access to these commands:
+
+| Command | Description |
+|---------|-------------|
+| `New-LabEnvironment` | Create complete lab environment |
+| `Test-LabEnvironment` | Validate lab configuration |
+| `Start-LabVMs` | Start all or specific lab VMs |
+| `Stop-LabVMs` | Stop all or specific lab VMs |
+| `Get-LabStatus` | Get current lab status |
+| `New-LabUsers` | Create lab users and OUs |
+| `Invoke-LabSecurityAudit` | Run security audit |
+| `Set-LabGroupPolicy` | Configure Group Policy |
+| `Set-LabConfiguration` | Modify lab settings |
+| `Get-LabConfiguration` | Get current lab settings |
 
 ## Contributing
 

@@ -23,7 +23,21 @@ Before we begin, make sure you have:
 
 Think of a virtual machine (VM) as a computer within your computer. Here's how to create one:
 
-1. Open your virtualization program (we'll use VirtualBox as an example)
+### For Hyper-V Users (Recommended for Windows Pro/Enterprise)
+
+1. Open **Hyper-V Manager** (search for it in Start Menu)
+2. Click "New" → "Virtual Machine" in the Actions pane
+3. Follow the New Virtual Machine Wizard:
+   - Name: `DC1-LAB`
+   - Generation: **Generation 2** (for better performance)
+   - Memory: 4096 MB (4GB) with Dynamic Memory enabled
+   - Network: Select your lab network switch (see [Hyper-V Setup Guide](16_Hyper-V_Setup_and_Configuration.md))
+   - Hard disk: Create new, 80 GB, Dynamic expanding
+   - Installation: Attach your Windows Server ISO
+
+### For VirtualBox/VMware Users
+
+1. Open your virtualization program
 2. Click "New" or "Create Virtual Machine"
 3. Set these recommended settings:
    - Name: `DC1` (DC stands for Domain Controller)
@@ -50,6 +64,24 @@ Think of a virtual machine (VM) as a computer within your computer. Here's how t
    - Desktop Experience gives you a graphical interface like regular Windows
 
 ## 🌐 Step 3: Configure Network Settings
+
+### For Hyper-V Labs
+
+If you followed the [Hyper-V Setup Guide](16_Hyper-V_Setup_and_Configuration.md), your VM should have two network adapters:
+
+1. **External Adapter** (for internet access):
+   - IP Address: 192.168.1.100 (or your network range)
+   - Subnet Mask: 255.255.255.0
+   - Default Gateway: 192.168.1.1 (your router)
+   - DNS Server: 192.168.1.100 (same as IP address)
+
+2. **Management Adapter** (for lab management):
+   - IP Address: 192.168.100.10
+   - Subnet Mask: 255.255.255.0
+   - Default Gateway: 192.168.100.1
+   - DNS Server: 192.168.100.10 (same as IP address)
+
+### For VirtualBox/VMware Labs
 
 1. After installation, press `Windows + X` and select "Network Connections"
 2. Right-click your network adapter and select "Properties"
