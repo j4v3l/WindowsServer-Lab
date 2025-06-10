@@ -129,10 +129,17 @@ The tutorials are organized in a logical sequence from initial setup to advanced
     - Reservations, exclusions, and best practices
 
 16. [Hyper-V Setup and Configuration](LabSetupTutorials/16_Hyper-V_Setup_and_Configuration.md)
+
     - Hyper-V installation and configuration
     - Virtual switch creation and management
     - Advanced networking and security
     - VM creation and optimization
+
+17. [Uninstall and Revert Changes](LabSetupTutorials/17_Uninstall_and_Revert.md)
+    - Safe removal of lab components
+    - Backup and restore procedures
+    - Selective component uninstallation
+    - Recovery from failed installations
 
 ### Management Scripts
 
@@ -153,6 +160,11 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
 - [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
 - [Hyper-V Management Script](Scripts/Hyper-V_Management.ps1) - Hyper-V lab lifecycle management
+
+#### Uninstall and Recovery Scripts (NEW)
+
+- [Lab Uninstall Script](Scripts/Lab-Uninstall.ps1) - Comprehensive component removal with backup
+- [Lab Restore Script](Scripts/Lab-Restore.ps1) - Restore from backups created during uninstall
 
 ## 🔒 Security Features
 
@@ -246,6 +258,20 @@ $securePassword = Read-Host -AsSecureString -Prompt "Enter password"
 
    # Check lab status
    Get-LabStatus
+   ```
+
+5. **Uninstall or revert when needed:**
+
+   ```powershell
+   # Safely remove all lab components (creates backup first)
+   Remove-LabEnvironment -Component All
+
+   # Remove specific components only
+   Remove-LabEnvironment -Component VMs
+   Remove-LabEnvironment -Component AD
+
+   # Restore from backup if needed
+   Restore-LabEnvironment -BackupPath "C:\LabBackup"
    ```
 
    **🔧 ISO Requirements:**

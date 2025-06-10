@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 Demo/
 ├── README.md                   # Complete demo overview
-├── Scripts/Deploy-AsgardLab.ps1  # Main deployment script  
+├── Scripts/Deploy-AsgardLab.ps1  # Main deployment script
 ├── Documentation/              # Technical documentation
 │   ├── DEMO_SETUP_GUIDE.md     # Complete setup guide
 │   └── HARDWARE_PERFORMANCE_GUIDE.md  # Hardware optimization
@@ -91,6 +91,25 @@ Demo/
 ## [Unreleased]
 
 ### Added
+
+- **🔄 Comprehensive Uninstall and Revert System**: Complete lab environment cleanup and restoration
+- **Lab-Uninstall.ps1**: Safe component removal with automatic backup creation
+- **Lab-Restore.ps1**: Backup restoration with integrity validation
+- **Selective Component Removal**: Remove individual components (VMs, Switches, Shares, AD, GPOs, Registry, Scheduled Tasks)
+- **PowerShell Module Integration**: Remove-LabEnvironment and Restore-LabEnvironment functions
+- **Safety Features**: Automatic backups, confirmation prompts, detailed logging, operation manifests
+- **Demo Environment Support**: Cleanup for Asgard and Olympus demo environments
+- **Tutorial 17**: "Uninstall and Revert Changes" comprehensive documentation
+- **Backup Validation**: Integrity checks and manifest tracking for restore operations
+
+### Enhanced
+
+- **WindowsServerLab Module**: Added uninstall/restore functions to PowerShell module
+- **Module Manifest**: Updated to include new scripts and exported functions
+- **README Documentation**: Added uninstall/revert quick start instructions
+- **Security**: Comprehensive audit trail and recovery planning guidance
+
+### Added (Previous)
 
 - **🎯 GitHub Templates & Community Standards**: Complete professional template suite
 - **Issue Templates**: Structured forms for bug reports, feature requests, and questions

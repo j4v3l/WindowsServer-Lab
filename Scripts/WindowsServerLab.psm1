@@ -9,15 +9,16 @@ $ModuleVersion = "1.1.0"
 try {
     Import-Module Hyper-V -ErrorAction Stop
     Import-Module ActiveDirectory -ErrorAction SilentlyContinue
-} catch {
+}
+catch {
     Write-Warning "Some required modules are not available. Full functionality may be limited."
 }
 
 # Common Configuration
 $script:LabConfig = @{
-    DefaultVMPath = "C:\VMs"
+    DefaultVMPath     = "C:\VMs"
     DefaultDomainName = "lab.local"
-    LogPath = Join-Path $env:TEMP "WindowsServerLab.log"
+    LogPath           = Join-Path $env:TEMP "WindowsServerLab.log"
 }
 
 # Common Logging Function
@@ -76,10 +77,12 @@ function New-LabEnvironment {
         $scriptPath = Join-Path $ModuleRoot "Hyper-V_Lab_Setup.ps1"
         if (Test-Path $scriptPath) {
             & $scriptPath -VMPath $VMPath -ISOPath $ISOPath -DomainName $DomainName -Force:$Force
-        } else {
+        }
+        else {
             throw "Hyper-V_Lab_Setup.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to create lab environment: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -108,10 +111,12 @@ function Test-LabEnvironment {
         $scriptPath = Join-Path $ModuleRoot "Test-LabEnvironment.ps1"
         if (Test-Path $scriptPath) {
             & $scriptPath -Detailed:$Detailed
-        } else {
+        }
+        else {
             throw "Test-LabEnvironment.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to validate lab environment: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -144,13 +149,16 @@ function Start-LabVMs {
                 foreach ($vmName in $VMNames) {
                     & $scriptPath -Action Start -VMName $vmName
                 }
-            } else {
+            }
+            else {
                 & $scriptPath -Action Start
             }
-        } else {
+        }
+        else {
             throw "Hyper-V_Management.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to start lab VMs: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -186,21 +194,26 @@ function Stop-LabVMs {
                 foreach ($vmName in $VMNames) {
                     if ($Force) {
                         & $scriptPath -Action Stop -VMName $vmName -Force
-                    } else {
+                    }
+                    else {
                         & $scriptPath -Action Stop -VMName $vmName
                     }
                 }
-            } else {
+            }
+            else {
                 if ($Force) {
                     & $scriptPath -Action Stop -Force
-                } else {
+                }
+                else {
                     & $scriptPath -Action Stop
                 }
             }
-        } else {
+        }
+        else {
             throw "Hyper-V_Management.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to stop lab VMs: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -225,10 +238,12 @@ function Get-LabStatus {
         $scriptPath = Join-Path $ModuleRoot "Hyper-V_Management.ps1"
         if (Test-Path $scriptPath) {
             & $scriptPath -Action Status
-        } else {
+        }
+        else {
             throw "Hyper-V_Management.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to get lab status: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -252,10 +267,12 @@ function New-LabUsers {
         $scriptPath = Join-Path $ModuleRoot "Create-LabUsers.ps1"
         if (Test-Path $scriptPath) {
             & $scriptPath
-        } else {
+        }
+        else {
             throw "Create-LabUsers.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to create lab users: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -279,10 +296,12 @@ function Invoke-LabSecurityAudit {
         $scriptPath = Join-Path $ModuleRoot "SecurityAudit.ps1"
         if (Test-Path $scriptPath) {
             & $scriptPath
-        } else {
+        }
+        else {
             throw "SecurityAudit.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to perform security audit: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -306,10 +325,12 @@ function Set-LabGroupPolicy {
         $scriptPath = Join-Path $ModuleRoot "GroupPolicyManager.ps1"
         if (Test-Path $scriptPath) {
             & $scriptPath
-        } else {
+        }
+        else {
             throw "GroupPolicyManager.ps1 script not found at $scriptPath"
         }
-    } catch {
+    }
+    catch {
         Write-LabLog "Failed to configure Group Policy: $($_.Exception.Message)" "ERROR"
         throw
     }
@@ -359,6 +380,98 @@ function Set-LabConfiguration {
     Write-LabLog "Lab configuration updated" "SUCCESS"
 }
 
+function Remove-LabEnvironment {
+    <#
+    .SYNOPSIS
+        Safely removes all lab environment components
+    .DESCRIPTION
+        This function provides a comprehensive uninstall of all lab components including
+        VMs, virtual switches, Active Directory objects, file shares, and configurations
+    .PARAMETER Component
+        Specific component to remove (All, VMs, Switches, Shares, AD, Users, GPOs, Registry, Scheduled)
+    .PARAMETER BackupPath
+        Path where backup will be created before removal
+    .PARAMETER Force
+        Force removal without detailed confirmations
+    .PARAMETER CreateBackup
+        Create backup before removal (default: true)
+    .EXAMPLE
+        Remove-LabEnvironment -Component All
+    .EXAMPLE
+        Remove-LabEnvironment -Component VMs -Force
+    #>
+    [CmdletBinding()]
+    param(
+        [ValidateSet("All", "VMs", "Switches", "Shares", "AD", "Users", "GPOs", "Registry", "Scheduled")]
+        [string]$Component = "All",
+        [string]$BackupPath = "C:\LabBackup",
+        [switch]$Force = $false,
+        [switch]$CreateBackup = $true
+    )
+    
+    Write-LabLog "Starting lab environment removal..." "INFO"
+    
+    try {
+        $scriptPath = Join-Path $ModuleRoot "Lab-Uninstall.ps1"
+        if (Test-Path $scriptPath) {
+            & $scriptPath -Component $Component -BackupPath $BackupPath -Force:$Force -CreateBackup:$CreateBackup
+        }
+        else {
+            throw "Lab-Uninstall.ps1 script not found at $scriptPath"
+        }
+    }
+    catch {
+        Write-LabLog "Failed to remove lab environment: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+function Restore-LabEnvironment {
+    <#
+    .SYNOPSIS
+        Restores lab environment from backup
+    .DESCRIPTION
+        This function restores lab components from backups created by Remove-LabEnvironment
+    .PARAMETER BackupPath
+        Path where backup is stored
+    .PARAMETER Component
+        Component to restore (All, VMs, AD, Configuration)
+    .PARAMETER VMPath
+        Path where VMs should be restored
+    .PARAMETER Force
+        Force restore without detailed confirmations
+    .EXAMPLE
+        Restore-LabEnvironment -BackupPath "C:\LabBackup"
+    .EXAMPLE
+        Restore-LabEnvironment -BackupPath "D:\Backup" -Component VMs
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BackupPath,
+        [ValidateSet("All", "VMs", "AD", "Configuration")]
+        [string]$Component = "All",
+        [string]$VMPath = $script:LabConfig.DefaultVMPath,
+        [switch]$Force = $false
+    )
+    
+    Write-LabLog "Starting lab environment restore..." "INFO"
+    
+    try {
+        $scriptPath = Join-Path $ModuleRoot "Lab-Restore.ps1"
+        if (Test-Path $scriptPath) {
+            & $scriptPath -BackupPath $BackupPath -Component $Component -VMPath $VMPath -Force:$Force
+        }
+        else {
+            throw "Lab-Restore.ps1 script not found at $scriptPath"
+        }
+    }
+    catch {
+        Write-LabLog "Failed to restore lab environment: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
 # Module initialization
 Write-LabLog "Windows Server Lab Module v$ModuleVersion loaded" "SUCCESS"
 Write-LabLog "Use Get-Command -Module WindowsServerLab to see available commands" "INFO"
@@ -374,5 +487,7 @@ Export-ModuleMember -Function @(
     'Get-LabConfiguration',
     'Invoke-LabSecurityAudit',
     'New-LabUsers',
-    'Set-LabGroupPolicy'
+    'Set-LabGroupPolicy',
+    'Remove-LabEnvironment',
+    'Restore-LabEnvironment'
 ) 
