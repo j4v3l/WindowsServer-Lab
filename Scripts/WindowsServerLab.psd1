@@ -119,10 +119,10 @@ PrivateData = @{
         Tags = @('Windows', 'Server', 'Lab', 'Hyper-V', 'ActiveDirectory', 'Education', 'Testing')
 
         # A URL to the license for this module.
-        LicenseUri = 'https://github.com/yourusername/WindowsServer/blob/main/LICENSE'
+        LicenseUri = 'https://github.com/j4v3l/WindowsServer-Lab/blob/main/LICENSE'
 
         # A URL to the main website for this project.
-        ProjectUri = 'https://github.com/yourusername/WindowsServer'
+        ProjectUri = 'https://github.com/j4v3l/WindowsServer-Lab'
 
         # A URL to an icon representing this module.
         # IconUri = ''

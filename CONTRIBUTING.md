@@ -20,8 +20,8 @@ This repository provides comprehensive documentation and scripts for setting up 
 1. **Fork and Clone**
 
    ```powershell
-   git clone https://github.com/yourusername/WindowsServer.git
-   cd WindowsServer
+   git clone https://github.com/j4v3l/WindowsServer-Lab.git
+   cd WindowsServer-Lab
    ```
 
 2. **Create a Development Branch**
@@ -85,7 +85,7 @@ function New-LabVirtualMachine {
 ### File Structure
 
 ```
-WindowsServer/
+WindowsServer-Lab/
 ├── LabSetupTutorials/          # Step-by-step guides
 ├── Scripts/                    # PowerShell automation scripts
 ├── Tests/                      # Test files (future)

@@ -90,11 +90,21 @@ Demo/
 
 ## [Unreleased]
 
+### Added
+
+- **🎯 GitHub Templates & Community Standards**: Complete professional template suite
+- **Issue Templates**: Structured forms for bug reports, feature requests, and questions
+- **Pull Request Template**: Comprehensive checklist with testing and documentation requirements
+- **Code of Conduct**: Community standards with educational focus and Norse mythology theme
+- **Security Policy**: Vulnerability reporting and security best practices for lab environments
+- **Support Documentation**: Multi-tier support with self-help resources and community channels
+- **Funding Configuration**: Sponsorship and funding setup for project sustainability
+- **Enhanced CI/CD Documentation**: Updated workflows documentation with template information
+
 ### Planned
 
 - Automated testing framework
 - Additional lab scenarios (DNS, Exchange, SQL Server)
-- CI/CD pipeline integration
 - PowerShell Gallery publication
 - Advanced security hardening templates
 - Multi-site lab configurations
