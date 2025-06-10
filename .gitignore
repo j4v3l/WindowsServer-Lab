@@ -114,8 +114,8 @@ $RECYCLE.BIN/
 *.lnk
 
 # PowerShell Module files
-*.psd1
-*.psm1
+# *.psd1
+# *.psm1
 *.ps1xml
 *.psc1
 *.pssc
