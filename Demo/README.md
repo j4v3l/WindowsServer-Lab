@@ -1,8 +1,44 @@
-# 🏰 **ASGARD TECHNOLOGIES DEMO** - Windows Server Lab
+# 🏰 **WINDOWS SERVER DEMO ENVIRONMENTS**
 
 ## 🎯 **Overview**
 
-This directory contains the complete **Asgard Technologies** demo environment - an epic Norse mythology-themed Windows Server lab that showcases every feature of the WindowsServer project. This demo creates a realistic enterprise environment with 25 virtual machines, complete organizational structure, and professional-grade configurations.
+This directory contains comprehensive Windows Server demo environments that showcase every feature of the WindowsServer project. Choose from two epic mythology-themed labs, each creating realistic enterprise environments with 25 virtual machines, complete organizational structures, and professional-grade configurations.
+
+### **🏰 Asgard Technologies Demo** (Primary)
+
+Norse mythology-themed Windows Server lab with traditional enterprise features and configurations.
+
+### **⚡ Olympus Systems Demo**
+
+Greek mythology-themed Windows Server lab with advanced cloud integration and AI/ML capabilities.
+
+---
+
+## 🚀 **Choose Your Adventure**
+
+### **🏰 Asgard Technologies** (Recommended for beginners)
+
+- **Focus**: Traditional Windows Server enterprise features
+- **Theme**: Norse mythology (Odin, Thor, Heimdall, etc.)
+- **Specialty**: Core Windows Server capabilities
+- **📂 Location**: This directory (`Demo/`)
+- **👉 [Get Started](Guides/QUICK_START_ASGARD.md)**
+
+### **⚡ Olympus Systems** (Advanced users)
+
+- **Focus**: Advanced cloud integration and AI/ML capabilities  
+- **Theme**: Greek mythology (Zeus, Athena, Apollo, etc.)
+- **Specialty**: Hybrid cloud, AI/ML pipelines, modern workloads
+- **📂 Location**: `Demo/Olympus/`
+- **👉 [Get Started](Olympus/Guides/QUICK_START_OLYMPUS.md)**
+
+---
+
+# 🏰 **ASGARD TECHNOLOGIES DEMO** - Core Windows Server Lab
+
+## 🎯 **Asgard Overview**
+
+The **Asgard Technologies** demo environment is an epic Norse mythology-themed Windows Server lab that showcases core enterprise features. This demo creates a realistic enterprise environment with 25 virtual machines, complete organizational structure, and professional-grade configurations.
 
 ---
 
@@ -10,14 +46,19 @@ This directory contains the complete **Asgard Technologies** demo environment - 
 
 ```
 Demo/
-├── README.md                          # This file - Demo overview
-├── Scripts/                           # Deployment and management scripts
-│   └── Deploy-AsgardLab.ps1          # Main deployment script
-├── Documentation/                     # Detailed technical documentation  
-│   ├── DEMO_SETUP_GUIDE.md           # Complete setup guide
+├── README.md                          # This file - Demo environments overview
+├── Scripts/                           # Asgard deployment and management scripts
+│   └── Deploy-AsgardLab.ps1          # Asgard deployment script
+├── Documentation/                     # Asgard technical documentation  
+│   ├── DEMO_SETUP_GUIDE.md           # Asgard complete setup guide
 │   └── HARDWARE_PERFORMANCE_GUIDE.md # Hardware optimization guide
-└── Guides/                           # Quick-start and user guides
-    └── QUICK_START_ASGARD.md         # 3-step deployment guide
+├── Guides/                           # Asgard quick-start and user guides
+│   └── QUICK_START_ASGARD.md         # Asgard 3-step deployment guide
+└── Olympus/                          # Olympus Systems demo environment
+    ├── README.md                      # Olympus demo overview
+    ├── Scripts/                       # Olympus deployment scripts
+    ├── Documentation/                 # Olympus technical documentation
+    └── Guides/                       # Olympus quick-start guides
 ```
 
 ---
