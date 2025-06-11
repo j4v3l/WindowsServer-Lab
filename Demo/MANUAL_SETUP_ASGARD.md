@@ -337,9 +337,9 @@ Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
 
 ```powershell
 # Run on BALDER-WEB01 after domain join
-Install-WindowsFeature -Name IIS-WebServerRole -IncludeManagementTools
-Install-WindowsFeature -Name IIS-ASPNET45 -IncludeManagementTools
-Install-WindowsFeature -Name IIS-NetFxExtensibility45 -IncludeManagementTools
+Install-WindowsFeature -Name Web-Server -IncludeManagementTools
+Install-WindowsFeature -Name Web-Asp-Net45 -IncludeManagementTools
+Install-WindowsFeature -Name Web-Net-Ext45 -IncludeManagementTools
 ```
 
 ### **Step 3.5: Create Security Server (VIDAR-SEC01)**
