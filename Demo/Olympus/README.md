@@ -11,6 +11,7 @@ This directory contains the complete **Olympus Systems** demo environment - an e
 ```
 Olympus/
 ├── README.md                          # This file - Demo overview
+├── MANUAL_SETUP_OLYMPUS.md           # Manual step-by-step deployment guide
 ├── Scripts/                           # Deployment and management scripts
 │   └── Deploy-OlympusLab.ps1         # Main deployment script
 ├── Documentation/                     # Detailed technical documentation
@@ -59,6 +60,12 @@ cd Olympus/Scripts
 - Read: `Guides/QUICK_START_OLYMPUS.md`
 - Run: `Scripts/Deploy-OlympusLab.ps1`
 - Time: 30-60 minutes
+
+#### **📚 Manual Step-by-Step Setup**
+
+- Read: `MANUAL_SETUP_OLYMPUS.md`
+- Complete manual deployment with advanced features
+- Perfect for learning cloud integration and AI/ML setup
 
 #### **🛡️ Advanced Security Features (NEW!)**
 

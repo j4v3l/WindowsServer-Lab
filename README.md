@@ -12,7 +12,9 @@ This repository contains comprehensive documentation and scripts for setting up 
 Both demos provide realistic enterprise environments perfect for demonstrations, learning, and showcasing Windows Server capabilities!
 
 👉 **[Get Started with Asgard Demo](Demo/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!  
-👉 **[Get Started with Olympus Demo](Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)** - Deploy in 30-60 minutes!
+👉 **[Manual Asgard Setup Guide](Demo/MANUAL_SETUP_ASGARD.md)** - Step-by-step manual deployment!  
+👉 **[Get Started with Olympus Demo](Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)** - Deploy in 30-60 minutes!  
+👉 **[Manual Olympus Setup Guide](Demo/Olympus/MANUAL_SETUP_OLYMPUS.md)** - Advanced manual deployment!
 
 ## ⚠️ Important Disclaimer
 

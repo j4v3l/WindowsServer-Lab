@@ -47,6 +47,7 @@ The **Asgard Technologies** demo environment is an epic Norse mythology-themed W
 ```
 Demo/
 ├── README.md                          # This file - Demo environments overview
+├── MANUAL_SETUP_ASGARD.md            # Manual step-by-step Asgard deployment guide
 ├── Scripts/                           # Asgard deployment and management scripts
 │   └── Deploy-AsgardLab.ps1          # Asgard deployment script
 ├── Documentation/                     # Asgard technical documentation
@@ -56,6 +57,7 @@ Demo/
 │   └── QUICK_START_ASGARD.md         # Asgard 3-step deployment guide
 └── Olympus/                          # Olympus Systems demo environment
     ├── README.md                      # Olympus demo overview
+    ├── MANUAL_SETUP_OLYMPUS.md       # Manual step-by-step Olympus deployment guide
     ├── Scripts/                       # Olympus deployment scripts
     ├── Documentation/                 # Olympus technical documentation
     └── Guides/                       # Olympus quick-start guides
@@ -120,6 +122,12 @@ All passwords are handled securely with no hardcoded credentials.
 - Read: `Guides/QUICK_START_ASGARD.md`
 - Run: `Scripts/Deploy-AsgardLab.ps1`
 - Time: 30-60 minutes
+
+#### **📚 Manual Step-by-Step Setup**
+
+- Read: `MANUAL_SETUP_ASGARD.md`
+- Complete manual deployment with full control
+- Perfect for learning and customization
 
 #### **🔧 Technical Implementation**
 

@@ -145,11 +145,26 @@ You've just set up your first Windows Server domain! This is the foundation for:
 - Creating shared resources
 - And much more!
 
-## 🤖 Automated Setup Alternative
+## 🤖 Automated Setup Alternatives
 
-Instead of manual setup, you can use our automated PowerShell scripts:
+Instead of manual setup, you have several options:
 
-### Using the Lab Setup Scripts
+### Epic Demo Environments (Recommended)
+
+For a complete, realistic Windows Server lab experience:
+
+- **🏰 [Asgard Technologies Demo](../Demo/README.md)**: 25-VM Norse mythology enterprise
+
+  - Automated deployment: [Quick Start Guide](../Demo/Guides/QUICK_START_ASGARD.md)
+  - Manual step-by-step: [Manual Setup Guide](../Demo/MANUAL_SETUP_ASGARD.md)
+
+- **⚡ [Olympus Systems Demo](../Demo/Olympus/README.md)**: 25-VM Greek mythology enterprise with advanced features
+  - Automated deployment: [Quick Start Guide](../Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)
+  - Manual step-by-step: [Manual Setup Guide](../Demo/Olympus/MANUAL_SETUP_OLYMPUS.md)
+
+### Basic Lab Setup Scripts
+
+For a simple lab setup:
 
 ```powershell
 # Navigate to the Scripts directory
