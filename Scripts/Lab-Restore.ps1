@@ -41,11 +41,26 @@ function Write-RestoreLog {
     
   # Also write to console with color
   switch ($Level) {
-    "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $ErrorColor }
-    "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $WarningColor }
-    "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $InfoColor }
-    "DEBUG" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $DebugColor }
-    "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $InfoColor }
+    "ERROR" { 
+      # Using Write-Host for colored user output
+      Write-Host $Message -ForegroundColor $ErrorColor 
+    }
+    "WARNING" { 
+      # Using Write-Host for colored user output
+      Write-Host $Message -ForegroundColor $WarningColor 
+    }
+    "INFO" { 
+      # Using Write-Host for colored user output
+      Write-Host $Message -ForegroundColor $InfoColor 
+    }
+    "DEBUG" { 
+      # Using Write-Host for colored user output
+      Write-Host $Message -ForegroundColor $DebugColor 
+    }
+    "SUCCESS" { 
+      # Using Write-Host for colored user output
+      Write-Host $Message -ForegroundColor $InfoColor 
+    }
   }
 }
 
@@ -130,7 +145,8 @@ function Restore-LabVM {
     Write-RestoreLog "Found $($vmBackups.Count) VM backups to restore" "INFO"
         
     if (-not $Force -and -not $SkipConfirmation) {
-      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`nVMs to be restored:" -ForegroundColor $WarningColor
+      # Using Write-Host for colored user output
+      Write-Host "`nVMs to be restored:" -ForegroundColor $WarningColor
       foreach ($vmBackup in $vmBackups) {
         Write-Host "  - $($vmBackup.Name)" -ForegroundColor $DebugColor
       }
@@ -235,8 +251,10 @@ function Restore-LabAD {
         try {
           if (-not (Get-ADUser -Filter "SamAccountName -eq '$($user.SamAccountName)'" -ErrorAction SilentlyContinue)) {
             $ouPath = $user.DistinguishedName.Substring($user.DistinguishedName.IndexOf(',') + 1)
-            # Generate a secure random password instead of hardcoded one
-            $tempPassword = ConvertTo-SecureString -String ([System.Web.Security.Membership]::GeneratePassword(12, 3)) -AsPlainText -Force
+            # Generate a secure random password and convert it properly
+            Add-Type -AssemblyName 'System.Web'
+            $randomPassword = [System.Web.Security.Membership]::GeneratePassword(12, 3)
+            $tempPassword = ConvertTo-SecureString -String $randomPassword -AsPlainText -Force
             New-ADUser -Name $user.Name -GivenName $user.GivenName -Surname $user.Surname -SamAccountName $user.SamAccountName -UserPrincipalName $user.UserPrincipalName -Path $ouPath -AccountPassword $tempPassword -Enabled $false
             Write-RestoreLog "Restored user: $($user.SamAccountName) (password reset required)" "SUCCESS"
           }
@@ -312,8 +330,9 @@ try {
   }
     
   # Summary
-  Write-Information "`n" -InformationAction Continue -NoNewline
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "=== RESTORE SUMMARY ===" -ForegroundColor $HighlightColor
+  Write-Information "`n" -InformationAction Continue
+  # Using Write-Host for colored user output
+  Write-Host "=== RESTORE SUMMARY ===" -ForegroundColor $HighlightColor
   Write-RestoreLog "Restore operation completed" "SUCCESS"
   Write-RestoreLog "Log file: $LogPath" "INFO"
     
@@ -330,9 +349,12 @@ try {
   }
     
   Write-Host "`nPost-Restore Actions Required:" -ForegroundColor $HighlightColor
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "1. Reset user passwords in Active Directory" -ForegroundColor $WarningColor
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "2. Verify VM network configurations" -ForegroundColor $WarningColor
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "3. Test domain controller functionality" -ForegroundColor $WarningColor
+  # Using Write-Host for colored user output
+  Write-Host "1. Reset user passwords in Active Directory" -ForegroundColor $WarningColor
+  # Using Write-Host for colored user output
+  Write-Host "2. Verify VM network configurations" -ForegroundColor $WarningColor
+  # Using Write-Host for colored user output
+  Write-Host "3. Test domain controller functionality" -ForegroundColor $WarningColor
   Write-Host "4. Re-configure any custom settings" -ForegroundColor $WarningColor
 }
 catch {
