@@ -230,7 +230,7 @@ function New-AdvancedGPO {
     if (-not (Get-GPO -Name $gpoName -ErrorAction SilentlyContinue)) {
       New-GPO -Name $gpoName -Comment $gpoDescription
       "Created GPO: $gpoName" | Out-File -FilePath $logFile -Append
-      Write-Host "✅ Created GPO: $gpoName" -ForegroundColor Green
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ Created GPO: $gpoName" -ForegroundColor Green
     }
         
     # Apply settings
@@ -263,7 +263,7 @@ function New-AdvancedGPO {
       try {
         New-GPLink -Name $gpoName -Target $OUTarget -LinkEnabled Yes
         "Linked GPO $gpoName to OU: $OUTarget" | Out-File -FilePath $logFile -Append
-        Write-Host "🔗 Linked GPO to: $OUTarget" -ForegroundColor Cyan
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🔗 Linked GPO to: $OUTarget" -ForegroundColor Cyan
       }
       catch {
         "Failed to link GPO to OU: $OUTarget - Error: $_" | Out-File -FilePath $logFile -Append
@@ -271,7 +271,7 @@ function New-AdvancedGPO {
       }
     }
         
-    Write-Host "✅ Completed GPO configuration: $gpoName" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ Completed GPO configuration: $gpoName" -ForegroundColor Green
         
   }
   catch {
@@ -282,18 +282,18 @@ function New-AdvancedGPO {
 }
 
 # Function to create all advanced GPOs
-function Deploy-AllAdvancedGPOs {
+function Deploy-AdvancedGPO {
   param (
     [string[]]$Categories = $gpoCategories.Keys,
     [hashtable]$OUMappings = @{}
   )
     
-  Write-Host "🚀 Deploying Advanced Group Policy Objects..." -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🚀 Deploying Advanced Group Policy Objects..." -ForegroundColor Yellow
   Write-Host "📋 Categories to deploy: $($Categories -join ', ')" -ForegroundColor Cyan
     
   foreach ($category in $Categories) {
     if ($gpoCategories.ContainsKey($category)) {
-      Write-Host "`n📂 Processing category: $category" -ForegroundColor Magenta
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`n📂 Processing category: $category" -ForegroundColor Magenta
             
       $ouTarget = $null
       if ($OUMappings.ContainsKey($category)) {
@@ -307,7 +307,7 @@ function Deploy-AllAdvancedGPOs {
     }
   }
     
-  Write-Host "`n🎉 Advanced GPO deployment completed!" -ForegroundColor Green
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`n🎉 Advanced GPO deployment completed!" -ForegroundColor Green
 }
 
 # Function to generate comprehensive GPO report
@@ -456,13 +456,13 @@ function Get-AdvancedGPOReport {
 "@
     
   $html | Out-File -FilePath $reportPath -Encoding UTF8
-  Write-Host "📊 Advanced GPO report generated: $reportPath" -ForegroundColor Green
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📊 Advanced GPO report generated: $reportPath" -ForegroundColor Green
     
   return $reportPath
 }
 
 # Function to backup all GPOs with enhanced metadata
-function Backup-AdvancedGPOs {
+function Backup-AdvancedGPO {
   param (
     [string]$BackupPath = $gpoConfig.BackupPath
   )
@@ -472,12 +472,12 @@ function Backup-AdvancedGPOs {
     
   New-Item -Path $backupFolder -ItemType Directory -Force | Out-Null
     
-  Write-Host "💾 Backing up all GPOs to: $backupFolder" -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "💾 Backing up all GPOs to: $backupFolder" -ForegroundColor Yellow
     
   Get-GPO -All | ForEach-Object {
     try {
       $backup = Backup-GPO -Guid $_.Id -Path $backupFolder
-      Write-Host "  ✓ Backed up: $($_.DisplayName)" -ForegroundColor Green
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "  ✓ Backed up: $($_.DisplayName)" -ForegroundColor Green
     }
     catch {
       Write-Warning "Failed to backup: $($_.DisplayName) - $_"
@@ -496,7 +496,7 @@ function Backup-AdvancedGPOs {
     
   $manifest | ConvertTo-Json -Depth 3 | Out-File -FilePath (Join-Path $backupFolder "backup_manifest.json") -Encoding UTF8
     
-  Write-Host "✅ GPO backup completed: $backupFolder" -ForegroundColor Green
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ GPO backup completed: $backupFolder" -ForegroundColor Green
   return $backupFolder
 }
 
@@ -504,45 +504,45 @@ function Backup-AdvancedGPOs {
 function Show-AdvancedGPOMenu {
   do {
     Clear-Host
-    Write-Host "🛡️  ADVANCED GROUP POLICY MANAGER" -ForegroundColor Cyan
-    Write-Host "=" * 50 -ForegroundColor Cyan
-    Write-Host "1. Deploy Security Policies (Camera, USB, Device Controls)" -ForegroundColor White
-    Write-Host "2. Deploy Personalization Policies (Desktop, Start Menu)" -ForegroundColor White
-    Write-Host "3. Deploy Device Control Policies (Printers, Storage)" -ForegroundColor White
-    Write-Host "4. Deploy Application Control Policies (Software, Store)" -ForegroundColor White
-    Write-Host "5. Deploy Network Security Policies (Firewall, Remote Access)" -ForegroundColor White
-    Write-Host "6. Deploy Data Protection Policies (Privacy, Cloud)" -ForegroundColor White
-    Write-Host "7. Deploy ALL Policies" -ForegroundColor Yellow
-    Write-Host "8. Generate Comprehensive Report" -ForegroundColor Green
-    Write-Host "9. Backup All GPOs" -ForegroundColor Magenta
-    Write-Host "0. Exit" -ForegroundColor Red
-    Write-Host "=" * 50 -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🛡️  ADVANCED GROUP POLICY MANAGER" -ForegroundColor Cyan
+    Write-Information "=" -InformationAction Continue * 50 -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "1. Deploy Security Policies (Camera, USB, Device Controls)" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "2. Deploy Personalization Policies (Desktop, Start Menu)" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "3. Deploy Device Control Policies (Printers, Storage)" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "4. Deploy Application Control Policies (Software, Store)" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "5. Deploy Network Security Policies (Firewall, Remote Access)" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "6. Deploy Data Protection Policies (Privacy, Cloud)" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "7. Deploy ALL Policies" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "8. Generate Comprehensive Report" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "9. Backup All GPOs" -ForegroundColor Magenta
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "0. Exit" -ForegroundColor Red
+    Write-Information "=" -InformationAction Continue * 50 -ForegroundColor Cyan
         
     $choice = Read-Host "Select an option (0-9)"
         
     switch ($choice) {
-      "1" { Deploy-AllAdvancedGPOs -Categories @("Security") }
-      "2" { Deploy-AllAdvancedGPOs -Categories @("Personalization") }
-      "3" { Deploy-AllAdvancedGPOs -Categories @("DeviceControl") }
-      "4" { Deploy-AllAdvancedGPOs -Categories @("ApplicationControl") }
-      "5" { Deploy-AllAdvancedGPOs -Categories @("NetworkSecurity") }
-      "6" { Deploy-AllAdvancedGPOs -Categories @("DataProtection") }
-      "7" { Deploy-AllAdvancedGPOs }
+      "1" { Deploy-AdvancedGPO -Categories @("Security") }
+      "2" { Deploy-AdvancedGPO -Categories @("Personalization") }
+      "3" { Deploy-AdvancedGPO -Categories @("DeviceControl") }
+      "4" { Deploy-AdvancedGPO -Categories @("ApplicationControl") }
+      "5" { Deploy-AdvancedGPO -Categories @("NetworkSecurity") }
+      "6" { Deploy-AdvancedGPO -Categories @("DataProtection") }
+      "7" { Deploy-AdvancedGPO }
       "8" { Get-AdvancedGPOReport }
-      "9" { Backup-AdvancedGPOs }
-      "0" { Write-Host "Goodbye!" -ForegroundColor Green; break }
-      default { Write-Host "Invalid option. Please try again." -ForegroundColor Red; Start-Sleep 2 }
+      "9" { Backup-AdvancedGPO }
+      "0" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Goodbye!" -ForegroundColor Green; break }
+      default { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Invalid option. Please try again." -ForegroundColor Red; Start-Sleep 2 }
     }
         
     if ($choice -ne "0") {
-      Write-Host "`nPress any key to continue..." -ForegroundColor Gray
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`nPress any key to continue..." -ForegroundColor Gray
       $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
   } while ($choice -ne "0")
 }
 
 # Export functions for use in other scripts
-Export-ModuleMember -Function Deploy-AllAdvancedGPOs, Get-AdvancedGPOReport, Backup-AdvancedGPOs, Show-AdvancedGPOMenu
+Export-ModuleMember -Function Deploy-AdvancedGPO, Get-AdvancedGPOReport, Backup-AdvancedGPO, Show-AdvancedGPOMenu
 
 # Auto-run menu if script is called directly
 if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Path) {

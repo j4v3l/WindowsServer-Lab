@@ -14,7 +14,7 @@ New-Item -Path "C:\Reports" -ItemType Directory -Force -ErrorAction SilentlyCont
 
 # Function to get disk space information
 function Get-DiskSpaceInfo {
-    $disks = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3"
+    $disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"
     $diskInfo = @()
     
     foreach ($disk in $disks) {
@@ -42,7 +42,7 @@ function Get-ServiceStatus {
 }
 
 # Function to get event log errors
-function Get-EventLogErrors {
+function Get-EventLogError {
     $errors = Get-EventLog -LogName System -EntryType Error -Newest 10
     return $errors | Select-Object TimeGenerated, Source, Message
 }
@@ -54,9 +54,9 @@ function Get-ADReplicationStatus {
 }
 
 # Function to get performance metrics
-function Get-PerformanceMetrics {
-    $cpu = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average
-    $memory = Get-WmiObject Win32_OperatingSystem
+function Get-PerformanceMetric {
+    $cpu = Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average
+    $memory = Get-CimInstance Win32_OperatingSystem
     $totalMemory = [math]::Round($memory.TotalVisibleMemorySize / 1MB, 2)
     $freeMemory = [math]::Round($memory.FreePhysicalMemory / 1MB, 2)
     $usedMemory = $totalMemory - $freeMemory
@@ -98,10 +98,10 @@ $html = @"
     $(Get-ServiceStatus | ConvertTo-Html -Fragment)
     
     <h3>Recent System Errors</h3>
-    $(Get-EventLogErrors | ConvertTo-Html -Fragment)
+    $(Get-EventLogError | ConvertTo-Html -Fragment)
     
     <h3>Performance Metrics</h3>
-    $(Get-PerformanceMetrics | ConvertTo-Html -Fragment)
+    $(Get-PerformanceMetric | ConvertTo-Html -Fragment)
     
     <h3>AD Replication Status</h3>
     <pre>$(Get-ADReplicationStatus)</pre>
@@ -112,4 +112,4 @@ $html = @"
 # Save the report
 $html | Out-File -FilePath $reportPath -Encoding UTF8
 
-Write-Host "System health report generated at: $reportPath" -ForegroundColor Green 
+# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "System health report generated at: $reportPath" -ForegroundColor Green 

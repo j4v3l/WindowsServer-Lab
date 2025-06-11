@@ -27,11 +27,11 @@ function Write-Log {
     
     # Also write to console with color
     switch ($Level) {
-        "ERROR" { Write-Host "❌ $Message" -ForegroundColor Red }
-        "WARNING" { Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-        "SUCCESS" { Write-Host "✅ $Message" -ForegroundColor Green }
-        "INFO" { Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
-        "DEBUG" { if ($Detailed) { Write-Host "🔍 $Message" -ForegroundColor Gray } }
+        "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ $Message" -ForegroundColor Red }
+        "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️  $Message" -ForegroundColor Yellow }
+        "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ $Message" -ForegroundColor Green }
+        "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
+        "DEBUG" { if ($Detailed) { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🔍 $Message" -ForegroundColor Gray } }
     }
 }
 
@@ -44,7 +44,7 @@ $script:ValidationResults = @{
     Issues       = @()
 }
 
-function Test-Prerequisites {
+function Test-Prerequisite {
     Write-Log "=== TESTING PREREQUISITES ===" "INFO"
     
     # Test PowerShell version
@@ -289,7 +289,7 @@ function Test-NetworkConfiguration {
     }
 }
 
-function Test-ScriptFiles {
+function Test-ScriptFile {
     Write-Log "=== TESTING SCRIPT FILES ===" "INFO"
     
     $scriptPath = Split-Path -Parent $MyInvocation.ScriptName
@@ -375,11 +375,11 @@ try {
     }
     
     # Run validation tests
-    Test-Prerequisites
+    Test-Prerequisite
     Test-HyperVConfiguration
     Test-ActiveDirectoryEnvironment
     Test-NetworkConfiguration
-    Test-ScriptFiles
+    Test-ScriptFile
     
     # Show summary
     Show-ValidationSummary

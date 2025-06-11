@@ -43,11 +43,11 @@ function Write-UninstallLog {
     
   # Also write to console with color
   switch ($Level) {
-    "ERROR" { Write-Host $Message -ForegroundColor $ErrorColor }
-    "WARNING" { Write-Host $Message -ForegroundColor $WarningColor }
-    "INFO" { Write-Host $Message -ForegroundColor $InfoColor }
-    "DEBUG" { Write-Host $Message -ForegroundColor $DebugColor }
-    "SUCCESS" { Write-Host $Message -ForegroundColor $InfoColor }
+    "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $ErrorColor }
+    "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $WarningColor }
+    "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $InfoColor }
+    "DEBUG" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $DebugColor }
+    "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $InfoColor }
   }
 }
 
@@ -157,7 +157,7 @@ function New-UninstallBackup {
   }
 }
 
-function Remove-LabVMs {
+function Remove-LabVM {
   Write-UninstallLog "Starting VM removal process..." "INFO"
     
   try {
@@ -188,7 +188,7 @@ function Remove-LabVMs {
     Write-UninstallLog "Found $($labVMs.Count) lab VMs to remove" "INFO"
         
     if (-not $Force -and -not $SkipConfirmation) {
-      Write-Host "`nLab VMs to be removed:" -ForegroundColor $WarningColor
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`nLab VMs to be removed:" -ForegroundColor $WarningColor
       foreach ($vm in $labVMs) {
         Write-Host "  - $($vm.Name) [$($vm.State)]" -ForegroundColor $DebugColor
       }
@@ -267,7 +267,7 @@ function Remove-LabVMs {
   }
 }
 
-function Remove-LabSwitches {
+function Remove-LabSwitch {
   Write-UninstallLog "Starting virtual switch removal..." "INFO"
     
   try {
@@ -288,7 +288,7 @@ function Remove-LabSwitches {
     Write-UninstallLog "Found $($labSwitches.Count) lab switches to remove" "INFO"
         
     if (-not $Force -and -not $SkipConfirmation) {
-      Write-Host "`nLab switches to be removed:" -ForegroundColor $WarningColor
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`nLab switches to be removed:" -ForegroundColor $WarningColor
       foreach ($switch in $labSwitches) {
         Write-Host "  - $($switch.Name) [$($switch.SwitchType)]" -ForegroundColor $DebugColor
       }
@@ -328,7 +328,7 @@ function Remove-LabSwitches {
   }
 }
 
-function Remove-LabShares {
+function Remove-LabShare {
   Write-UninstallLog "Starting file share removal..." "INFO"
     
   try {
@@ -342,7 +342,7 @@ function Remove-LabShares {
       Write-UninstallLog "Found $($labShares.Count) lab shares to remove" "INFO"
             
       if (-not $Force -and -not $SkipConfirmation) {
-        Write-Host "`nLab shares to be removed:" -ForegroundColor $WarningColor
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`nLab shares to be removed:" -ForegroundColor $WarningColor
         foreach ($share in $labShares) {
           Write-Host "  - $($share.Name) [$($share.Path)]" -ForegroundColor $DebugColor
         }
@@ -442,7 +442,7 @@ function Remove-LabAD {
   }
 }
 
-function Remove-LabUsers {
+function Remove-LabUser {
   Write-UninstallLog "Starting user account removal..." "INFO"
     
   try {
@@ -477,7 +477,7 @@ function Remove-LabUsers {
   }
 }
 
-function Remove-LabGPOs {
+function Remove-LabGPO {
   Write-UninstallLog "Starting Group Policy cleanup..." "INFO"
     
   try {
@@ -552,7 +552,7 @@ function Remove-LabRegistry {
   }
 }
 
-function Remove-LabScheduledTasks {
+function Remove-LabScheduledTask {
   Write-UninstallLog "Starting scheduled task cleanup..." "INFO"
     
   try {
@@ -635,22 +635,22 @@ try {
   switch ($Component.ToLower()) {
     "all" {
       Write-UninstallLog "Performing complete lab environment removal..." "INFO"
-      $results.VMs = Remove-LabVMs
-      $results.Switches = Remove-LabSwitches
-      $results.Shares = Remove-LabShares
+      $results.VMs = Remove-LabVM
+      $results.Switches = Remove-LabSwitch
+      $results.Shares = Remove-LabShare
       $results.AD = Remove-LabAD
-      $results.GPOs = Remove-LabGPOs
+      $results.GPOs = Remove-LabGPO
       $results.Registry = Remove-LabRegistry
-      $results.ScheduledTasks = Remove-LabScheduledTasks
+      $results.ScheduledTasks = Remove-LabScheduledTask
     }
-    "vms" { $results.VMs = Remove-LabVMs }
-    "switches" { $results.Switches = Remove-LabSwitches }
-    "shares" { $results.Shares = Remove-LabShares }
+    "vms" { $results.VMs = Remove-LabVM }
+    "switches" { $results.Switches = Remove-LabSwitch }
+    "shares" { $results.Shares = Remove-LabShare }
     "ad" { $results.AD = Remove-LabAD }
-    "users" { $results.Users = Remove-LabUsers }
-    "gpos" { $results.GPOs = Remove-LabGPOs }
+    "users" { $results.Users = Remove-LabUser }
+    "gpos" { $results.GPOs = Remove-LabGPO }
     "registry" { $results.Registry = Remove-LabRegistry }
-    "scheduled" { $results.ScheduledTasks = Remove-LabScheduledTasks }
+    "scheduled" { $results.ScheduledTasks = Remove-LabScheduledTask }
     default {
       Write-UninstallLog "Unknown component: $Component" "ERROR"
       Show-Help
@@ -661,8 +661,8 @@ try {
   New-UninstallManifest -Results $results
     
   # Summary
-  Write-Host "`n" -NoNewline
-  Write-Host "=== UNINSTALL SUMMARY ===" -ForegroundColor $HighlightColor
+  Write-Information "`n" -InformationAction Continue -NoNewline
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "=== UNINSTALL SUMMARY ===" -ForegroundColor $HighlightColor
   Write-UninstallLog "Uninstall operation completed" "SUCCESS"
   Write-UninstallLog "Log file: $LogPath" "INFO"
   if ($CreateBackup) {

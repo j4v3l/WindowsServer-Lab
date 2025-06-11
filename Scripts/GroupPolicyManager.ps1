@@ -29,7 +29,7 @@ function Set-StandardGPO {
         # Create new GPO if it doesn't exist
         if (-not (Get-GPO -Name $GpoName -ErrorAction SilentlyContinue)) {
             New-GPO -Name $GpoName -Comment $gpoConfig.Description
-            Write-Host "Created new GPO: $GpoName" -ForegroundColor Green
+            # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Created new GPO: $GpoName" -ForegroundColor Green
         }
 
         # Computer Configuration Settings
@@ -118,17 +118,17 @@ function Set-StandardGPO {
             }
         }
 
-        Write-Host "GPO configuration completed successfully!" -ForegroundColor Green
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "GPO configuration completed successfully!" -ForegroundColor Green
     }
     catch {
         $errorMessage = "GPO configuration failed: $_"
         $errorMessage | Out-File -FilePath $logFile -Append
-        Write-Host $errorMessage -ForegroundColor Red
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $errorMessage -ForegroundColor Red
     }
 }
 
 # Function to link GPO to OUs
-function Set-GPOLinks {
+function Set-GPOLink {
     param (
         [string]$GpoName = $gpoConfig.GpoName,
         [string[]]$OUs = @("Computers", "Users")
@@ -138,11 +138,11 @@ function Set-GPOLinks {
         foreach ($ou in $OUs) {
             $ouPath = "OU=$ou,DC=lab,DC=local"
             New-GPLink -Name $GpoName -Target $ouPath
-            Write-Host "Linked GPO to OU: $ou" -ForegroundColor Green
+            # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Linked GPO to OU: $ou" -ForegroundColor Green
         }
     }
     catch {
-        Write-Host "Failed to link GPO: $_" -ForegroundColor Red
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Failed to link GPO: $_" -ForegroundColor Red
     }
 }
 
@@ -156,11 +156,11 @@ function Get-GPOReport {
     $reportPath = Join-Path $gpoConfig.ReportPath "GPO_Report_${GpoName}_$timestamp.html"
     
     Get-GPOReport -Name $GpoName -ReportType HTML -Path $reportPath
-    Write-Host "GPO report generated at: $reportPath" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "GPO report generated at: $reportPath" -ForegroundColor Green
 }
 
 # Function to backup GPOs
-function Backup-GPOs {
+function Backup-GPO {
     $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm"
     $backupPath = Join-Path $gpoConfig.ReportPath "GPO_Backup_$timestamp"
     
@@ -170,11 +170,11 @@ function Backup-GPOs {
         Backup-GPO -Guid $_.Id -Path $backupPath
     }
     
-    Write-Host "GPOs backed up to: $backupPath" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "GPOs backed up to: $backupPath" -ForegroundColor Green
 }
 
 # Example usage:
 # Set-StandardGPO
-# Set-GPOLinks
+# Set-GPOLink
 # Get-GPOReport
-# Backup-GPOs 
+# Backup-GPO 

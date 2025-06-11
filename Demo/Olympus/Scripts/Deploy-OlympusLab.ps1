@@ -59,12 +59,12 @@ if ($ClientISOPath -and !(Test-Path $ClientISOPath)) {
 
 # Get secure passwords if not provided
 if (-not $SafeModePassword) {
-    Write-Host "Please enter the Safe Mode (DSRM) password for domain controllers:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the Safe Mode (DSRM) password for domain controllers:" -ForegroundColor Yellow
     $SafeModePassword = Read-Host -AsSecureString
 }
 
 if (-not $DefaultUserPassword) {
-    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
     $DefaultUserPassword = Read-Host -AsSecureString
 }
 
@@ -85,10 +85,10 @@ function Write-OlympusLog {
     Add-Content -Path $LogPath -Value $logEntry -ErrorAction SilentlyContinue
     
     switch ($Level) {
-        "SUCCESS" { Write-Host "✅ $Message" -ForegroundColor Green }
-        "WARNING" { Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-        "ERROR" { Write-Host "❌ $Message" -ForegroundColor Red }
-        "INFO" { Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
+        "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ $Message" -ForegroundColor Green }
+        "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️  $Message" -ForegroundColor Yellow }
+        "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ $Message" -ForegroundColor Red }
+        "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
     }
 }
 
@@ -113,7 +113,7 @@ function Show-OlympusBanner {
 }
 
 # Network Configuration
-function New-OlympusNetworks {
+function New-OlympusNetwork {
     Write-OlympusLog "Creating Olympus network infrastructure..." "INFO"
     
     try {
@@ -255,7 +255,7 @@ function New-OlympusVM {
 }
 
 # Server Infrastructure Creation
-function New-OlympusServers {
+function New-OlympusServer {
     Write-OlympusLog "Creating Olympus server infrastructure..." "INFO"
     
     $servers = @(
@@ -314,7 +314,7 @@ function New-OlympusServers {
 }
 
 # Workstation Creation
-function New-OlympusWorkstations {
+function New-OlympusWorkstation {
     Write-OlympusLog "Creating Olympus workstations..." "INFO"
     
     $departments = @(
@@ -352,7 +352,7 @@ function New-OlympusADScript {
 
 # Get the default user password (this should be passed as a parameter)
 if (-not `$DefaultUserPassword) {
-    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
     `$DefaultUserPassword = Read-Host -AsSecureString
 }
 
@@ -429,7 +429,7 @@ Add-ADGroupMember -Identity "GRP-Harmony_Relations" -Members "aphrodite.harmony"
 Add-ADGroupMember -Identity "Domain Admins" -Members "zeus.supreme", "athena.wisdom"
 Add-ADGroupMember -Identity "Enterprise Admins" -Members "zeus.supreme"
 
-Write-Host "⚡ Olympus Systems Active Directory configuration completed successfully! ⚡" -ForegroundColor Green
+# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚡ Olympus Systems Active Directory configuration completed successfully! ⚡" -ForegroundColor Green
 "@
 
     $scriptPath = Join-Path $VMPath "Configure-OlympusAD.ps1"
@@ -456,7 +456,7 @@ function Start-OlympusDeployment {
     
     # Create networks
     if (-not $SkipNetworking) {
-        if (-not (New-OlympusNetworks)) {
+        if (-not (New-OlympusNetwork)) {
             Write-OlympusLog "Network creation failed. Aborting deployment." "ERROR"
             return $false
         }
@@ -465,13 +465,13 @@ function Start-OlympusDeployment {
     # Create VMs
     if (-not $SkipVMs) {
         # Create servers
-        if (-not (New-OlympusServers)) {
+        if (-not (New-OlympusServer)) {
             Write-OlympusLog "Server creation failed. Aborting deployment." "ERROR"
             return $false
         }
         
         # Create workstations
-        if (-not (New-OlympusWorkstations)) {
+        if (-not (New-OlympusWorkstation)) {
             Write-OlympusLog "Workstation creation failed. Aborting deployment." "ERROR"
             return $false
         }

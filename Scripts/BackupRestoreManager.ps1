@@ -29,17 +29,17 @@ function Start-Backup {
     try {
         switch ($BackupType) {
             "SystemState" {
-                Write-Host "Starting System State backup..." -ForegroundColor Yellow
+                # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Starting System State backup..." -ForegroundColor Yellow
                 $backupPath = Join-Path $backupConfig.BackupPath "SystemState_$timestamp"
                 wbadmin start systemstatebackup -backupTarget:$backupPath -quiet
             }
             "AD" {
-                Write-Host "Starting Active Directory backup..." -ForegroundColor Yellow
+                # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Starting Active Directory backup..." -ForegroundColor Yellow
                 $backupPath = Join-Path $backupConfig.BackupPath "AD_$timestamp"
                 ntdsutil "activate instance ntds" "ifm" "create full $backupPath" "quit" "quit"
             }
             "Files" {
-                Write-Host "Starting File System backup..." -ForegroundColor Yellow
+                # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Starting File System backup..." -ForegroundColor Yellow
                 $backupPath = Join-Path $backupConfig.BackupPath "Files_$timestamp"
                 $sourcePaths = @(
                     "C:\Shares",
@@ -56,12 +56,12 @@ function Start-Backup {
         }
         
         "Backup completed successfully at $(Get-Date)" | Out-File -FilePath $logFile -Append
-        Write-Host "Backup completed successfully!" -ForegroundColor Green
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Backup completed successfully!" -ForegroundColor Green
     }
     catch {
         $errorMessage = "Backup failed: $_"
         $errorMessage | Out-File -FilePath $logFile -Append
-        Write-Host $errorMessage -ForegroundColor Red
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $errorMessage -ForegroundColor Red
     }
 }
 
@@ -77,21 +77,21 @@ function Start-Restore {
     try {
         switch ($BackupType) {
             "SystemState" {
-                Write-Host "Starting System State restore..." -ForegroundColor Yellow
+                # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Starting System State restore..." -ForegroundColor Yellow
                 $backupPath = Get-ChildItem -Path $backupConfig.BackupPath -Filter "SystemState_$BackupDate*" | Select-Object -First 1
                 if ($backupPath) {
                     wbadmin start systemstaterecovery -backupTarget:$backupPath.FullName -quiet
                 }
             }
             "AD" {
-                Write-Host "Starting Active Directory restore..." -ForegroundColor Yellow
+                # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Starting Active Directory restore..." -ForegroundColor Yellow
                 $backupPath = Get-ChildItem -Path $backupConfig.BackupPath -Filter "AD_$BackupDate*" | Select-Object -First 1
                 if ($backupPath) {
                     ntdsutil "activate instance ntds" "ifm" "restore full $($backupPath.FullName)" "quit" "quit"
                 }
             }
             "Files" {
-                Write-Host "Starting File System restore..." -ForegroundColor Yellow
+                # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Starting File System restore..." -ForegroundColor Yellow
                 $backupPath = Get-ChildItem -Path $backupConfig.BackupPath -Filter "Files_$BackupDate*" | Select-Object -First 1
                 if ($backupPath) {
                     $sourcePaths = @(
@@ -110,24 +110,24 @@ function Start-Restore {
         }
         
         "Restore completed successfully at $(Get-Date)" | Out-File -FilePath $logFile -Append
-        Write-Host "Restore completed successfully!" -ForegroundColor Green
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Restore completed successfully!" -ForegroundColor Green
     }
     catch {
         $errorMessage = "Restore failed: $_"
         $errorMessage | Out-File -FilePath $logFile -Append
-        Write-Host $errorMessage -ForegroundColor Red
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $errorMessage -ForegroundColor Red
     }
 }
 
 # Function to clean up old backups
-function Remove-OldBackups {
+function Remove-OldBackup {
     $cutoffDate = (Get-Date).AddDays(-$backupConfig.RetentionDays)
     
     Get-ChildItem -Path $backupConfig.BackupPath -Recurse | Where-Object {
         $_.LastWriteTime -lt $cutoffDate
     } | Remove-Item -Recurse -Force
     
-    Write-Host "Cleaned up backups older than $($backupConfig.RetentionDays) days" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Cleaned up backups older than $($backupConfig.RetentionDays) days" -ForegroundColor Yellow
 }
 
 # Function to list available backups
@@ -139,9 +139,9 @@ function Get-BackupList {
     }
     
     foreach ($group in $backups) {
-        Write-Host "`n$($group.Name) Backups:" -ForegroundColor Cyan
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`n$($group.Name) Backups:" -ForegroundColor Cyan
         $group.Group | Sort-Object LastWriteTime -Descending | ForEach-Object {
-            Write-Host "  $($_.Name) - $($_.LastWriteTime)"
+            Write-Information "  $($_.Name) - $($_.LastWriteTime)" -InformationAction Continue
         }
     }
 }
@@ -151,5 +151,5 @@ function Get-BackupList {
 # Start-Backup -BackupType "AD"
 # Start-Backup -BackupType "Files"
 # Start-Restore -BackupType "SystemState" -BackupDate "2024-03-20"
-# Remove-OldBackups
+# Remove-OldBackup
 # Get-BackupList 

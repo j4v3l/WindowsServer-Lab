@@ -137,7 +137,7 @@ function Get-USBSecurityAudit {
     }
         
     # Check connected USB devices
-    $usbDevices = Get-WmiObject -Class Win32_PnPEntity | Where-Object { $_.PNPDeviceID -like "USB*" -and $_.Status -eq "OK" }
+    $usbDevices = Get-CimInstance -ClassName Win32_PnPEntity | Where-Object { $_.PNPDeviceID -like "USB*" -and $_.Status -eq "OK" }
     $audit.ConnectedUSBDevices = $usbDevices | Select-Object Name, Manufacturer, PNPDeviceID | Sort-Object Name
         
     # Security scoring and recommendations
@@ -238,7 +238,7 @@ function Get-DeviceControlAudit {
     }
         
     # Get connected devices
-    $pnpDevices = Get-WmiObject -Class Win32_PnPEntity | Where-Object { $_.Status -eq "OK" -and $_.Name -notlike "*Microsoft*" }
+    $pnpDevices = Get-CimInstance -ClassName Win32_PnPEntity | Where-Object { $_.Status -eq "OK" -and $_.Name -notlike "*Microsoft*" }
     $audit.ConnectedDevices = $pnpDevices | Select-Object Name, Manufacturer, DeviceID | Sort-Object Name
         
     # Security scoring
@@ -449,7 +449,7 @@ function Get-ApplicationControlAudit {
     }
         
     # Get installed software
-    $installedSoftware = Get-WmiObject -Class Win32_Product | Select-Object Name, Version, Vendor | Sort-Object Name
+    $installedSoftware = Get-CimInstance -ClassName Win32_Product | Select-Object Name, Version, Vendor | Sort-Object Name
     $audit.InstalledSoftware = $installedSoftware
         
     $audit.Recommendations += "Review installed software: $($installedSoftware.Count) applications detected"
@@ -551,7 +551,7 @@ function Get-AdvancedSecurityReport {
   $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
   $reportPath = Join-Path $OutputPath "AdvancedSecurityAudit_$timestamp.html"
     
-  Write-Host "🔍 Performing comprehensive security audit..." -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🔍 Performing comprehensive security audit..." -ForegroundColor Yellow
     
   # Perform all audits
   $cameraAudit = Get-CameraSecurityAudit
@@ -869,8 +869,8 @@ function Get-AdvancedSecurityReport {
 "@
     
   $html | Out-File -FilePath $reportPath -Encoding UTF8
-  Write-Host "✅ Advanced security audit report generated: $reportPath" -ForegroundColor Green
-  Write-Host "🛡️ Overall Security Score: $scorePercentage% ($($securityLevel.Level))" -ForegroundColor $( 
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ Advanced security audit report generated: $reportPath" -ForegroundColor Green
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🛡️ Overall Security Score: $scorePercentage% ($($securityLevel.Level))" -ForegroundColor $( 
     switch ($securityLevel.Level) {
       "Excellent" { "Green" }
       "Good" { "Yellow" }
@@ -884,7 +884,7 @@ function Get-AdvancedSecurityReport {
 
 # Function to run quick security check
 function Start-QuickSecurityCheck {
-  Write-Host "🚀 Running Quick Security Check..." -ForegroundColor Cyan
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🚀 Running Quick Security Check..." -ForegroundColor Cyan
     
   $issues = @()
     
@@ -913,14 +913,14 @@ function Start-QuickSecurityCheck {
     $issues += "PowerShell execution policy too permissive: $psPolicy"
   }
     
-  Write-Host "`n📋 Quick Security Check Results:" -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`n📋 Quick Security Check Results:" -ForegroundColor Yellow
   if ($issues.Count -eq 0) {
-    Write-Host "✅ No immediate security issues detected!" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ No immediate security issues detected!" -ForegroundColor Green
   }
   else {
-    Write-Host "⚠️ Found $($issues.Count) potential security issues:" -ForegroundColor Red
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️ Found $($issues.Count) potential security issues:" -ForegroundColor Red
     foreach ($issue in $issues) {
-      Write-Host "  • $issue" -ForegroundColor Yellow
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "  • $issue" -ForegroundColor Yellow
     }
   }
     
@@ -933,7 +933,7 @@ Export-ModuleMember -Function Get-AdvancedSecurityReport, Start-QuickSecurityChe
 # Main execution
 if ($MyInvocation.InvocationName -eq $MyInvocation.MyCommand.Path) {
   Start-QuickSecurityCheck
-  Write-Host "`nWould you like to generate a full security report? (Y/N): " -NoNewline -ForegroundColor Cyan
+  Write-Information "`nWould you like to generate a full security report? (Y/N): " -InformationAction Continue -NoNewline -ForegroundColor Cyan
   $response = Read-Host
   if ($response -eq 'Y' -or $response -eq 'y') {
     Get-AdvancedSecurityReport

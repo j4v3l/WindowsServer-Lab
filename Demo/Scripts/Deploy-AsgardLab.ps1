@@ -59,12 +59,12 @@ if ($ClientISOPath -and !(Test-Path $ClientISOPath)) {
 
 # Get secure passwords if not provided
 if (-not $SafeModePassword) {
-    Write-Host "Please enter the Safe Mode (DSRM) password for domain controllers:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the Safe Mode (DSRM) password for domain controllers:" -ForegroundColor Yellow
     $SafeModePassword = Read-Host -AsSecureString
 }
 
 if (-not $DefaultUserPassword) {
-    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
     $DefaultUserPassword = Read-Host -AsSecureString
 }
 
@@ -85,10 +85,10 @@ function Write-AsgardLog {
     Add-Content -Path $LogPath -Value $logEntry -ErrorAction SilentlyContinue
     
     switch ($Level) {
-        "SUCCESS" { Write-Host "✅ $Message" -ForegroundColor Green }
-        "WARNING" { Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-        "ERROR" { Write-Host "❌ $Message" -ForegroundColor Red }
-        "INFO" { Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
+        "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ $Message" -ForegroundColor Green }
+        "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️  $Message" -ForegroundColor Yellow }
+        "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ $Message" -ForegroundColor Red }
+        "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
     }
 }
 
@@ -114,7 +114,7 @@ function Show-AsgardBanner {
 }
 
 # Network Configuration
-function New-AsgardNetworks {
+function New-AsgardNetwork {
     Write-AsgardLog "Creating Asgard network infrastructure..." "INFO"
     
     try {
@@ -258,7 +258,7 @@ function New-AsgardVM {
     }
 }
 
-function New-AsgardServers {
+function New-AsgardServer {
     Write-AsgardLog "Creating Asgard server infrastructure..." "INFO"
     
     # Define server specifications (Optimized for 64GB RAM, 24 threads)
@@ -313,7 +313,7 @@ function New-AsgardServers {
     }
 }
 
-function New-AsgardWorkstations {
+function New-AsgardWorkstation {
     Write-AsgardLog "Creating Asgard workstation army..." "INFO"
     
     # Define workstation specifications (Optimized for 64GB RAM, 24 threads)
@@ -453,7 +453,7 @@ foreach ($user in $users) {
     }
 }
 
-Write-Host "Asgard Technologies Active Directory structure created successfully!" -ForegroundColor Green
+# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Asgard Technologies Active Directory structure created successfully!" -ForegroundColor Green
 "@
         
         # Save the AD configuration script
@@ -568,7 +568,7 @@ try {
     
     # Create networks
     if (-not $SkipNetworking) {
-        if (-not (New-AsgardNetworks)) {
+        if (-not (New-AsgardNetwork)) {
             Write-AsgardLog "Failed to create networks. Continuing with VM creation..." "WARNING"
         }
     }
@@ -576,10 +576,10 @@ try {
     # Create VMs
     if (-not $SkipVMs) {
         Write-AsgardLog "Creating server infrastructure..." "INFO"
-        New-AsgardServers
+        New-AsgardServer
         
         Write-AsgardLog "Creating workstation army..." "INFO"
-        New-AsgardWorkstations
+        New-AsgardWorkstation
     }
     
     # Prepare AD configuration

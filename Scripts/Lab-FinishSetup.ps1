@@ -18,7 +18,7 @@ $domainName = "lab.local"
 
 # Get secure password if not provided
 if (-not $DefaultUserPassword) {
-    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
     $DefaultUserPassword = Read-Host -AsSecureString
 }
 
@@ -160,15 +160,15 @@ foreach ($ou in @("IT", "HR", "Sales", "Interns", "ServiceAccounts")) {
 
     if (-not (Get-GPO -Name $gpoName -ErrorAction SilentlyContinue)) {
         New-GPO -Name $gpoName -Domain $domainName | Out-Null
-        Write-Host "Created GPO $gpoName"
+        Write-Information "Created GPO $gpoName" -InformationAction Continue
     }
 
     $links = (Get-GPInheritance -Target $ouDN).GpoLinks | Where-Object { $_.DisplayName -eq $gpoName }
     if (-not $links) {
         New-GPLink -Name $gpoName -Target $ouDN -LinkEnabled Yes -Enforced No
-        Write-Host "Linked $gpoName to $ou"
+        Write-Information "Linked $gpoName to $ou" -InformationAction Continue
     }
     else {
-        Write-Host "$gpoName is already linked to $ou"
+        Write-Information "$gpoName is already linked to $ou" -InformationAction Continue
     }
 }

@@ -29,4 +29,4 @@ Set-DhcpServerv4OptionValue -ScopeId "192.168.1.0" -DnsServer $DnsServers -DnsDo
 # Example: Add an exclusion range
 # Add-DhcpServerv4ExclusionRange -ScopeId "192.168.1.0" -StartRange "192.168.1.150" -EndRange "192.168.1.160"
 
-Write-Host "DHCP Server installation and configuration complete." -ForegroundColor Green 
+# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "DHCP Server installation and configuration complete." -ForegroundColor Green 

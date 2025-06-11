@@ -35,11 +35,11 @@ function Write-LabLog {
     
     # Also write to console with color
     switch ($Level) {
-        "ERROR" { Write-Host "❌ $Message" -ForegroundColor Red }
-        "WARNING" { Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-        "SUCCESS" { Write-Host "✅ $Message" -ForegroundColor Green }
-        "INFO" { Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
-        "DEBUG" { Write-Host "🔍 $Message" -ForegroundColor Gray }
+        "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ $Message" -ForegroundColor Red }
+        "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️  $Message" -ForegroundColor Yellow }
+        "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ $Message" -ForegroundColor Green }
+        "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
+        "DEBUG" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🔍 $Message" -ForegroundColor Gray }
     }
 }
 
@@ -122,7 +122,7 @@ function Test-LabEnvironment {
     }
 }
 
-function Start-LabVMs {
+function Start-LabVM {
     <#
     .SYNOPSIS
         Starts all lab virtual machines
@@ -131,9 +131,9 @@ function Start-LabVMs {
     .PARAMETER VMNames
         Specific VM names to start (optional)
     .EXAMPLE
-        Start-LabVMs
+        Start-LabVM
     .EXAMPLE
-        Start-LabVMs -VMNames "DC1-LAB", "FS1-LAB"
+        Start-LabVM -VMNames "DC1-LAB", "FS1-LAB"
     #>
     [CmdletBinding()]
     param(
@@ -164,7 +164,7 @@ function Start-LabVMs {
     }
 }
 
-function Stop-LabVMs {
+function Stop-LabVM {
     <#
     .SYNOPSIS
         Stops all lab virtual machines
@@ -175,9 +175,9 @@ function Stop-LabVMs {
     .PARAMETER Force
         Force shutdown of VMs
     .EXAMPLE
-        Stop-LabVMs
+        Stop-LabVM
     .EXAMPLE
-        Stop-LabVMs -VMNames "CL1-LAB" -Force
+        Stop-LabVM -VMNames "CL1-LAB" -Force
     #>
     [CmdletBinding()]
     param(
@@ -249,14 +249,14 @@ function Get-LabStatus {
     }
 }
 
-function New-LabUsers {
+function New-LabUser {
     <#
     .SYNOPSIS
         Creates lab users and organizational structure
     .DESCRIPTION
         This function creates users, groups, and organizational units for the lab environment
     .EXAMPLE
-        New-LabUsers
+        New-LabUser
     #>
     [CmdletBinding()]
     param()
@@ -480,13 +480,13 @@ Write-LabLog "Use Get-Command -Module WindowsServerLab to see available commands
 Export-ModuleMember -Function @(
     'New-LabEnvironment',
     'Test-LabEnvironment', 
-    'Start-LabVMs',
-    'Stop-LabVMs',
+    'Start-LabVM',
+    'Stop-LabVM',
     'Get-LabStatus',
     'Set-LabConfiguration',
     'Get-LabConfiguration',
     'Invoke-LabSecurityAudit',
-    'New-LabUsers',
+    'New-LabUser',
     'Set-LabGroupPolicy',
     'Remove-LabEnvironment',
     'Restore-LabEnvironment'

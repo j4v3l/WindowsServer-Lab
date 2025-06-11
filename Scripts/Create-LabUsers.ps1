@@ -15,7 +15,7 @@ Import-Module ActiveDirectory
 
 # Get secure password if not provided
 if (-not $DefaultUserPassword) {
-    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Please enter the default password for new user accounts:" -ForegroundColor Yellow
     $DefaultUserPassword = Read-Host -AsSecureString
 }
 

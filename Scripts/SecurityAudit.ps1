@@ -180,4 +180,4 @@ $html = @"
 # Save the report
 $html | Out-File -FilePath $reportPath -Encoding UTF8
 
-Write-Host "Security audit report generated at: $reportPath" -ForegroundColor Green 
+# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Security audit report generated at: $reportPath" -ForegroundColor Green 

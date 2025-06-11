@@ -42,7 +42,7 @@ function Write-ComplianceLog {
         "INFO" { "ℹ️" }
     }
     
-    Write-Host "$emoji $Message" -ForegroundColor $(
+    # Using Write-Host for colored user output`n    Write-Host "$emoji $Message" -ForegroundColor $(
         switch ($Level) {
             "PASS" { "Green" }
             "FAIL" { "Red" }
@@ -137,7 +137,7 @@ function Test-DemoStructure {
     }
 }
 
-function Test-IssueTemplates {
+function Test-IssueTemplate {
     Write-ComplianceLog "Validating issue template compliance..." "INFO"
     
     # Check for proper Demo environment references
@@ -218,44 +218,44 @@ function Test-DocumentationCompliance {
 }
 
 # Main execution
-Write-Host "`n🔍 GitHub Directory Compliance Validation" -ForegroundColor Cyan
-Write-Host "=========================================" -ForegroundColor Cyan
+# Using Write-Host for colored user output`n    Write-Host "`n🔍 GitHub Directory Compliance Validation" -ForegroundColor Cyan
+# Using Write-Host for colored user output`n    Write-Host "=========================================" -ForegroundColor Cyan
 
 # Run all validation tests
 Test-GitHubDirectory
 Test-VersionConsistency  
 Test-DemoStructure
-Test-IssueTemplates
+Test-IssueTemplate
 Test-WorkflowCompliance
 Test-DocumentationCompliance
 
 # Summary report
-Write-Host "`n📊 Compliance Summary" -ForegroundColor Cyan
-Write-Host "=====================" -ForegroundColor Cyan
-Write-Host "✅ Passed: $($ComplianceResults.Passed.Count)" -ForegroundColor Green
-Write-Host "❌ Failed: $($ComplianceResults.Failed.Count)" -ForegroundColor Red  
-Write-Host "⚠️  Warnings: $($ComplianceResults.Warnings.Count)" -ForegroundColor Yellow
+# Using Write-Host for colored user output`n    Write-Host "`n📊 Compliance Summary" -ForegroundColor Cyan
+# Using Write-Host for colored user output`n    Write-Host "=====================" -ForegroundColor Cyan
+# Using Write-Host for colored user output`n    Write-Host "✅ Passed: $($ComplianceResults.Passed.Count)" -ForegroundColor Green
+# Using Write-Host for colored user output`n    Write-Host "❌ Failed: $($ComplianceResults.Failed.Count)" -ForegroundColor Red  
+# Using Write-Host for colored user output`n    Write-Host "⚠️  Warnings: $($ComplianceResults.Warnings.Count)" -ForegroundColor Yellow
 
 if ($Detailed) {
     if ($ComplianceResults.Failed.Count -gt 0) {
-        Write-Host "`n❌ Failed Items:" -ForegroundColor Red
+        # Using Write-Host for colored user output`n    Write-Host "`n❌ Failed Items:" -ForegroundColor Red
         $ComplianceResults.Failed | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     }
     
     if ($ComplianceResults.Warnings.Count -gt 0) {
-        Write-Host "`n⚠️  Warning Items:" -ForegroundColor Yellow
+        # Using Write-Host for colored user output`n    Write-Host "`n⚠️  Warning Items:" -ForegroundColor Yellow
         $ComplianceResults.Warnings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
     }
 }
 
 # Exit with appropriate code
 if ($ComplianceResults.Failed.Count -gt 0) {
-    Write-Host "`n❌ Compliance validation failed!" -ForegroundColor Red
+    # Using Write-Host for colored user output`n    Write-Host "`n❌ Compliance validation failed!" -ForegroundColor Red
     exit 1
 } elseif ($ComplianceResults.Warnings.Count -gt 0) {
-    Write-Host "`n⚠️  Compliance validation passed with warnings" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    Write-Host "`n⚠️  Compliance validation passed with warnings" -ForegroundColor Yellow
     exit 0
 } else {
-    Write-Host "`n✅ All compliance checks passed!" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    Write-Host "`n✅ All compliance checks passed!" -ForegroundColor Green
     exit 0
 } 

@@ -23,7 +23,7 @@ $HighlightColor = "Magenta"
 
 function Write-ColorOutput {
     param([string]$Message, [string]$Color = "White")
-    Write-Host $Message -ForegroundColor $Color
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $Color
 }
 
 function Show-Help {
@@ -58,7 +58,7 @@ function Show-Help {
     Write-ColorOutput "  Monitor   : Show real-time performance monitoring"
 }
 
-function Get-LabVMs {
+function Get-LabVM {
     param([string]$SpecificVM = "")
     
     if ($SpecificVM) {
@@ -75,7 +75,7 @@ function Get-LabVMs {
 function Show-VMStatus {
     Write-ColorOutput "=== VM STATUS REPORT ===" $InfoColor
     
-    $vms = Get-LabVMs -SpecificVM $VMName
+    $vms = Get-LabVM -SpecificVM $VMName
     if (-not $vms) {
         Write-ColorOutput "No VMs found matching criteria." $WarningColor
         return
@@ -128,8 +128,8 @@ function Show-VMStatus {
     Write-ColorOutput "  Total vCPUs: $totalCPUs" $DebugColor
 }
 
-function Start-LabVMs {
-    $vms = Get-LabVMs -SpecificVM $VMName
+function Start-LabVM {
+    $vms = Get-LabVM -SpecificVM $VMName
     if (-not $vms) {
         Write-ColorOutput "No VMs found to start." $WarningColor
         return
@@ -152,8 +152,8 @@ function Start-LabVMs {
     }
 }
 
-function Stop-LabVMs {
-    $vms = Get-LabVMs -SpecificVM $VMName
+function Stop-LabVM {
+    $vms = Get-LabVM -SpecificVM $VMName
     if (-not $vms) {
         Write-ColorOutput "No VMs found to stop." $WarningColor
         return
@@ -192,8 +192,8 @@ function Stop-LabVMs {
     }
 }
 
-function Restart-LabVMs {
-    $vms = Get-LabVMs -SpecificVM $VMName
+function ReStart-LabVM {
+    $vms = Get-LabVM -SpecificVM $VMName
     if (-not $vms) {
         Write-ColorOutput "No VMs found to restart." $WarningColor
         return
@@ -216,8 +216,8 @@ function Restart-LabVMs {
     }
 }
 
-function Backup-LabVMs {
-    $vms = Get-LabVMs -SpecificVM $VMName
+function Backup-LabVM {
+    $vms = Get-LabVM -SpecificVM $VMName
     if (-not $vms) {
         Write-ColorOutput "No VMs found to backup." $WarningColor
         return
@@ -244,8 +244,8 @@ function Backup-LabVMs {
     }
 }
 
-function Restore-LabVMs {
-    $vms = Get-LabVMs -SpecificVM $VMName
+function Restore-LabVM {
+    $vms = Get-LabVM -SpecificVM $VMName
     if (-not $vms) {
         Write-ColorOutput "No VMs found to restore." $WarningColor
         return
@@ -289,7 +289,7 @@ function Restore-LabVMs {
     }
 }
 
-function Show-NetworkDiagnostics {
+function Show-NetworkDiagnostic {
     Write-ColorOutput "=== NETWORK DIAGNOSTICS ===" $InfoColor
     
     # Virtual Switches
@@ -333,7 +333,7 @@ function Show-NetworkDiagnostics {
     
     # VM Network Status
     Write-ColorOutput "`nVM Network Status:" $InfoColor
-    $vms = Get-LabVMs
+    $vms = Get-LabVM
     foreach ($vm in $vms) {
         if ($vm.State -eq "Running") {
             $adapters = Get-VMNetworkAdapter -VMName $vm.Name
@@ -369,7 +369,7 @@ function Invoke-Cleanup {
         }
     }
     
-    $vms = Get-LabVMs -SpecificVM $VMName
+    $vms = Get-LabVM -SpecificVM $VMName
     
     # Remove old checkpoints (keep latest 3)
     Write-ColorOutput "`nCleaning up old checkpoints..." $InfoColor
@@ -432,7 +432,7 @@ function Show-PerformanceMonitor {
             
             # VM Performance
             Write-ColorOutput "`nVM Performance:" $InfoColor
-            $vms = Get-LabVMs | Where-Object { $_.State -eq "Running" }
+            $vms = Get-LabVM | Where-Object { $_.State -eq "Running" }
             foreach ($vm in $vms) {
                 $vmCpu = Get-Counter "\Hyper-V Hypervisor Virtual Processor($($vm.Name):Hv VP *)\% Guest Run Time" -SampleInterval 1 -MaxSamples 1 -ErrorAction SilentlyContinue
                 if ($vmCpu) {
@@ -453,12 +453,12 @@ function Show-PerformanceMonitor {
 try {
     switch ($Action.ToLower()) {
         "status" { Show-VMStatus }
-        "start" { Start-LabVMs }
-        "stop" { Stop-LabVMs }
-        "restart" { Restart-LabVMs }
-        "backup" { Backup-LabVMs }
-        "restore" { Restore-LabVMs }
-        "network" { Show-NetworkDiagnostics }
+        "start" { Start-LabVM }
+        "stop" { Stop-LabVM }
+        "restart" { ReStart-LabVM }
+        "backup" { Backup-LabVM }
+        "restore" { Restore-LabVM }
+        "network" { Show-NetworkDiagnostic }
         "cleanup" { Invoke-Cleanup }
         "monitor" { Show-PerformanceMonitor }
         "help" { Show-Help }

@@ -69,10 +69,10 @@ function Write-ColorOutput {
         [string]$Message,
         [string]$Color = "White"
     )
-    Write-Host $Message -ForegroundColor $Color
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $Color
 }
 
-function Test-Prerequisites {
+function Test-Prerequisite {
     Write-Log "Checking prerequisites..." "INFO"
     
     try {
@@ -99,7 +99,7 @@ function Test-Prerequisites {
         
         # Check disk space
         $drive = [System.IO.Path]::GetPathRoot($VMPath)
-        $diskSpace = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='$($drive.TrimEnd('\'))'" -ErrorAction Stop
+        $diskSpace = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$($drive.TrimEnd('\'))'" -ErrorAction Stop
         $freeSpaceGB = $diskSpace.FreeSpace / 1GB
         if ($freeSpaceGB -lt 100) {
             Write-Log "Low disk space detected ($([math]::Round($freeSpaceGB, 1))GB free). Consider freeing up space." "WARNING"
@@ -127,7 +127,7 @@ function Test-Prerequisites {
     }
 }
 
-function New-LabVirtualSwitches {
+function New-LabVirtualSwitch {
     Write-ColorOutput "Creating virtual switches..." $InfoColor
     
     try {
@@ -438,12 +438,12 @@ try {
     Write-ColorOutput "Domain: $DomainName" $DebugColor
     Write-ColorOutput "Physical Adapter: $PhysicalAdapter" $DebugColor
     
-    if (-not (Test-Prerequisites)) {
+    if (-not (Test-Prerequisite)) {
         exit 1
     }
     
     # Create virtual switches
-    if (-not (New-LabVirtualSwitches)) {
+    if (-not (New-LabVirtualSwitch)) {
         Write-ColorOutput "Failed to create virtual switches. Exiting." $ErrorColor
         exit 1
     }

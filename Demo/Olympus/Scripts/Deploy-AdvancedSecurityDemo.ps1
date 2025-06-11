@@ -68,34 +68,34 @@ $ScriptName = "Deploy-AdvancedSecurityDemo.ps1 (Olympus Edition)"
 # Console styling
 function Write-OlympusHeader {
   Clear-Host
-  Write-Host "=" * 80 -ForegroundColor Cyan
+  Write-Information "=" -InformationAction Continue * 80 -ForegroundColor Cyan
   Write-Host "⚡ OLYMPUS SYSTEMS - ADVANCED SECURITY DEMO ⚡" -ForegroundColor Yellow
-  Write-Host "=" * 80 -ForegroundColor Cyan
-  Write-Host ""
-  Write-Host "🏛️  Divine Power Meets Digital Security  🏛️" -ForegroundColor White
-  Write-Host ""
-  Write-Host "Version: $ScriptVersion" -ForegroundColor Gray
-  Write-Host "Demo Environment: Olympus Systems (Greek Mythology)" -ForegroundColor Gray
-  Write-Host "Domain: olympus.local" -ForegroundColor Gray
-  Write-Host ""
+  Write-Information "=" -InformationAction Continue * 80 -ForegroundColor Cyan
+  Write-Information "" -InformationAction Continue
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🏛️  Divine Power Meets Digital Security  🏛️" -ForegroundColor White
+  Write-Information "" -InformationAction Continue
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Version: $ScriptVersion" -ForegroundColor Gray
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Demo Environment: Olympus Systems (Greek Mythology)" -ForegroundColor Gray
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Domain: olympus.local" -ForegroundColor Gray
+  Write-Information "" -InformationAction Continue
 }
 
 function Write-OlympusMessage {
   param([string]$Message, [string]$Color = "White")
-  Write-Host "🏛️ " -ForegroundColor Yellow -NoNewline
-  Write-Host $Message -ForegroundColor $Color
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🏛️ " -ForegroundColor Yellow -NoNewline
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor $Color
 }
 
 function Write-OlympusError {
   param([string]$Message)
-  Write-Host "⚠️ " -ForegroundColor Red -NoNewline
-  Write-Host $Message -ForegroundColor Red
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️ " -ForegroundColor Red -NoNewline
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor Red
 }
 
 function Write-OlympusSuccess {
   param([string]$Message)
-  Write-Host "✅ " -ForegroundColor Green -NoNewline
-  Write-Host $Message -ForegroundColor Green
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ " -ForegroundColor Green -NoNewline
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $Message -ForegroundColor Green
 }
 
 # Main execution
@@ -107,16 +107,16 @@ try {
     
   if (-not (Test-Path $MainScriptPath)) {
     Write-OlympusError "Main Deploy-AdvancedSecurityDemo.ps1 script not found at: $MainScriptPath"
-    Write-Host ""
-    Write-Host "Expected location: Demo/Scripts/Deploy-AdvancedSecurityDemo.ps1"
-    Write-Host "Please ensure the main Windows Server Lab project structure is intact."
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
+    Write-Information "Expected location: Demo/Scripts/Deploy-AdvancedSecurityDemo.ps1" -InformationAction Continue
+    Write-Information "Please ensure the main Windows Server Lab project structure is intact." -InformationAction Continue
+    Write-Information "" -InformationAction Continue
     Read-Host "Press Enter to exit"
     exit 1
   }
     
   Write-OlympusMessage "Main advanced security script found: $MainScriptPath"
-  Write-Host ""
+  Write-Information "" -InformationAction Continue
     
   # Prepare parameters for main script
   $MainScriptParams = @{
@@ -139,12 +139,12 @@ try {
   }
     
   Write-OlympusMessage "Launching Advanced Security Demo for Olympus Systems..."
-  Write-Host ""
-  Write-Host "Parameters:" -ForegroundColor Cyan
+  Write-Information "" -InformationAction Continue
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Parameters:" -ForegroundColor Cyan
   $MainScriptParams.GetEnumerator() | ForEach-Object {
     Write-Host "  - $($_.Key): $($_.Value)" -ForegroundColor Gray
   }
-  Write-Host ""
+  Write-Information "" -InformationAction Continue
     
   # Create output directory if it doesn't exist
   if (-not (Test-Path $OutputPath)) {
@@ -154,34 +154,34 @@ try {
     }
     catch {
       Write-OlympusError "Failed to create output directory: $OutputPath"
-      Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     }
   }
     
-  Write-Host ""
+  Write-Information "" -InformationAction Continue
   Write-OlympusMessage "Transferring control to main Advanced Security Demo script..."
-  Write-Host ""
-  Write-Host "🏛️ Welcome to the divine realm of Windows Server security! 🏛️" -ForegroundColor Yellow
-  Write-Host ""
+  Write-Information "" -InformationAction Continue
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🏛️ Welcome to the divine realm of Windows Server security! 🏛️" -ForegroundColor Yellow
+  Write-Information "" -InformationAction Continue
     
   # Execute main script with parameters
   & $MainScriptPath @MainScriptParams
     
 }
 catch {
-  Write-Host ""
+  Write-Information "" -InformationAction Continue
   Write-OlympusError "An error occurred while launching the Advanced Security Demo:"
-  Write-Host $_.Exception.Message -ForegroundColor Red
-  Write-Host ""
-  Write-Host "Stack Trace:" -ForegroundColor Gray
-  Write-Host $_.ScriptStackTrace -ForegroundColor Gray
-  Write-Host ""
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $_.Exception.Message -ForegroundColor Red
+  Write-Information "" -InformationAction Continue
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "Stack Trace:" -ForegroundColor Gray
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+  Write-Information "" -InformationAction Continue
   Read-Host "Press Enter to exit"
   exit 1
 }
 
 # Footer message
-Write-Host ""
-Write-Host "=" * 80 -ForegroundColor Cyan
-Write-Host "⚡ Thank you for exploring Olympus Systems Advanced Security! ⚡" -ForegroundColor Yellow
-Write-Host "=" * 80 -ForegroundColor Cyan 
+Write-Information "" -InformationAction Continue
+Write-Information "=" -InformationAction Continue * 80 -ForegroundColor Cyan
+# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚡ Thank you for exploring Olympus Systems Advanced Security! ⚡" -ForegroundColor Yellow
+Write-Information "=" -InformationAction Continue * 80 -ForegroundColor Cyan 
