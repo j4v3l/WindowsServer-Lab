@@ -385,7 +385,7 @@ Install-WindowsFeature -Name RSAT-AD-Tools -IncludeManagementTools
 
 ### **Step 4.1: Create Workstation Template**
 
-Create a PowerShell function to standardize workstation creation:
+**IMPORTANT:** First, run the following PowerShell function definition to create the `New-AsgardWorkstation` function. Copy and paste this entire function into your PowerShell session and press Enter:
 
 ```powershell
 function New-AsgardWorkstation {
@@ -423,7 +423,11 @@ function New-AsgardWorkstation {
 }
 ```
 
+**✅ Verify Function Creation:** After running the above function, you should see no errors. The function is now available for use.
+
 ### **Step 4.2: Create All Workstations**
+
+**Now you can use the `New-AsgardWorkstation` function to create all workstations. Run each department's commands in sequence:**
 
 #### **IT Operations Department (Odin's Realm)**
 
