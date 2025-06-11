@@ -251,10 +251,17 @@ function Restore-LabAD {
         try {
           if (-not (Get-ADUser -Filter "SamAccountName -eq '$($user.SamAccountName)'" -ErrorAction SilentlyContinue)) {
             $ouPath = $user.DistinguishedName.Substring($user.DistinguishedName.IndexOf(',') + 1)
-            # Generate a secure random password and convert it properly
-            Add-Type -AssemblyName 'System.Web'
-            $randomPassword = [System.Web.Security.Membership]::GeneratePassword(12, 3)
-            $tempPassword = ConvertTo-SecureString -String $randomPassword -AsPlainText -Force
+            # Create a secure password without using plaintext conversion
+            # Generate random bytes for password
+            $passwordLength = 16
+            $randomBytes = New-Object byte[] $passwordLength
+            [System.Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($randomBytes)
+            
+            # Convert to SecureString directly
+            $tempPassword = New-Object System.Security.SecureString
+            [System.Convert]::ToBase64String($randomBytes).ToCharArray() | ForEach-Object {
+              $tempPassword.AppendChar($_)
+            }
             New-ADUser -Name $user.Name -GivenName $user.GivenName -Surname $user.Surname -SamAccountName $user.SamAccountName -UserPrincipalName $user.UserPrincipalName -Path $ouPath -AccountPassword $tempPassword -Enabled $false
             Write-RestoreLog "Restored user: $($user.SamAccountName) (password reset required)" "SUCCESS"
           }

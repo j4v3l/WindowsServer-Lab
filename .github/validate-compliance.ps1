@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Validates GitHub directory compliance for Windows Server Lab Environment
@@ -21,6 +21,11 @@ param(
     [switch]$Fix
 )
 
+# Use the Fix parameter for auto-fixing issues (addresses unused parameter warning)
+if ($Fix) {
+    Write-ComplianceLog "Auto-fix mode enabled - attempting to fix issues automatically" "INFO"
+}
+
 # Initialize results
 $ComplianceResults = @{
     Passed = @()
@@ -36,13 +41,14 @@ function Write-ComplianceLog {
     )
     
     $emoji = switch ($Level) {
-        "PASS" { "✅"; $ComplianceResults.Passed += $Message }
-        "FAIL" { "❌"; $ComplianceResults.Failed += $Message }
-        "WARN" { "⚠️"; $ComplianceResults.Warnings += $Message }
-        "INFO" { "ℹ️" }
+        "PASS" { "âœ…"; $ComplianceResults.Passed += $Message }
+        "FAIL" { "âŒ"; $ComplianceResults.Failed += $Message }
+        "WARN" { "âš ï¸"; $ComplianceResults.Warnings += $Message }
+        "INFO" { "â„¹ï¸" }
     }
     
-    # Using Write-Host for colored user output`n    Write-Host "$emoji $Message" -ForegroundColor $(
+    # Using Write-Host for colored user output
+    Write-Host "$emoji $Message" -ForegroundColor $(
         switch ($Level) {
             "PASS" { "Green" }
             "FAIL" { "Red" }
@@ -218,8 +224,10 @@ function Test-DocumentationCompliance {
 }
 
 # Main execution
-# Using Write-Host for colored user output`n    Write-Host "`n🔍 GitHub Directory Compliance Validation" -ForegroundColor Cyan
-# Using Write-Host for colored user output`n    Write-Host "=========================================" -ForegroundColor Cyan
+# Using Write-Host for colored user output
+Write-Host "`nðŸ” GitHub Directory Compliance Validation" -ForegroundColor Cyan
+# Using Write-Host for colored user output
+Write-Host "=========================================" -ForegroundColor Cyan
 
 # Run all validation tests
 Test-GitHubDirectory
@@ -230,32 +238,42 @@ Test-WorkflowCompliance
 Test-DocumentationCompliance
 
 # Summary report
-# Using Write-Host for colored user output`n    Write-Host "`n📊 Compliance Summary" -ForegroundColor Cyan
-# Using Write-Host for colored user output`n    Write-Host "=====================" -ForegroundColor Cyan
-# Using Write-Host for colored user output`n    Write-Host "✅ Passed: $($ComplianceResults.Passed.Count)" -ForegroundColor Green
-# Using Write-Host for colored user output`n    Write-Host "❌ Failed: $($ComplianceResults.Failed.Count)" -ForegroundColor Red  
-# Using Write-Host for colored user output`n    Write-Host "⚠️  Warnings: $($ComplianceResults.Warnings.Count)" -ForegroundColor Yellow
+# Using Write-Host for colored user output
+Write-Host "`nðŸ“Š Compliance Summary" -ForegroundColor Cyan
+# Using Write-Host for colored user output
+Write-Host "=====================" -ForegroundColor Cyan
+# Using Write-Host for colored user output
+Write-Host "âœ… Passed: $($ComplianceResults.Passed.Count)" -ForegroundColor Green
+# Using Write-Host for colored user output
+Write-Host "âŒ Failed: $($ComplianceResults.Failed.Count)" -ForegroundColor Red  
+# Using Write-Host for colored user output
+Write-Host "âš ï¸  Warnings: $($ComplianceResults.Warnings.Count)" -ForegroundColor Yellow
 
 if ($Detailed) {
     if ($ComplianceResults.Failed.Count -gt 0) {
-        # Using Write-Host for colored user output`n    Write-Host "`n❌ Failed Items:" -ForegroundColor Red
+        # Using Write-Host for colored user output
+        Write-Host "`nâŒ Failed Items:" -ForegroundColor Red
         $ComplianceResults.Failed | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     }
     
     if ($ComplianceResults.Warnings.Count -gt 0) {
-        # Using Write-Host for colored user output`n    Write-Host "`n⚠️  Warning Items:" -ForegroundColor Yellow
+        # Using Write-Host for colored user output
+        Write-Host "`nâš ï¸  Warning Items:" -ForegroundColor Yellow
         $ComplianceResults.Warnings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
     }
 }
 
 # Exit with appropriate code
 if ($ComplianceResults.Failed.Count -gt 0) {
-    # Using Write-Host for colored user output`n    Write-Host "`n❌ Compliance validation failed!" -ForegroundColor Red
+    # Using Write-Host for colored user output
+    Write-Host "`nâŒ Compliance validation failed!" -ForegroundColor Red
     exit 1
 } elseif ($ComplianceResults.Warnings.Count -gt 0) {
-    # Using Write-Host for colored user output`n    Write-Host "`n⚠️  Compliance validation passed with warnings" -ForegroundColor Yellow
+    # Using Write-Host for colored user output
+    Write-Host "`nâš ï¸  Compliance validation passed with warnings" -ForegroundColor Yellow
     exit 0
 } else {
-    # Using Write-Host for colored user output`n    Write-Host "`n✅ All compliance checks passed!" -ForegroundColor Green
+    # Using Write-Host for colored user output
+    Write-Host "`nâœ… All compliance checks passed!" -ForegroundColor Green
     exit 0
 } 

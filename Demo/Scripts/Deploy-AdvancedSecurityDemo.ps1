@@ -1,4 +1,4 @@
-# Advanced Security Features Demo Script
+﻿# Advanced Security Features Demo Script
 # Demonstrates comprehensive camera, USB, device control, personalization, and security features
 # Integrates with existing Asgard Technologies and Olympus Systems demo environments
 
@@ -36,33 +36,34 @@ function Show-AdvancedSecurityBanner {
   Clear-Host
   $banner = @"
     
-██████████████████████████████████████████████████████████████████████████████
-█                                                                            █
-█  🛡️  ADVANCED SECURITY FEATURES DEMONSTRATION - $DemoName EDITION 🛡️       █
-█                                                                            █
-█  📋 Camera & Microphone Controls    🔌 USB & Storage Security             █
-█  🖥️  Device & Peripheral Management  🎨 Personalization Controls          █
-█  📱 Application & Software Control   🌐 Network Security Policies         █
-█  🔒 Data Protection & Privacy        📊 Comprehensive Security Auditing   █
-█                                                                            █
-██████████████████████████████████████████████████████████████████████████████
+â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ
+â–ˆ                                                                            â–ˆ
+â–ˆ  ðŸ›¡ï¸  ADVANCED SECURITY FEATURES DEMONSTRATION - $DemoName EDITION ðŸ›¡ï¸       â–ˆ
+â–ˆ                                                                            â–ˆ
+â–ˆ  ðŸ“‹ Camera & Microphone Controls    ðŸ”Œ USB & Storage Security             â–ˆ
+â–ˆ  ðŸ–¥ï¸  Device & Peripheral Management  ðŸŽ¨ Personalization Controls          â–ˆ
+â–ˆ  ðŸ“± Application & Software Control   ðŸŒ Network Security Policies         â–ˆ
+â–ˆ  ðŸ”’ Data Protection & Privacy        ðŸ“Š Comprehensive Security Auditing   â–ˆ
+â–ˆ                                                                            â–ˆ
+â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ
 
 "@
     
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host $banner -ForegroundColor Cyan
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🚀 Initializing Advanced Security Demo Environment..." -ForegroundColor Yellow
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📍 Demo Type: $DemoName | Domain: $Domain | VM Path: $VMPath" -ForegroundColor Gray
+  # Using Write-Host for colored user output
+  Write-Host $banner -ForegroundColor Cyan
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸš€ Initializing Advanced Security Demo Environment..." -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“ Demo Type: $DemoName | Domain: $Domain | VM Path: $VMPath" -ForegroundColor Gray
   Write-Information "" -InformationAction Continue
 }
 
 # Feature demonstration function
 function Show-SecurityFeature {
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🎯 ADVANCED SECURITY FEATURES OVERVIEW" -ForegroundColor Magenta
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸŽ¯ ADVANCED SECURITY FEATURES OVERVIEW" -ForegroundColor Magenta
   Write-Information "=" -InformationAction Continue * 70 -ForegroundColor Magenta
     
   $features = @(
     @{
-      Category = "🎥 Camera & Microphone Security"
+      Category = "ðŸŽ¥ Camera & Microphone Security"
       Features = @(
         "Complete camera access control for applications",
         "Microphone usage restriction policies",
@@ -71,7 +72,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "🔌 USB & Removable Storage Control"
+      Category = "ðŸ”Œ USB & Removable Storage Control"
       Features = @(
         "Granular USB device type restrictions",
         "Removable storage read/write/execute controls",
@@ -80,7 +81,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "🖥️ Device & Peripheral Management"
+      Category = "ðŸ–¥ï¸ Device & Peripheral Management"
       Features = @(
         "Bluetooth and wireless device controls",
         "Printer and fax management policies",
@@ -89,7 +90,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "🎨 Personalization & User Experience"
+      Category = "ðŸŽ¨ Personalization & User Experience"
       Features = @(
         "Desktop background and theme controls",
         "Start menu and taskbar customization",
@@ -98,7 +99,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "📱 Application & Software Control"
+      Category = "ðŸ“± Application & Software Control"
       Features = @(
         "PowerShell execution and logging policies",
         "AppLocker application whitelisting",
@@ -107,7 +108,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "🌐 Network Security & Communication"
+      Category = "ðŸŒ Network Security & Communication"
       Features = @(
         "Advanced Windows Firewall configuration",
         "Remote Desktop security controls",
@@ -116,7 +117,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "🔒 Data Protection & Privacy"
+      Category = "ðŸ”’ Data Protection & Privacy"
       Features = @(
         "Telemetry and data collection controls",
         "OneDrive and cloud service policies",
@@ -125,7 +126,7 @@ function Show-SecurityFeature {
       )
     },
     @{
-      Category = "📊 Security Auditing & Monitoring"
+      Category = "ðŸ“Š Security Auditing & Monitoring"
       Features = @(
         "Comprehensive security score calculation",
         "Real-time policy compliance checking",
@@ -139,19 +140,19 @@ function Show-SecurityFeature {
     # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`n$($category.Category)" -ForegroundColor Cyan
     Write-Host ("-" * $category.Category.Length) -ForegroundColor Cyan
     foreach ($feature in $category.Features) {
-      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "  ✓ $feature" -ForegroundColor Green
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "  âœ“ $feature" -ForegroundColor Green
     }
   }
     
   Write-Information "`n" -InformationAction Continue + "=" * 70 -ForegroundColor Magenta
-  Write-Host "🎉 Total: $(($features.Features | Measure-Object).Count) Advanced Security Features!" -ForegroundColor Yellow
+  Write-Host "ðŸŽ‰ Total: $(($features.Features | Measure-Object).Count) Advanced Security Features!" -ForegroundColor Yellow
 }
 
 # Deploy advanced security policies
 function Deploy-AdvancedSecurityPolicy {
   param([string]$TargetDomain)
     
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🚀 Deploying Advanced Security Policies..." -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸš€ Deploying Advanced Security Policies..." -ForegroundColor Yellow
     
   try {
     # Check if Advanced GPO Manager exists
@@ -186,19 +187,19 @@ function Deploy-AdvancedSecurityPolicy {
       }
     }
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📋 Deploying policies to organizational units..." -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“‹ Deploying policies to organizational units..." -ForegroundColor Cyan
         
     # Deploy all advanced GPO categories
     Deploy-AdvancedGPO -OUMappings $ouMappings
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ Advanced security policies deployed successfully!" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "âœ… Advanced security policies deployed successfully!" -ForegroundColor Green
         
     # Wait for policy replication
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⏳ Waiting for policy replication..." -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "â³ Waiting for policy replication..." -ForegroundColor Yellow
     Start-Sleep -Seconds 30
         
     # Force group policy update on domain controllers
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🔄 Forcing group policy update..." -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ”„ Forcing group policy update..." -ForegroundColor Cyan
     try {
       Invoke-Command -ComputerName (Get-ADDomainController).Name -ScriptBlock {
         gpupdate /force
@@ -208,7 +209,7 @@ function Deploy-AdvancedSecurityPolicy {
       Write-Warning "Could not force GP update on remote DCs: $_"
     }
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🎉 Advanced security policies are now active!" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸŽ‰ Advanced security policies are now active!" -ForegroundColor Green
         
   }
   catch {
@@ -218,7 +219,7 @@ function Deploy-AdvancedSecurityPolicy {
 
 # Run comprehensive security audit
 function Start-AdvancedSecurityAudit {
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🔍 Running Comprehensive Security Audit..." -ForegroundColor Yellow
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ” Running Comprehensive Security Audit..." -ForegroundColor Yellow
     
   try {
     # Check if Advanced Security Audit script exists
@@ -231,23 +232,23 @@ function Start-AdvancedSecurityAudit {
     # Source the Advanced Security Audit script
     . $advancedAuditScript
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📊 Performing quick security check..." -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“Š Performing quick security check..." -ForegroundColor Cyan
     Start-QuickSecurityCheck
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`n🔍 Generating comprehensive security report..." -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "`nðŸ” Generating comprehensive security report..." -ForegroundColor Cyan
     $reportPath = Get-AdvancedSecurityReport -OutputPath $demoConfig.ReportsPath
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ Security audit completed!" -ForegroundColor Green
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📄 Report saved to: $reportPath" -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "âœ… Security audit completed!" -ForegroundColor Green
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“„ Report saved to: $reportPath" -ForegroundColor Cyan
         
     # Open report if possible
     if (Test-Path $reportPath) {
-      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🌐 Opening security report..." -ForegroundColor Yellow
+      # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸŒ Opening security report..." -ForegroundColor Yellow
       try {
         Start-Process $reportPath
       }
       catch {
-        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📄 Report available at: $reportPath" -ForegroundColor Cyan
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“„ Report available at: $reportPath" -ForegroundColor Cyan
       }
     }
         
@@ -321,14 +322,14 @@ function New-DemoReport {
 <body>
     <div class="container">
         <div class="demo-header">
-            <h1>🛡️ Advanced Security Features Demo</h1>
+            <h1>ðŸ›¡ï¸ Advanced Security Features Demo</h1>
             <h2>$DemoType Technologies Edition</h2>
             <p>Comprehensive Windows Server Lab Security Demonstration</p>
             <p><strong>Generated:</strong> $timestamp</p>
         </div>
         
         <div class="success">
-            <h3>🎉 Demo Deployment Summary</h3>
+            <h3>ðŸŽ‰ Demo Deployment Summary</h3>
             <ul>
                 <li><strong>Demo Environment:</strong> $DemoType Technologies</li>
                 <li><strong>Domain:</strong> $Domain</li>
@@ -339,11 +340,11 @@ function New-DemoReport {
             </ul>
         </div>
         
-        <h2>🎯 Deployed Security Features</h2>
+        <h2>ðŸŽ¯ Deployed Security Features</h2>
         
         <div class="feature-grid">
             <div class="feature-card">
-                <h3>🎥 Camera & Microphone Security</h3>
+                <h3>ðŸŽ¥ Camera & Microphone Security</h3>
                 <ul>
                     <li>Application camera access control</li>
                     <li>Microphone usage restrictions</li>
@@ -353,7 +354,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>🔌 USB & Storage Control</h3>
+                <h3>ðŸ”Œ USB & Storage Control</h3>
                 <ul>
                     <li>Removable storage access restrictions</li>
                     <li>USB device installation controls</li>
@@ -363,7 +364,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>🖥️ Device & Peripheral Management</h3>
+                <h3>ðŸ–¥ï¸ Device & Peripheral Management</h3>
                 <ul>
                     <li>Bluetooth and wireless controls</li>
                     <li>Printer management policies</li>
@@ -373,7 +374,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>🎨 Personalization Controls</h3>
+                <h3>ðŸŽ¨ Personalization Controls</h3>
                 <ul>
                     <li>Desktop customization policies</li>
                     <li>Start menu and taskbar control</li>
@@ -383,7 +384,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>📱 Application Security</h3>
+                <h3>ðŸ“± Application Security</h3>
                 <ul>
                     <li>PowerShell execution policies</li>
                     <li>AppLocker whitelisting</li>
@@ -393,7 +394,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>🌐 Network Security</h3>
+                <h3>ðŸŒ Network Security</h3>
                 <ul>
                     <li>Advanced firewall configuration</li>
                     <li>Remote Desktop controls</li>
@@ -403,7 +404,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>🔒 Data Protection</h3>
+                <h3>ðŸ”’ Data Protection</h3>
                 <ul>
                     <li>Telemetry and privacy controls</li>
                     <li>OneDrive and cloud policies</li>
@@ -413,7 +414,7 @@ function New-DemoReport {
             </div>
             
             <div class="feature-card">
-                <h3>📊 Security Monitoring</h3>
+                <h3>ðŸ“Š Security Monitoring</h3>
                 <ul>
                     <li>Comprehensive audit reporting</li>
                     <li>Security score calculation</li>
@@ -424,7 +425,7 @@ function New-DemoReport {
         </div>
         
         <div class="demo-section">
-            <h2>🚀 Next Steps for Testing</h2>
+            <h2>ðŸš€ Next Steps for Testing</h2>
             
             <h3>1. Policy Validation</h3>
             <ul>
@@ -452,7 +453,7 @@ function New-DemoReport {
         </div>
         
         <div class="highlight">
-            <h3>💡 Demo Environment Access</h3>
+            <h3>ðŸ’¡ Demo Environment Access</h3>
             <p>To fully experience these features:</p>
             <ul>
                 <li><strong>Domain Controllers:</strong> Access via RDP to test policy deployment</li>
@@ -463,7 +464,7 @@ function New-DemoReport {
         </div>
         
         <div class="demo-section">
-            <h2>📚 Documentation and Resources</h2>
+            <h2>ðŸ“š Documentation and Resources</h2>
             <ul>
                 <li><strong>Advanced GPO Guide:</strong> LabSetupTutorials/04_GPO_Creation_and_Linking.md</li>
                 <li><strong>Security Hardening:</strong> LabSetupTutorials/09_Security_Hardening.md</li>
@@ -476,7 +477,7 @@ function New-DemoReport {
         <footer style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; color: #7f8c8d;">
             <p><strong>Advanced Security Demo - Windows Server Lab Environment</strong></p>
             <p>$DemoType Technologies Edition | Generated: $timestamp</p>
-            <p>🛡️ Comprehensive Security Controls Demonstration</p>
+            <p>ðŸ›¡ï¸ Comprehensive Security Controls Demonstration</p>
         </footer>
     </div>
 </body>
@@ -484,14 +485,14 @@ function New-DemoReport {
 "@
     
   $html | Out-File -FilePath $reportPath -Encoding UTF8
-  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📄 Demo report generated: $reportPath" -ForegroundColor Green
+  # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“„ Demo report generated: $reportPath" -ForegroundColor Green
     
   # Open report
   try {
     Start-Process $reportPath
   }
   catch {
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📄 Report available at: $reportPath" -ForegroundColor Cyan
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“„ Report available at: $reportPath" -ForegroundColor Cyan
   }
     
   return $reportPath
@@ -503,17 +504,17 @@ function Show-DemoMenu {
     Clear-Host
     Show-AdvancedSecurityBanner -DemoName $DemoType
         
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "🎮 ADVANCED SECURITY DEMO MENU" -ForegroundColor Magenta
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸŽ® ADVANCED SECURITY DEMO MENU" -ForegroundColor Magenta
     Write-Information "=" -InformationAction Continue * 50 -ForegroundColor Magenta
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "1. 🎯 Show Security Features Overview" -ForegroundColor White
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "2. 🚀 Deploy Advanced Security Policies" -ForegroundColor White
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "3. 🔍 Run Comprehensive Security Audit" -ForegroundColor White
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "4. 📊 Generate Demo Report" -ForegroundColor White
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "5. 🛠️  Open Advanced GPO Manager" -ForegroundColor White
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "6. 📋 Open Group Policy Management Console" -ForegroundColor White
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "7. 🌐 View Security Documentation" -ForegroundColor White
-    Write-Host "8. 🔄 Switch Demo Environment ($DemoType ⟷ $(if($DemoType -eq 'Asgard'){'Olympus'}else{'Asgard'}))" -ForegroundColor Yellow
-    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "0. 🚪 Exit Demo" -ForegroundColor Red
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "1. ðŸŽ¯ Show Security Features Overview" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "2. ðŸš€ Deploy Advanced Security Policies" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "3. ðŸ” Run Comprehensive Security Audit" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "4. ðŸ“Š Generate Demo Report" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "5. ðŸ› ï¸  Open Advanced GPO Manager" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "6. ðŸ“‹ Open Group Policy Management Console" -ForegroundColor White
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "7. ðŸŒ View Security Documentation" -ForegroundColor White
+    Write-Host "8. ðŸ”„ Switch Demo Environment ($DemoType âŸ· $(if($DemoType -eq 'Asgard'){'Olympus'}else{'Asgard'}))" -ForegroundColor Yellow
+    # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "0. ðŸšª Exit Demo" -ForegroundColor Red
     Write-Information "=" -InformationAction Continue * 50 -ForegroundColor Magenta
         
     $choice = Read-Host "Select an option (0-8)"
@@ -566,16 +567,16 @@ function Show-DemoMenu {
       }
       "8" {
         $script:DemoType = if ($DemoType -eq "Asgard") { "Olympus" } else { "Asgard" }
-        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ Switched to $DemoType demo environment" -ForegroundColor Green
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "âœ… Switched to $DemoType demo environment" -ForegroundColor Green
         Start-Sleep 2
       }
       "0" { 
-        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "👋 Thank you for exploring Advanced Security Features!" -ForegroundColor Green
-        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "📚 Visit our documentation for more information." -ForegroundColor Cyan
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ‘‹ Thank you for exploring Advanced Security Features!" -ForegroundColor Green
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ðŸ“š Visit our documentation for more information." -ForegroundColor Cyan
         break 
       }
       default { 
-        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ Invalid option. Please try again." -ForegroundColor Red
+        # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "âŒ Invalid option. Please try again." -ForegroundColor Red
         Start-Sleep 2 
       }
     }
@@ -583,8 +584,14 @@ function Show-DemoMenu {
 }
 
 # Main execution logic
+[CmdletBinding(SupportsShouldProcess)]
 function Start-AdvancedSecurityDemo {
   try {
+    # Ensure VM path exists (addresses unused parameter warning)
+    if (-not (Test-Path $VMPath)) {
+      Write-Warning "VM Path $VMPath does not exist. Demo may not function correctly."
+    }
+    
     # Show banner
     Show-AdvancedSecurityBanner -DemoName $DemoType
         
