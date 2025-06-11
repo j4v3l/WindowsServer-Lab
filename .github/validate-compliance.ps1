@@ -40,11 +40,12 @@ function Write-ComplianceLog {
         [string]$Level = "INFO"
     )
     
+    # Variable used in Write-Host statement below (addresses PSScriptAnalyzer warning)
     $emoji = switch ($Level) {
-        "PASS" { "âœ…"; $ComplianceResults.Passed += $Message }
+        "PASS" { "✅"; $ComplianceResults.Passed += $Message }
         "FAIL" { "âŒ"; $ComplianceResults.Failed += $Message }
         "WARN" { "âš ï¸"; $ComplianceResults.Warnings += $Message }
-        "INFO" { "â„¹ï¸" }
+        "INFO" { "ℹ️" }
     }
     
     # Using Write-Host for colored user output
@@ -225,7 +226,7 @@ function Test-DocumentationCompliance {
 
 # Main execution
 # Using Write-Host for colored user output
-Write-Host "`nðŸ” GitHub Directory Compliance Validation" -ForegroundColor Cyan
+Write-Host "`n��” GitHub Directory Compliance Validation" -ForegroundColor Cyan
 # Using Write-Host for colored user output
 Write-Host "=========================================" -ForegroundColor Cyan
 
@@ -239,11 +240,11 @@ Test-DocumentationCompliance
 
 # Summary report
 # Using Write-Host for colored user output
-Write-Host "`nðŸ“Š Compliance Summary" -ForegroundColor Cyan
+Write-Host "`n��“Š Compliance Summary" -ForegroundColor Cyan
 # Using Write-Host for colored user output
 Write-Host "=====================" -ForegroundColor Cyan
 # Using Write-Host for colored user output
-Write-Host "âœ… Passed: $($ComplianceResults.Passed.Count)" -ForegroundColor Green
+Write-Host "❌… Passed: $($ComplianceResults.Passed.Count)" -ForegroundColor Green
 # Using Write-Host for colored user output
 Write-Host "âŒ Failed: $($ComplianceResults.Failed.Count)" -ForegroundColor Red  
 # Using Write-Host for colored user output
@@ -274,6 +275,6 @@ if ($ComplianceResults.Failed.Count -gt 0) {
     exit 0
 } else {
     # Using Write-Host for colored user output
-    Write-Host "`nâœ… All compliance checks passed!" -ForegroundColor Green
+    Write-Host "`n❌… All compliance checks passed!" -ForegroundColor Green
     exit 0
 } 
