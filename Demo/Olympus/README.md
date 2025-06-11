@@ -13,7 +13,7 @@ Olympus/
 ├── README.md                          # This file - Demo overview
 ├── Scripts/                           # Deployment and management scripts
 │   └── Deploy-OlympusLab.ps1         # Main deployment script
-├── Documentation/                     # Detailed technical documentation  
+├── Documentation/                     # Detailed technical documentation
 │   ├── DEMO_SETUP_GUIDE.md           # Complete setup guide
 │   └── HARDWARE_PERFORMANCE_GUIDE.md # Hardware optimization guide
 └── Guides/                           # Quick-start and user guides
@@ -60,6 +60,12 @@ cd Olympus/Scripts
 - Run: `Scripts/Deploy-OlympusLab.ps1`
 - Time: 30-60 minutes
 
+#### **🛡️ Advanced Security Features (NEW!)**
+
+- Read: `../Guides/ADVANCED_SECURITY_QUICK_START.md`
+- Run: `../Scripts/Deploy-AdvancedSecurityDemo.ps1 -DemoType "Olympus"`
+- Experience: 100+ enterprise security controls
+
 #### **🔧 Technical Implementation**
 
 - Read: `Documentation/DEMO_SETUP_GUIDE.md`
@@ -84,7 +90,7 @@ cd Olympus/Scripts
 #### **Departments**
 
 1. **Divine Council** (IT Operations) - 5 users
-2. **War Strategists** (Cybersecurity) - 5 users  
+2. **War Strategists** (Cybersecurity) - 5 users
 3. **Innovation Forge** (Research & Development) - 5 users
 4. **Abundance Treasury** (Finance & Administration) - 5 users
 5. **Harmony Relations** (Human Resources) - 5 users
@@ -97,7 +103,7 @@ cd Olympus/Scripts
 - **hermes.messenger** - Senior Systems Engineer
 - **hera.queen** - CFO
 - **aphrodite.harmony** - HR Director
-- *...and many more divine characters!*
+- _...and many more divine characters!_
 
 ---
 
@@ -105,27 +111,29 @@ cd Olympus/Scripts
 
 ### **Server Infrastructure**
 
-| Server | Role | Specs | Purpose |
-|--------|------|-------|---------|
-| **ZEUS-DC01** | Primary DC | 8GB/4CPU | Active Directory, DNS, DHCP |
-| **HERA-DC02** | Secondary DC | 6GB/3CPU | AD Replication, Backup |
-| **HERMES-FS01** | File Server | 8GB/4CPU | File Storage, Shares, Backup |
-| **APOLLO-WEB01** | Web Server | 6GB/3CPU | IIS, .NET, Applications |
-| **ATHENA-SEC01** | Security | 8GB/4CPU | WSUS, Monitoring, Security |
+| Server           | Role         | Specs    | Purpose                      |
+| ---------------- | ------------ | -------- | ---------------------------- |
+| **ZEUS-DC01**    | Primary DC   | 8GB/4CPU | Active Directory, DNS, DHCP  |
+| **HERA-DC02**    | Secondary DC | 6GB/3CPU | AD Replication, Backup       |
+| **HERMES-FS01**  | File Server  | 8GB/4CPU | File Storage, Shares, Backup |
+| **APOLLO-WEB01** | Web Server   | 6GB/3CPU | IIS, .NET, Applications      |
+| **ATHENA-SEC01** | Security     | 8GB/4CPU | WSUS, Monitoring, Security   |
 
 ### **Network Architecture**
 
 ```
 Production:  10.0.10.0/24  (Servers)
-Management:  10.0.100.0/24 (Admin Access) 
+Management:  10.0.100.0/24 (Admin Access)
 Clients:     10.0.20.0/22  (Workstations)
 DMZ:         10.0.50.0/24  (External Services)
 ```
 
 ### **Features Demonstrated**
 
+#### **Core Infrastructure**
+
 - ✅ Active Directory Domain Services
-- ✅ DNS & DHCP Configuration  
+- ✅ DNS & DHCP Configuration
 - ✅ File Shares & Permissions
 - ✅ Group Policy Management
 - ✅ Security Groups & User Management
@@ -134,8 +142,22 @@ DMZ:         10.0.50.0/24  (External Services)
 - ✅ Backup & Recovery
 - ✅ Hyper-V Virtualization
 - ✅ PowerShell Automation
+
+#### **Advanced Features**
+
 - ✅ Cloud Integration & Hybrid Services
 - ✅ AI/ML Development Environment
+
+#### **🛡️ Advanced Security Suite (NEW!)**
+
+- ✅ **Camera & Microphone Controls** - Complete privacy protection
+- ✅ **USB & Storage Security** - Granular device access restrictions
+- ✅ **Device & Peripheral Management** - Bluetooth, WiFi, printer controls
+- ✅ **Personalization Policies** - Desktop, Start menu, Windows Store management
+- ✅ **Application Control** - PowerShell, AppLocker, software restrictions
+- ✅ **Network Security** - Advanced firewall, RDP, SMB signing
+- ✅ **Data Protection** - Telemetry, OneDrive, Cortana privacy controls
+- ✅ **Security Auditing** - Comprehensive scoring and compliance reporting
 
 ---
 
@@ -143,18 +165,22 @@ DMZ:         10.0.50.0/24  (External Services)
 
 ### **Included Scenarios**
 
-1. **🔥 New Employee Onboarding** - Complete user lifecycle
+1. **🔥 New Employee Onboarding** - Complete user lifecycle with security policies
 2. **⚔️ Security Incident Response** - Breach simulation and containment
 3. **🛡️ Compliance Auditing** - Generate reports and demonstrate compliance
 4. **🔧 Cloud Migration** - Hybrid cloud deployment and management
 5. **🏢 AI/ML Pipeline** - Data science and machine learning workflows
+6. **🎥 Camera/USB Security Testing** - Demonstrate device access controls _(NEW!)_
+7. **🔒 Advanced Security Audit** - Comprehensive security assessment _(NEW!)_
+8. **📱 Application Control Demo** - PowerShell and software restrictions _(NEW!)_
+9. **☁️ Hybrid Security Policies** - Cloud-integrated security controls _(NEW!)_
 
 ### **Custom Scenarios**
 
 The demo environment supports any Windows Server scenario:
 
 - Multi-domain forests
-- Site-to-site replication  
+- Site-to-site replication
 - Certificate services
 - Web applications
 - Database services
@@ -170,7 +196,7 @@ The demo environment supports any Windows Server scenario:
 
 - **CPU**: AMD Ryzen 7900X (12 cores, 24 threads)
 - **RAM**: 64GB DDR5
-- **Storage**: 1TB NVMe SSD  
+- **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
 - **OS**: Windows 11 Pro with Hyper-V
 
@@ -188,14 +214,36 @@ The demo environment supports any Windows Server scenario:
 ### **Deployment Commands**
 
 ```powershell
-# Full deployment
+# Full deployment with advanced security features
 .\Deploy-OlympusLab.ps1 -VMPath "C:\VMs\Olympus"
+
+# Deploy advanced security demo
+.\Deploy-AdvancedSecurityDemo.ps1 -DemoType "Olympus"
 
 # Network only
 .\Deploy-OlympusLab.ps1 -SkipVMs
 
 # Custom domain
 .\Deploy-OlympusLab.ps1 -DomainName "custom.local"
+```
+
+### **Advanced Security Commands (NEW!)**
+
+```powershell
+# Run interactive security demo (Olympus edition)
+.\Deploy-AdvancedSecurityDemo.ps1 -DemoType "Olympus"
+
+# Deploy comprehensive security policies
+.\Scripts\AdvancedGroupPolicyManager.ps1
+
+# Run complete security audit with cloud integration
+.\Scripts\AdvancedSecurityAudit.ps1
+
+# Quick security assessment
+Start-QuickSecurityCheck
+
+# Generate Olympus-specific security report
+Get-AdvancedSecurityReport -OutputPath "C:\Olympus\Reports"
 ```
 
 ### **VM Management**
@@ -252,11 +300,11 @@ Get-VMNetworkAdapter | Where-Object {$_.SwitchName -like "OLYMPUS-*"}
 
 ### **VM Resource Allocation**
 
-| VM Type | Count | CPU/VM | RAM/VM | Storage/VM | Total Resources |
-|---------|-------|--------|--------|------------|----------------|
-| **Servers** | 5 | 4 cores | 6-8GB | 100-200GB | 20 cores, 34GB |
-| **Workstations** | 20 | 2 cores | 4GB | 60GB | 40 cores, 80GB |
-| **Total** | 25 | - | - | - | 60 cores, 114GB |
+| VM Type          | Count | CPU/VM  | RAM/VM | Storage/VM | Total Resources |
+| ---------------- | ----- | ------- | ------ | ---------- | --------------- |
+| **Servers**      | 5     | 4 cores | 6-8GB  | 100-200GB  | 20 cores, 34GB  |
+| **Workstations** | 20    | 2 cores | 4GB    | 60GB       | 40 cores, 80GB  |
+| **Total**        | 25    | -       | -      | -          | 60 cores, 114GB |
 
 ### **Network Throughput**
 

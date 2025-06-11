@@ -26,7 +26,7 @@
     Copyright         = '(c) 2025 Windows Server Lab Environment. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description       = 'PowerShell module for Windows Server lab environment management, including Hyper-V setup, Active Directory management, and security tools.'
+    Description       = 'PowerShell module for Windows Server lab environment management, including Hyper-V setup, Active Directory management, advanced security features, and comprehensive auditing tools.'
 
     # Minimum version of the Windows PowerShell engine required by this module
     PowerShellVersion = '5.1'
@@ -98,18 +98,20 @@
     # List of all files packaged with this module
     FileList          = @(
         'WindowsServerLab.psm1',
+        'AdvancedGroupPolicyManager.ps1',
+        'AdvancedSecurityAudit.ps1',
+        'BackupRestoreManager.ps1',
+        'Create-LabUsers.ps1',
+        'DHCP_Setup.ps1',
+        'GroupPolicyManager.ps1',
         'Hyper-V_Lab_Setup.ps1',
         'Hyper-V_Management.ps1',
         'Lab_Setup.ps1',
         'Lab-FinishSetup.ps1',
-        'Lab-Uninstall.ps1',
         'Lab-Restore.ps1',
-        'Create-LabUsers.ps1',
-        'GroupPolicyManager.ps1',
+        'Lab-Uninstall.ps1',
         'SecurityAudit.ps1',
-        'BackupRestoreManager.ps1',
         'SystemHealthMonitor.ps1',
-        'DHCP_Setup.ps1',
         'Test-LabEnvironment.ps1',
         'Test-ModuleIntegrity.ps1'
     )
@@ -120,7 +122,7 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags                       = @('Windows', 'Server', 'Lab', 'Hyper-V', 'ActiveDirectory', 'Education', 'Testing')
+            Tags                       = @('Windows', 'Server', 'Lab', 'Hyper-V', 'ActiveDirectory', 'Education', 'Testing', 'Security', 'GPO', 'Audit')
 
             # A URL to the license for this module.
             LicenseUri                 = 'https://github.com/j4v3l/WindowsServer-Lab/blob/main/LICENSE'
@@ -135,17 +137,40 @@
             ReleaseNotes               = @'
 # Windows Server Lab Environment v1.2.0
 
-## Features
+## Major Features
 - Complete Hyper-V lab setup and management
 - Active Directory automation and management
-- Security auditing and hardening tools
+- **NEW**: Advanced Security Suite with 100+ policies across 8 categories
+- **NEW**: Comprehensive security auditing with scoring and HTML reports
 - Group Policy management automation
 - System monitoring and health checks
 - Comprehensive validation and testing tools
-- Organized Demo environment with Asgard Technologies showcase
-- **NEW**: Comprehensive uninstall and revert functionality
+- Demo environments: Asgard Technologies and Olympus Systems
+- Complete uninstall and revert functionality
 
-## Uninstall and Revert (NEW in v1.2.0)
+## Advanced Security Features (NEW in v1.2.0)
+- Camera & Microphone Security: Application access controls, privacy protection
+- USB & Removable Storage Control: Granular device restrictions, installation prevention
+- Device Control: Bluetooth, WiFi, printer, CD/DVD, external display management
+- Personalization Policies: Desktop, Start menu, taskbar, Windows Store controls
+- Application Control: PowerShell policies, AppLocker, software installation restrictions
+- Network Security: Advanced firewall, Remote Desktop, SMB signing configurations
+- Data Protection: Telemetry, OneDrive, Cortana, privacy settings
+- Security Auditing: Comprehensive scoring (0-100%) with improvement recommendations
+
+## Demo Environments
+- **Asgard Technologies**: Norse mythology-themed enterprise (25 VMs)
+- **Olympus Systems**: Greek mythology-themed with cloud integration (25 VMs)
+- Interactive security demos with hands-on testing scenarios
+- Professional HTML reporting and analytics
+- Environment-specific policy deployment
+
+## Advanced Scripts
+- AdvancedGroupPolicyManager.ps1: 100+ security policies with interactive deployment
+- AdvancedSecurityAudit.ps1: Comprehensive security assessment and reporting
+- Enhanced demo deployment scripts with security integration
+
+## Uninstall and Revert
 - Safe component removal with automatic backup creation
 - Selective uninstall (VMs, Switches, Shares, AD, GPOs, Registry, Scheduled Tasks)
 - Complete backup and restore system with integrity validation
@@ -153,26 +178,22 @@
 - Detailed logging and operation tracking
 - Support for demo environment cleanup
 
-## Demo Environment
-- Complete Norse mythology-themed enterprise demo
-- 25 VMs (5 servers + 20 workstations) with professional naming
-- 4-tier network architecture (Production, Management, Clients, DMZ)
-- Automated deployment scripts in Demo/ directory
-- Comprehensive documentation and quick-start guides
-
 ## Requirements
 - Windows 10/11 Pro/Enterprise or Windows Server
 - PowerShell 5.1 or later
 - Hyper-V enabled
 - Administrator privileges
+- Group Policy Management Tools (for advanced security features)
 
 ## Getting Started
 1. Import the module: Import-Module WindowsServerLab
 2. Create lab environment: New-LabEnvironment
-3. Validate setup: Test-LabEnvironment
-4. Start lab VMs: Start-LabVMs
-5. Remove when needed: Remove-LabEnvironment
-6. Restore if needed: Restore-LabEnvironment
+3. Deploy advanced security: .\Scripts\AdvancedGroupPolicyManager.ps1
+4. Run security audit: .\Scripts\AdvancedSecurityAudit.ps1
+5. Validate setup: Test-LabEnvironment
+6. Start lab VMs: Start-LabVMs
+7. Remove when needed: Remove-LabEnvironment
+8. Restore if needed: Restore-LabEnvironment
 '@
 
             # Prerelease string of this module

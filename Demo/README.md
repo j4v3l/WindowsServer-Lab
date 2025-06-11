@@ -185,6 +185,8 @@ DMZ:         10.0.50.0/24  (External Services)
 
 ### **Features Demonstrated**
 
+#### **Core Infrastructure**
+
 - ✅ Active Directory Domain Services
 - ✅ DNS & DHCP Configuration
 - ✅ File Shares & Permissions
@@ -196,17 +198,31 @@ DMZ:         10.0.50.0/24  (External Services)
 - ✅ Hyper-V Virtualization
 - ✅ PowerShell Automation
 
+#### **🛡️ Advanced Security Features (NEW!)**
+
+- ✅ **Camera & Microphone Controls** - Complete privacy protection
+- ✅ **USB & Storage Security** - Granular device access restrictions
+- ✅ **Device & Peripheral Management** - Bluetooth, WiFi, printer controls
+- ✅ **Personalization Policies** - Desktop, Start menu, Windows Store management
+- ✅ **Application Control** - PowerShell, AppLocker, software restrictions
+- ✅ **Network Security** - Advanced firewall, RDP, SMB signing
+- ✅ **Data Protection** - Telemetry, OneDrive, Cortana privacy controls
+- ✅ **Security Auditing** - Comprehensive scoring and compliance reporting
+
 ---
 
 ## 🎯 **Demo Scenarios**
 
 ### **Included Scenarios**
 
-1. **🔥 New Employee Onboarding** - Complete user lifecycle
+1. **🔥 New Employee Onboarding** - Complete user lifecycle with security policies
 2. **⚔️ Security Incident Response** - Breach simulation and containment
 3. **🛡️ Compliance Auditing** - Generate reports and demonstrate compliance
 4. **🔧 Server Maintenance** - Backup, update, and recovery procedures
 5. **🏢 Department Reorganization** - Moving users and resources
+6. **🎥 Camera/USB Security Testing** - Demonstrate device access controls _(NEW!)_
+7. **🔒 Advanced Security Audit** - Comprehensive security assessment _(NEW!)_
+8. **📱 Application Control Demo** - PowerShell and software restrictions _(NEW!)_
 
 ### **Custom Scenarios**
 
@@ -245,14 +261,33 @@ The demo environment supports any Windows Server scenario:
 ### **Deployment Commands**
 
 ```powershell
-# Full deployment
+# Full deployment with advanced security features
 .\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard"
+
+# Deploy advanced security demo
+.\Deploy-AdvancedSecurityDemo.ps1 -DemoType "Asgard"
 
 # Network only
 .\Deploy-AsgardLab.ps1 -SkipVMs
 
 # Custom domain
 .\Deploy-AsgardLab.ps1 -DomainName "custom.local"
+```
+
+### **Advanced Security Commands (NEW!)**
+
+```powershell
+# Run interactive security demo
+.\Deploy-AdvancedSecurityDemo.ps1
+
+# Deploy comprehensive security policies
+.\Scripts\AdvancedGroupPolicyManager.ps1
+
+# Run complete security audit
+.\Scripts\AdvancedSecurityAudit.ps1
+
+# Quick security assessment
+Start-QuickSecurityCheck
 ```
 
 ### **VM Management**
@@ -292,6 +327,21 @@ The demo leverages core project scripts:
 - `Scripts/Hyper-V_Lab_Setup.ps1` - Base VM creation
 - `Scripts/Test-LabEnvironment.ps1` - Environment validation
 - `Scripts/WindowsServerLab.psm1` - PowerShell module functions
+- `Scripts/AdvancedGroupPolicyManager.ps1` - 100+ security policies _(NEW!)_
+- `Scripts/AdvancedSecurityAudit.ps1` - Comprehensive security scoring _(NEW!)_
+
+### **Advanced Security Quick Start**
+
+🛡️ **NEW**: [Advanced Security Features Quick Start Guide](Guides/ADVANCED_SECURITY_QUICK_START.md)
+
+Experience 100+ enterprise security features including:
+
+- Camera & microphone access controls
+- USB & removable storage restrictions
+- Device & peripheral management
+- Application control & PowerShell policies
+- Network security & data protection
+- Comprehensive security auditing with scoring
 
 ---
 

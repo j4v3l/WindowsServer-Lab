@@ -153,10 +153,16 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [DHCP Setup Script](Scripts/DHCP_Setup.ps1) - DHCP server installation and configuration
 - [Hyper-V Lab Setup Script](Scripts/Hyper-V_Lab_Setup.ps1) - Complete Hyper-V lab environment setup
 
-#### Management Scripts
+#### Advanced Security and Policy Management Scripts (NEW!)
 
-- [Group Policy Manager](Scripts/GroupPolicyManager.ps1) - GPO management
-- [Security Audit Script](Scripts/SecurityAudit.ps1) - Security assessment
+- [**Advanced Group Policy Manager**](Scripts/AdvancedGroupPolicyManager.ps1) - Comprehensive GPO management with camera, USB, device controls
+- [**Advanced Security Audit**](Scripts/AdvancedSecurityAudit.ps1) - Complete security assessment with scoring and recommendations
+- [**Advanced Security Demo**](Demo/Scripts/Deploy-AdvancedSecurityDemo.ps1) - Interactive demonstration of all security features
+
+#### Traditional Management Scripts
+
+- [Group Policy Manager](Scripts/GroupPolicyManager.ps1) - Basic GPO management
+- [Security Audit Script](Scripts/SecurityAudit.ps1) - Basic security assessment
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
 - [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
 - [Hyper-V Management Script](Scripts/Hyper-V_Management.ps1) - Hyper-V lab lifecycle management
@@ -166,7 +172,82 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Lab Uninstall Script](Scripts/Lab-Uninstall.ps1) - Comprehensive component removal with backup
 - [Lab Restore Script](Scripts/Lab-Restore.ps1) - Restore from backups created during uninstall
 
-## 🔒 Security Features
+## 🛡️ Advanced Security Features (NEW!)
+
+### Comprehensive Security Controls
+
+This lab now includes **100+ advanced security features** across 8 major categories:
+
+#### 🎥 **Camera & Microphone Security**
+
+- Complete camera access control for applications
+- Microphone usage restriction policies
+- Windows Hello camera security settings
+- Privacy protection for multimedia devices
+
+#### 🔌 **USB & Removable Storage Control**
+
+- Granular USB device type restrictions
+- Removable storage read/write/execute controls
+- Device installation prevention policies
+- Autorun and autoplay security settings
+
+#### 🖥️ **Device & Peripheral Management**
+
+- Bluetooth and wireless device controls
+- Printer and fax management policies
+- CD/DVD and optical drive restrictions
+- External display and monitor controls
+
+#### 🎨 **Personalization & User Experience**
+
+- Desktop background and theme controls
+- Start menu and taskbar customization
+- Screen saver and power management
+- Windows Store and app installation policies
+
+#### 📱 **Application & Software Control**
+
+- PowerShell execution and logging policies
+- AppLocker application whitelisting
+- Software installation restrictions
+- Windows Defender Application Guard
+
+#### 🌐 **Network Security & Communication**
+
+- Advanced Windows Firewall configuration
+- Remote Desktop security controls
+- SMB signing and encryption settings
+- VPN and network connection policies
+
+#### 🔒 **Data Protection & Privacy**
+
+- Telemetry and data collection controls
+- OneDrive and cloud service policies
+- Cortana and search privacy settings
+- Windows Error Reporting configuration
+
+#### 📊 **Security Auditing & Monitoring**
+
+- Comprehensive security score calculation (0-100%)
+- Real-time policy compliance checking
+- Advanced HTML reporting with analytics
+- Security improvement recommendations
+
+### Quick Start with Advanced Security
+
+```powershell
+# Run the Advanced Security Demo
+.\Demo\Scripts\Deploy-AdvancedSecurityDemo.ps1
+
+# Deploy all security policies
+.\Scripts\AdvancedGroupPolicyManager.ps1
+
+# Run comprehensive security audit
+.\Scripts\AdvancedSecurityAudit.ps1
+```
+
+## 🔒 Traditional Security Features
 
 ### Secure Password Management
 

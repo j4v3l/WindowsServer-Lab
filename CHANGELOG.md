@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-06-11
+
+### Added - Advanced Security Features Suite
+
+- **🛡️ Advanced Group Policy Manager**: 100+ comprehensive security policies across 6 categories
+
+  - Camera & Microphone Security: Application access controls, privacy protection
+  - USB & Removable Storage Control: Granular device restrictions, installation prevention
+  - Device Control: Bluetooth, WiFi, printer, CD/DVD, external display management
+  - Personalization Policies: Desktop, Start menu, taskbar, Windows Store controls
+  - Application Control: PowerShell policies, AppLocker, software installation restrictions
+  - Network Security: Advanced firewall, Remote Desktop, SMB signing configurations
+  - Data Protection: Telemetry, OneDrive, Cortana, privacy settings
+
+- **🔍 Advanced Security Audit System**: Comprehensive security scoring and assessment
+
+  - Professional HTML reporting with visual dashboards and analytics
+  - Security scoring (0-100%) across all categories with improvement recommendations
+  - Individual audit functions for each security domain
+  - Quick security check functionality and connected device analysis
+
+- **🎮 Interactive Demo System**: Enhanced demo environments with security showcase
+
+  - Integration with existing Asgard and Olympus demo environments
+  - Interactive menu system showcasing all security features
+  - Automated policy deployment to appropriate organizational units
+  - Demo-specific security assessment and reporting
+
+- **📚 Enhanced Documentation Suite**:
+  - Complete rewrite of GPO Creation and Linking tutorial with advanced features
+  - Advanced Security Quick Start Guide for both demo environments
+  - Registry implementation examples and troubleshooting sections
+  - Best practices for phased deployment and compliance framework alignment
+
+### Enhanced
+
+- **Demo Environments**: Updated both Asgard Technologies and Olympus Systems demos
+
+  - Added 8 new security-focused demo scenarios
+  - Enhanced organizational unit mapping for security policies
+  - Updated feature demonstrations to include 100+ security controls
+  - Added environment-specific security commands and testing scenarios
+
+- **Main Documentation**: Updated README.md with comprehensive security feature overview
+  - Quick start examples and command-line usage for security features
+  - Visual formatting and feature categorization
+  - Integration information for existing demo environments
+
+### Security Features
+
+- **Device & Privacy Controls**: Camera/microphone restrictions, USB device management
+- **Application Security**: PowerShell execution policies, AppLocker implementation
+- **Network Security**: Advanced firewall rules, Remote Desktop restrictions
+- **Data Protection**: Privacy settings, telemetry controls, cloud service restrictions
+- **Comprehensive Monitoring**: Security auditing, compliance scoring, professional reporting
+
+### Technical Implementation
+
+- Registry-based policy enforcement with detailed key paths
+- Group Policy Object creation and linking automation
+- Organizational Unit mapping for different departments
+- Policy backup and restore capabilities
+- Interactive menu systems for user-friendly management
+- HTML report generation with professional styling
+
 ## [1.1.0] - 2025-06-09
 
 ### Added - Demo Organization & Code Cleanup
