@@ -149,7 +149,7 @@ Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
 # Configure boot order
 $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
 $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 ```
 
 #### **Promote to Domain Controller**
@@ -306,7 +306,7 @@ function New-OlympusWorkstation {
     # Configure boot order
     $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
     $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-    Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+    Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 
     Write-Host "Created divine workstation: $VMName" -ForegroundColor Cyan
 }

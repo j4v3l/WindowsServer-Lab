@@ -183,7 +183,7 @@ Set-VMDvdDrive -VMName $VMName -Path $ISOPath
 # Configure boot order
 $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
 $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 ```
 
 #### **Install Windows Server**
@@ -252,7 +252,7 @@ Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
 
 $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
 $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 ```
 
 #### **Install and Configure**
@@ -290,7 +290,7 @@ Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
 
 $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
 $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 ```
 
 #### **Configure File Server Role**
@@ -330,7 +330,7 @@ Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
 
 $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
 $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 ```
 
 #### **Configure IIS and Web Services**
@@ -368,7 +368,7 @@ Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
 
 $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
 $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 ```
 
 #### **Configure WSUS and Security Features**
@@ -417,7 +417,7 @@ function New-AsgardWorkstation {
     # Configure boot order
     $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
     $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-    Set-VMFirmware -VMName $VMName -BootOrder $VMDvdDrive, $VMHardDisk
+    Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 
     Write-Host "Created workstation: $VMName" -ForegroundColor Green
 }
