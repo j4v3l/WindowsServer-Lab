@@ -36,6 +36,19 @@ Greek mythology-themed Windows Server lab with advanced cloud integration and AI
 
 # 🏰 **ASGARD TECHNOLOGIES DEMO** - Core Windows Server Lab
 
+## 🛠️ **v1.3.1 UPDATE: Network Issues Resolved!**
+
+**✅ FIXED**: Critical networking issues have been resolved in v1.3.1! Asgard now deploys cleanly with:
+
+- **Fixed Virtual Switch Configuration**: Uses proper Internal switches instead of External
+- **Fixed IP Forwarding**: Enables routing between networks to prevent domain join failures
+- **Fixed User Passwords**: Added `-PasswordNeverExpires` to prevent authentication issues
+- **Added Network Validation**: New `Test-AsgardNetwork.ps1` script validates configuration
+
+**Result**: Domain joins now work on first attempt without manual network troubleshooting! 🎉
+
+---
+
 ## 🎯 **Asgard Overview**
 
 The **Asgard Technologies** demo environment is an epic Norse mythology-themed Windows Server lab that showcases core enterprise features. This demo creates a realistic enterprise environment with 25 virtual machines, complete organizational structure, and professional-grade configurations.

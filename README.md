@@ -2,9 +2,25 @@
 
 This repository contains comprehensive documentation and scripts for setting up and managing a Windows Server lab environment. The content is organized into two main sections: Lab Setup Tutorials and Management Scripts.
 
+## 🛠️ **CRITICAL FIXES: v1.3.1 Network Issues Resolved!**
+
+**🚨 IMPORTANT UPDATE**: Version 1.3.1 includes critical networking fixes that resolve domain join failures and connectivity issues:
+
+- **✅ Fixed Virtual Switch Configuration**: Both Asgard and Olympus demos now use proper Internal switches instead of External
+- **✅ Fixed IP Forwarding**: Enabled routing between virtual networks to resolve "Access is denied" domain join errors
+- **✅ Fixed User Passwords**: Added `-PasswordNeverExpires` to prevent password expiration issues in lab environments
+- **✅ Added Network Validation**: New testing scripts to identify network issues before deployment
+
+**Result**: Domain joins now work on first attempt without manual network troubleshooting! 🎉
+
+👉 **[View Complete Fix Details](NETWORK_CONFIGURATION_AUDIT_FIXES.md)**  
+👉 **[Network Troubleshooting Guide](LabSetupTutorials/20_Network_Troubleshooting_Guide.md)**
+
+---
+
 ## 🏰 **Epic Demos Available!**
 
-**NEW**: Experience the complete power of this lab environment with our comprehensive demo environments:
+**Experience the complete power of this lab environment with our comprehensive demo environments:**
 
 - **[Asgard Technologies Demo](Demo/README.md)** - Norse mythology-themed enterprise setup featuring 25 VMs, complete organizational structure, and professional-grade configurations
 - **[Olympus Systems Demo](Demo/Olympus/README.md)** - Greek mythology-themed enterprise setup with advanced cloud integration and AI/ML capabilities

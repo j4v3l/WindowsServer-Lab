@@ -5,7 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2024-12-XX
+## [1.3.1] - 2025-06-12
+
+### Fixed - Critical Network Configuration Issues
+
+- **🔧 Virtual Switch Configuration**: Fixed both Asgard and Olympus demos to use Internal switches instead of External
+
+  - **ASGARD-Production**: Changed from External to Internal with proper 10.0.10.1/24 gateway
+  - **OLYMPUS-Production**: Changed from External to Internal with proper 10.0.10.1/24 gateway
+  - **Issue Resolution**: Prevents IP address conflicts with host network (192.168.x.x vs 10.0.x.x)
+
+- **🌐 IP Forwarding Configuration**: Added missing IP forwarding enablement on all virtual interfaces
+
+  - **Critical Fix**: Enables routing between virtual networks (Production ↔ Clients ↔ Management)
+  - **All Demos**: Applied to both Asgard and Olympus deployment scripts
+  - **Impact**: Resolves "Access is denied" domain join failures and network isolation issues
+
+- **👤 User Account Password Issues**: Fixed password expiration problems in lab environments
+
+  - **Added**: `-PasswordNeverExpires $true` to all user account creation commands
+  - **Prevents**: "Password must be changed at next logon" and expired password authentication failures
+  - **Lab-Optimized**: Appropriate for lab/demo environments where password policies should be relaxed
+
+- **🛠️ Network Validation Tools**: Created comprehensive network testing scripts
+
+  - **New**: `Demo/Asgard/Scripts/Test-AsgardNetwork.ps1` - Complete Asgard network validation
+  - **New**: `Demo/Olympus/Scripts/Test-OlympusNetwork.ps1` - Complete Olympus network validation
+  - **Features**: Tests switches, IP configuration, forwarding, NAT, connectivity, and VM network status
+  - **Proactive**: Identifies network issues before attempting domain joins
+
+- **📚 Troubleshooting Documentation**: Added comprehensive network troubleshooting guide
+  - **New**: `LabSetupTutorials/20_Network_Troubleshooting_Guide.md`
+  - **Emergency Recovery**: Quick fix commands for common network failures
+  - **Step-by-Step**: Solutions for domain join, DNS, gateway, and connectivity issues
+  - **Automated Tools**: Integration with network validation scripts
+
+### Technical Details
+
+- **Root Cause Analysis**: External virtual switches caused IP conflicts between host network and lab networks
+- **DNS Resolution**: Fixed by ensuring proper gateway configuration and IP forwarding
+- **Cross-Network Routing**: Static routes and IP forwarding now enable communication between network segments
+- **User Authentication**: Password policies optimized for lab environments to prevent authentication loops
+
+### Impact
+
+- **Domain Joins**: Now succeed on first attempt without manual network configuration
+- **DNS Resolution**: Proper resolution of lab domains (asgard.local, olympus.local)
+- **Network Connectivity**: Full connectivity between all network segments and VMs
+- **User Experience**: Eliminates hours of manual troubleshooting for new users
+
+## [1.3.0] - 2025-06-12
 
 ### Added - Comprehensive Manual Setup Documentation
 

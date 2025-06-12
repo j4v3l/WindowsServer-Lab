@@ -1,5 +1,18 @@
 # ⚡ **OLYMPUS SYSTEMS DEMO** - Windows Server Lab
 
+## 🛠️ **v1.3.1 UPDATE: Network Issues Resolved!**
+
+**✅ FIXED**: Critical networking issues have been resolved in v1.3.1! Olympus now deploys cleanly with:
+
+- **Fixed Virtual Switch Configuration**: Uses proper Internal switches instead of External
+- **Fixed IP Forwarding**: Enables routing between networks to prevent domain join failures
+- **Fixed User Passwords**: Added `-PasswordNeverExpires` to prevent authentication issues for all 25 users
+- **Added Network Validation**: New `Test-OlympusNetwork.ps1` script validates configuration
+
+**Result**: Domain joins now work on first attempt without manual network troubleshooting! 🎉
+
+---
+
 ## 🎯 **Overview**
 
 This directory contains the complete **Olympus Systems** demo environment - an epic Greek mythology-themed Windows Server lab that showcases every feature of the WindowsServer project. This demo creates a realistic enterprise environment with 25 virtual machines, complete organizational structure, and professional-grade configurations.

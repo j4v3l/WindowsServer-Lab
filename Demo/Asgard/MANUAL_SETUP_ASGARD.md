@@ -663,7 +663,7 @@ For each workstation:
 2. **Join to Domain**:
    ```cmd
    # Run as Administrator
-   netdom join %COMPUTERNAME% /domain:asgard.local /userd:odin.allfather /passwordd:*
+   Add-Computer -DomainName "asgard.local" -Credential (Get-Credential -UserName "odin.allfather" -Message "Enter domain credentials") -Restart
    ```
 3. **Configure Network Settings**:
    - Use DHCP for IP configuration

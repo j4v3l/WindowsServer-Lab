@@ -2,6 +2,17 @@
 
 Welcome to the comprehensive Windows Server Lab demonstration environments! This directory contains two complete enterprise lab setups that showcase the full capabilities of the Windows Server Lab project.
 
+## 🛠️ **CRITICAL UPDATE: v1.3.1 Network Fixes Applied!**
+
+**🎉 GOOD NEWS**: Both Asgard and Olympus demos now have resolved networking issues that were causing domain join failures:
+
+- **✅ Fixed Virtual Switch Configuration**: Proper Internal switches prevent IP conflicts
+- **✅ Fixed IP Forwarding**: Cross-network routing now works correctly
+- **✅ Fixed User Passwords**: Lab accounts no longer expire unexpectedly
+- **✅ Added Network Validation**: New testing scripts validate network configuration before deployment
+
+**Result**: Domain joins and network connectivity now work reliably on first deployment!
+
 ---
 
 ## 🎯 **Available Demo Environments**

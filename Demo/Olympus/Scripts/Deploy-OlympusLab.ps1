@@ -85,16 +85,17 @@ function Write-OlympusLog {
     Add-Content -Path $LogPath -Value $logEntry -ErrorAction SilentlyContinue
     
     switch ($Level) {
-        "SUCCESS" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ $Message" -ForegroundColor Green }
-        "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-        "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ $Message" -ForegroundColor Red }
-        "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
-    }
-}
+        "SUCCESS" {
+            # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "✅ $Message" -ForegroundColor Green }
+            "WARNING" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚠️  $Message" -ForegroundColor Yellow }
+                "ERROR" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "❌ $Message" -ForegroundColor Red }
+                    "INFO" { # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
+                    }
+                }
 
-# Banner
-function Show-OlympusBanner {
-    Write-Host @"
+                # Banner
+                function Show-OlympusBanner {
+                    Write-Host @"
     
     ⚡ ═══════════════════════════════════════════════════════════ ⚡
     
@@ -110,243 +111,256 @@ function Show-OlympusBanner {
     ⚡ ═══════════════════════════════════════════════════════════ ⚡
     
 "@ -ForegroundColor Blue
-}
-
-# Network Configuration
-function New-OlympusNetwork {
-    Write-OlympusLog "Creating Olympus network infrastructure..." "INFO"
-    
-    try {
-        # Remove existing switches if Force is specified
-        if ($Force) {
-            $existingSwitches = @("OLYMPUS-Production", "OLYMPUS-Management", "OLYMPUS-DMZ", "OLYMPUS-Clients")
-            foreach ($switchName in $existingSwitches) {
-                $switch = Get-VMSwitch -Name $switchName -ErrorAction SilentlyContinue
-                if ($switch) {
-                    Write-OlympusLog "Removing existing switch: $switchName" "WARNING"
-                    Remove-VMSwitch -Name $switchName -Force
                 }
-            }
-        }
-        
-        # Create Production Network (External)
-        $physicalAdapters = Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" }
-        if ($physicalAdapters.Count -gt 0) {
-            $targetAdapter = $physicalAdapters | Select-Object -First 1
-            New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName $targetAdapter.Name -AllowManagementOS $true -ErrorAction SilentlyContinue
-            Write-OlympusLog "Created Production network switch" "SUCCESS"
-        }
-        
-        # Create Management Network (Internal)
-        New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
-        $mgmtAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Management)" -ErrorAction SilentlyContinue
-        if ($mgmtAdapter) {
-            Remove-NetIPAddress -InterfaceIndex $mgmtAdapter.ifIndex -Confirm:$false -ErrorAction SilentlyContinue
-            New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceIndex $mgmtAdapter.ifIndex -ErrorAction SilentlyContinue
-            Write-OlympusLog "Created Management network: 10.0.100.1/24" "SUCCESS"
-        }
-        
-        # Create DMZ Network (Private)
-        New-VMSwitch -Name "OLYMPUS-DMZ" -SwitchType Private -ErrorAction SilentlyContinue
-        Write-OlympusLog "Created DMZ network switch" "SUCCESS"
-        
-        # Create Client Network (Internal)
-        New-VMSwitch -Name "OLYMPUS-Clients" -SwitchType Internal -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
-        $clientAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Clients)" -ErrorAction SilentlyContinue
-        if ($clientAdapter) {
-            Remove-NetIPAddress -InterfaceIndex $clientAdapter.ifIndex -Confirm:$false -ErrorAction SilentlyContinue
-            New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceIndex $clientAdapter.ifIndex -ErrorAction SilentlyContinue
-            Write-OlympusLog "Created Client network: 10.0.20.1/22" "SUCCESS"
-        }
-        
-        # Configure NAT for internal networks
-        $existingNAT = Get-NetNat -Name "OLYMPUS-NAT" -ErrorAction SilentlyContinue
-        if (-not $existingNAT) {
-            New-NetNat -Name "OLYMPUS-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8 -ErrorAction SilentlyContinue
-            Write-OlympusLog "Configured NAT for internal networks" "SUCCESS"
-        }
-        
-        return $true
-    }
-    catch {
-        Write-OlympusLog "Failed to create networks: $($_.Exception.Message)" "ERROR"
-        return $false
-    }
-}
 
-# VM Creation Functions
-function New-OlympusVM {
-    param(
-        [string]$VMName,
-        [int64]$Memory,
-        [int64]$VHDSize,
-        [int]$CPUCount,
-        [string[]]$NetworkSwitches,
-        [string]$Description,
-        [string]$ISOPath = ""
-    )
+                # Network Configuration
+                function New-OlympusNetwork {
+                    Write-OlympusLog "Creating Olympus network infrastructure..." "INFO"
     
-    try {
-        # Check if VM exists
-        $existingVM = Get-VM -Name $VMName -ErrorAction SilentlyContinue
-        if ($existingVM -and -not $Force) {
-            Write-OlympusLog "VM $VMName already exists" "WARNING"
-            return $true
-        }
-        elseif ($existingVM -and $Force) {
-            Write-OlympusLog "Removing existing VM: $VMName" "WARNING"
-            Stop-VM -Name $VMName -Force -ErrorAction SilentlyContinue
-            Remove-VM -Name $VMName -Force
-        }
+                    try {
+                        # Remove existing switches if Force is specified
+                        if ($Force) {
+                            $existingSwitches = @("OLYMPUS-Production", "OLYMPUS-Management", "OLYMPUS-DMZ", "OLYMPUS-Clients")
+                            foreach ($switchName in $existingSwitches) {
+                                $switch = Get-VMSwitch -Name $switchName -ErrorAction SilentlyContinue
+                                if ($switch) {
+                                    Write-OlympusLog "Removing existing switch: $switchName" "WARNING"
+                                    Remove-VMSwitch -Name $switchName -Force
+                                }
+                            }
+                        }
         
-        # Create VM directory
-        $vmPath = Join-Path $VMPath $VMName
-        if (!(Test-Path $vmPath)) {
-            New-Item -Path $vmPath -ItemType Directory -Force | Out-Null
-        }
+                        # Create Production Network (Internal) - FIXED: Was External, caused network mismatch
+                        New-VMSwitch -Name "OLYMPUS-Production" -SwitchType Internal -ErrorAction SilentlyContinue
+                        Start-Sleep -Seconds 2
+                        $prodAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Production)" -ErrorAction SilentlyContinue
+                        if ($prodAdapter) {
+                            Remove-NetIPAddress -InterfaceIndex $prodAdapter.ifIndex -Confirm:$false -ErrorAction SilentlyContinue
+                            New-NetIPAddress -IPAddress 10.0.10.1 -PrefixLength 24 -InterfaceIndex $prodAdapter.ifIndex -ErrorAction SilentlyContinue
+                            Write-OlympusLog "Created Production network: 10.0.10.1/24" "SUCCESS"
+                        }
         
-        # Create VM
-        New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2 | Out-Null
+                        # Create Management Network (Internal)
+                        New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal -ErrorAction SilentlyContinue
+                        Start-Sleep -Seconds 2
+                        $mgmtAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Management)" -ErrorAction SilentlyContinue
+                        if ($mgmtAdapter) {
+                            Remove-NetIPAddress -InterfaceIndex $mgmtAdapter.ifIndex -Confirm:$false -ErrorAction SilentlyContinue
+                            New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceIndex $mgmtAdapter.ifIndex -ErrorAction SilentlyContinue
+                            Write-OlympusLog "Created Management network: 10.0.100.1/24" "SUCCESS"
+                        }
         
-        # Configure VM
-        Set-VM -Name $VMName -ProcessorCount $CPUCount -DynamicMemory -MemoryMinimumBytes ([Math]::Max(1GB, $Memory / 2)) -MemoryMaximumBytes ($Memory * 2) -Notes $Description
+                        # Create DMZ Network (Private)
+                        New-VMSwitch -Name "OLYMPUS-DMZ" -SwitchType Private -ErrorAction SilentlyContinue
+                        Write-OlympusLog "Created DMZ network switch" "SUCCESS"
         
-        # Create and attach VHD
-        $vhdPath = Join-Path $vmPath "$VMName.vhdx"
-        New-VHD -Path $vhdPath -SizeBytes $VHDSize -Dynamic | Out-Null
-        Add-VMHardDiskDrive -VMName $VMName -Path $vhdPath
+                        # Create Client Network (Internal)
+                        New-VMSwitch -Name "OLYMPUS-Clients" -SwitchType Internal -ErrorAction SilentlyContinue
+                        Start-Sleep -Seconds 2
+                        $clientAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Clients)" -ErrorAction SilentlyContinue
+                        if ($clientAdapter) {
+                            Remove-NetIPAddress -InterfaceIndex $clientAdapter.ifIndex -Confirm:$false -ErrorAction SilentlyContinue
+                            New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceIndex $clientAdapter.ifIndex -ErrorAction SilentlyContinue
+                            Write-OlympusLog "Created Client network: 10.0.20.1/22" "SUCCESS"
+                        }
         
-        # Add DVD drive
-        Add-VMDvdDrive -VMName $VMName
+                        # Configure NAT for internal networks
+                        $existingNAT = Get-NetNat -Name "OLYMPUS-NAT" -ErrorAction SilentlyContinue
+                        if (-not $existingNAT) {
+                            New-NetNat -Name "OLYMPUS-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8 -ErrorAction SilentlyContinue
+                            Write-OlympusLog "Configured NAT for internal networks" "SUCCESS"
+                        }
         
-        # Configure network adapters
-        $defaultAdapter = Get-VMNetworkAdapter -VMName $VMName
-        if ($defaultAdapter) {
-            Remove-VMNetworkAdapter -VMName $VMName -VMNetworkAdapter $defaultAdapter
-        }
+                        # Enable IP Forwarding between networks - NEW: Critical for network routing
+                        try {
+                            Set-NetIPInterface -InterfaceAlias "vEthernet (OLYMPUS-Production)" -Forwarding Enabled -ErrorAction SilentlyContinue
+                            Set-NetIPInterface -InterfaceAlias "vEthernet (OLYMPUS-Clients)" -Forwarding Enabled -ErrorAction SilentlyContinue
+                            Set-NetIPInterface -InterfaceAlias "vEthernet (OLYMPUS-Management)" -Forwarding Enabled -ErrorAction SilentlyContinue
+                            Write-OlympusLog "Enabled IP forwarding on all network interfaces" "SUCCESS"
+                        }
+                        catch {
+                            Write-OlympusLog "Failed to enable IP forwarding: $($_.Exception.Message)" "WARNING"
+                        }
         
-        foreach ($switchName in $NetworkSwitches) {
-            $adapterName = $switchName.Replace("OLYMPUS-", "")
-            Add-VMNetworkAdapter -VMName $VMName -SwitchName $switchName -Name $adapterName
-        }
-        
-        # Configure firmware
-        Set-VMFirmware -VMName $VMName -EnableSecureBoot On -SecureBootTemplate "MicrosoftWindows"
-        $dvdDrive = Get-VMDvdDrive -VMName $VMName
-        if ($dvdDrive) {
-            Set-VMFirmware -VMName $VMName -FirstBootDevice $dvdDrive
-        }
-        
-        # Attach ISO if provided
-        if ($ISOPath -and (Test-Path $ISOPath)) {
-            Set-VMDvdDrive -VMName $VMName -Path $ISOPath
-            Write-OlympusLog "Attached ISO to $VMName`: $(Split-Path $ISOPath -Leaf)" "SUCCESS"
-        }
-        
-        Write-OlympusLog "Created VM: $VMName" "SUCCESS"
-        return $true
-    }
-    catch {
-        Write-OlympusLog "Failed to create VM $VMName : $($_.Exception.Message)" "ERROR"
-        return $false
-    }
-}
+                        return $true
+                    }
+                    catch {
+                        Write-OlympusLog "Failed to create networks: $($_.Exception.Message)" "ERROR"
+                        return $false
+                    }
+                }
 
-# Server Infrastructure Creation
-function New-OlympusServer {
-    Write-OlympusLog "Creating Olympus server infrastructure..." "INFO"
+                # VM Creation Functions
+                function New-OlympusVM {
+                    param(
+                        [string]$VMName,
+                        [int64]$Memory,
+                        [int64]$VHDSize,
+                        [int]$CPUCount,
+                        [string[]]$NetworkSwitches,
+                        [string]$Description,
+                        [string]$ISOPath = ""
+                    )
     
-    $servers = @(
-        @{
-            Name        = "ZEUS-DC01"
-            Description = "Primary Domain Controller - King of the Gods"
-            Memory      = 8GB
-            VHDSize     = 100GB
-            CPUCount    = 4
-            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
-        },
-        @{
-            Name        = "HERA-DC02"
-            Description = "Secondary Domain Controller - Queen of the Gods"
-            Memory      = 6GB
-            VHDSize     = 80GB
-            CPUCount    = 3
-            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
-        },
-        @{
-            Name        = "HERMES-FS01"
-            Description = "File Server - Messenger of the Gods"
-            Memory      = 8GB
-            VHDSize     = 200GB
-            CPUCount    = 4
-            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
-        },
-        @{
-            Name        = "APOLLO-WEB01"
-            Description = "Web/Application Server - God of Light and Knowledge"
-            Memory      = 6GB
-            VHDSize     = 100GB
-            CPUCount    = 3
-            Networks    = @("OLYMPUS-Production", "OLYMPUS-DMZ", "OLYMPUS-Management")
-        },
-        @{
-            Name        = "ATHENA-SEC01"
-            Description = "Security Server - Goddess of Wisdom and Warfare"
-            Memory      = 8GB
-            VHDSize     = 150GB
-            CPUCount    = 4
-            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
-        }
-    )
-    
-    foreach ($server in $servers) {
-        $result = New-OlympusVM -VMName $server.Name -Memory $server.Memory -VHDSize $server.VHDSize -CPUCount $server.CPUCount -NetworkSwitches $server.Networks -Description $server.Description -ISOPath $ServerISOPath
-        if (-not $result) {
-            Write-OlympusLog "Failed to create server: $($server.Name)" "ERROR"
-            return $false
-        }
-    }
-    
-    Write-OlympusLog "All servers created successfully" "SUCCESS"
-    return $true
-}
+                    try {
+                        # Check if VM exists
+                        $existingVM = Get-VM -Name $VMName -ErrorAction SilentlyContinue
+                        if ($existingVM -and -not $Force) {
+                            Write-OlympusLog "VM $VMName already exists" "WARNING"
+                            return $true
+                        }
+                        elseif ($existingVM -and $Force) {
+                            Write-OlympusLog "Removing existing VM: $VMName" "WARNING"
+                            Stop-VM -Name $VMName -Force -ErrorAction SilentlyContinue
+                            Remove-VM -Name $VMName -Force
+                        }
+        
+                        # Create VM directory
+                        $vmPath = Join-Path $VMPath $VMName
+                        if (!(Test-Path $vmPath)) {
+                            New-Item -Path $vmPath -ItemType Directory -Force | Out-Null
+                        }
+        
+                        # Create VM
+                        New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2 | Out-Null
+        
+                        # Configure VM
+                        Set-VM -Name $VMName -ProcessorCount $CPUCount -DynamicMemory -MemoryMinimumBytes ([Math]::Max(1GB, $Memory / 2)) -MemoryMaximumBytes ($Memory * 2) -Notes $Description
+        
+                        # Create and attach VHD
+                        $vhdPath = Join-Path $vmPath "$VMName.vhdx"
+                        New-VHD -Path $vhdPath -SizeBytes $VHDSize -Dynamic | Out-Null
+                        Add-VMHardDiskDrive -VMName $VMName -Path $vhdPath
+        
+                        # Add DVD drive
+                        Add-VMDvdDrive -VMName $VMName
+        
+                        # Configure network adapters
+                        $defaultAdapter = Get-VMNetworkAdapter -VMName $VMName
+                        if ($defaultAdapter) {
+                            Remove-VMNetworkAdapter -VMName $VMName -VMNetworkAdapter $defaultAdapter
+                        }
+        
+                        foreach ($switchName in $NetworkSwitches) {
+                            $adapterName = $switchName.Replace("OLYMPUS-", "")
+                            Add-VMNetworkAdapter -VMName $VMName -SwitchName $switchName -Name $adapterName
+                        }
+        
+                        # Configure firmware
+                        Set-VMFirmware -VMName $VMName -EnableSecureBoot On -SecureBootTemplate "MicrosoftWindows"
+                        $dvdDrive = Get-VMDvdDrive -VMName $VMName
+                        if ($dvdDrive) {
+                            Set-VMFirmware -VMName $VMName -FirstBootDevice $dvdDrive
+                        }
+        
+                        # Attach ISO if provided
+                        if ($ISOPath -and (Test-Path $ISOPath)) {
+                            Set-VMDvdDrive -VMName $VMName -Path $ISOPath
+                            Write-OlympusLog "Attached ISO to $VMName`: $(Split-Path $ISOPath -Leaf)" "SUCCESS"
+                        }
+        
+                        Write-OlympusLog "Created VM: $VMName" "SUCCESS"
+                        return $true
+                    }
+                    catch {
+                        Write-OlympusLog "Failed to create VM $VMName : $($_.Exception.Message)" "ERROR"
+                        return $false
+                    }
+                }
 
-# Workstation Creation
-function New-OlympusWorkstation {
-    Write-OlympusLog "Creating Olympus workstations..." "INFO"
+                # Server Infrastructure Creation
+                function New-OlympusServer {
+                    Write-OlympusLog "Creating Olympus server infrastructure..." "INFO"
     
-    $departments = @(
-        @{ Name = "Divine Council"; Prefix = "DC"; Users = @("ZEUS", "POSEIDON", "HADES", "HERMES", "DIONYSUS") },
-        @{ Name = "War Strategists"; Prefix = "WS"; Users = @("ATHENA", "ARES", "NIKE", "KRATOS", "BIA") },
-        @{ Name = "Innovation Forge"; Prefix = "IF"; Users = @("APOLLO", "ARTEMIS", "HEPHAESTUS", "PROMETHEUS", "DAEDALUS") },
-        @{ Name = "Abundance Treasury"; Prefix = "AT"; Users = @("HERA", "DEMETER", "PLUTUS", "TYCHE", "NEMESIS") },
-        @{ Name = "Harmony Relations"; Prefix = "HR"; Users = @("APHRODITE", "EROS", "PSYCHE", "HARMONIA", "IRIS") }
-    )
+                    $servers = @(
+                        @{
+                            Name        = "ZEUS-DC01"
+                            Description = "Primary Domain Controller - King of the Gods"
+                            Memory      = 8GB
+                            VHDSize     = 100GB
+                            CPUCount    = 4
+                            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
+                        },
+                        @{
+                            Name        = "HERA-DC02"
+                            Description = "Secondary Domain Controller - Queen of the Gods"
+                            Memory      = 6GB
+                            VHDSize     = 80GB
+                            CPUCount    = 3
+                            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
+                        },
+                        @{
+                            Name        = "HERMES-FS01"
+                            Description = "File Server - Messenger of the Gods"
+                            Memory      = 8GB
+                            VHDSize     = 200GB
+                            CPUCount    = 4
+                            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
+                        },
+                        @{
+                            Name        = "APOLLO-WEB01"
+                            Description = "Web/Application Server - God of Light and Knowledge"
+                            Memory      = 6GB
+                            VHDSize     = 100GB
+                            CPUCount    = 3
+                            Networks    = @("OLYMPUS-Production", "OLYMPUS-DMZ", "OLYMPUS-Management")
+                        },
+                        @{
+                            Name        = "ATHENA-SEC01"
+                            Description = "Security Server - Goddess of Wisdom and Warfare"
+                            Memory      = 8GB
+                            VHDSize     = 150GB
+                            CPUCount    = 4
+                            Networks    = @("OLYMPUS-Production", "OLYMPUS-Management")
+                        }
+                    )
     
-    foreach ($dept in $departments) {
-        for ($i = 0; $i -lt $dept.Users.Count; $i++) {
-            $vmName = "$($dept.Users[$i])-WS$(($i+1).ToString('00'))"
-            $description = "$($dept.Name) Workstation - $($dept.Users[$i])"
+                    foreach ($server in $servers) {
+                        $result = New-OlympusVM -VMName $server.Name -Memory $server.Memory -VHDSize $server.VHDSize -CPUCount $server.CPUCount -NetworkSwitches $server.Networks -Description $server.Description -ISOPath $ServerISOPath
+                        if (-not $result) {
+                            Write-OlympusLog "Failed to create server: $($server.Name)" "ERROR"
+                            return $false
+                        }
+                    }
+    
+                    Write-OlympusLog "All servers created successfully" "SUCCESS"
+                    return $true
+                }
+
+                # Workstation Creation
+                function New-OlympusWorkstation {
+                    Write-OlympusLog "Creating Olympus workstations..." "INFO"
+    
+                    $departments = @(
+                        @{ Name = "Divine Council"; Prefix = "DC"; Users = @("ZEUS", "POSEIDON", "HADES", "HERMES", "DIONYSUS") },
+                        @{ Name = "War Strategists"; Prefix = "WS"; Users = @("ATHENA", "ARES", "NIKE", "KRATOS", "BIA") },
+                        @{ Name = "Innovation Forge"; Prefix = "IF"; Users = @("APOLLO", "ARTEMIS", "HEPHAESTUS", "PROMETHEUS", "DAEDALUS") },
+                        @{ Name = "Abundance Treasury"; Prefix = "AT"; Users = @("HERA", "DEMETER", "PLUTUS", "TYCHE", "NEMESIS") },
+                        @{ Name = "Harmony Relations"; Prefix = "HR"; Users = @("APHRODITE", "EROS", "PSYCHE", "HARMONIA", "IRIS") }
+                    )
+    
+                    foreach ($dept in $departments) {
+                        for ($i = 0; $i -lt $dept.Users.Count; $i++) {
+                            $vmName = "$($dept.Users[$i])-WS$(($i+1).ToString('00'))"
+                            $description = "$($dept.Name) Workstation - $($dept.Users[$i])"
             
-            $result = New-OlympusVM -VMName $vmName -Memory 4GB -VHDSize 60GB -CPUCount 2 -NetworkSwitches @("OLYMPUS-Clients") -Description $description -ISOPath $ClientISOPath
-            if (-not $result) {
-                Write-OlympusLog "Failed to create workstation: $vmName" "ERROR"
-                return $false
-            }
-        }
-    }
+                            $result = New-OlympusVM -VMName $vmName -Memory 4GB -VHDSize 60GB -CPUCount 2 -NetworkSwitches @("OLYMPUS-Clients") -Description $description -ISOPath $ClientISOPath
+                            if (-not $result) {
+                                Write-OlympusLog "Failed to create workstation: $vmName" "ERROR"
+                                return $false
+                            }
+                        }
+                    }
     
-    Write-OlympusLog "All workstations created successfully" "SUCCESS"
-    return $true
-}
+                    Write-OlympusLog "All workstations created successfully" "SUCCESS"
+                    return $true
+                }
 
-# Active Directory Configuration Script Generation
-function New-OlympusADScript {
-    Write-OlympusLog "Generating Active Directory configuration script..." "INFO"
+                # Active Directory Configuration Script Generation
+                function New-OlympusADScript {
+                    Write-OlympusLog "Generating Active Directory configuration script..." "INFO"
     
-    $adScript = @"
+                    $adScript = @"
 # ⚡ OLYMPUS SYSTEMS - Active Directory Configuration Script
 # Run this script on ZEUS-DC01 after promoting to Domain Controller
 
@@ -383,12 +397,12 @@ New-ADGroup -Name "GRP-Harmony_Relations" -GroupScope Global -GroupCategory Secu
 New-ADGroup -Name "GRP-Domain_Admins_Olympus" -GroupScope Global -GroupCategory Security -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 New-ADGroup -Name "GRP-Security_Admins" -GroupScope Global -GroupCategory Security -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
-# Create User Accounts - Divine Council (IT Operations)
-New-ADUser -Name "Zeus Supreme" -SamAccountName "zeus.supreme" -UserPrincipalName "zeus.supreme@olympus.local" -DisplayName "Zeus Supreme" -Department "Divine Council" -Title "CEO & Domain Admin" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
-New-ADUser -Name "Poseidon Seas" -SamAccountName "poseidon.seas" -UserPrincipalName "poseidon.seas@olympus.local" -DisplayName "Poseidon Seas" -Department "Divine Council" -Title "Senior Systems Engineer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
-New-ADUser -Name "Hades Underworld" -SamAccountName "hades.underworld" -UserPrincipalName "hades.underworld@olympus.local" -DisplayName "Hades Underworld" -Department "Divine Council" -Title "Database Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
-New-ADUser -Name "Hermes Messenger" -SamAccountName "hermes.messenger" -UserPrincipalName "hermes.messenger@olympus.local" -DisplayName "Hermes Messenger" -Department "Divine Council" -Title "Network Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
-New-ADUser -Name "Dionysus Wine" -SamAccountName "dionysus.wine" -UserPrincipalName "dionysus.wine@olympus.local" -DisplayName "Dionysus Wine" -Department "Divine Council" -Title "Junior Developer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
+# Create User Accounts - Divine Council (IT Operations) - FIXED: Added PasswordNeverExpires for lab environment
+New-ADUser -Name "Zeus Supreme" -SamAccountName "zeus.supreme" -UserPrincipalName "zeus.supreme@olympus.local" -DisplayName "Zeus Supreme" -Department "Divine Council" -Title "CEO & Domain Admin" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true -PasswordNeverExpires `$true
+New-ADUser -Name "Poseidon Seas" -SamAccountName "poseidon.seas" -UserPrincipalName "poseidon.seas@olympus.local" -DisplayName "Poseidon Seas" -Department "Divine Council" -Title "Senior Systems Engineer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true -PasswordNeverExpires `$true
+New-ADUser -Name "Hades Underworld" -SamAccountName "hades.underworld" -UserPrincipalName "hades.underworld@olympus.local" -DisplayName "Hades Underworld" -Department "Divine Council" -Title "Database Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true -PasswordNeverExpires `$true
+New-ADUser -Name "Hermes Messenger" -SamAccountName "hermes.messenger" -UserPrincipalName "hermes.messenger@olympus.local" -DisplayName "Hermes Messenger" -Department "Divine Council" -Title "Network Administrator" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true -PasswordNeverExpires `$true
+New-ADUser -Name "Dionysus Wine" -SamAccountName "dionysus.wine" -UserPrincipalName "dionysus.wine@olympus.local" -DisplayName "Dionysus Wine" -Department "Divine Council" -Title "Junior Developer" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true -PasswordNeverExpires `$true
 
 # Create User Accounts - War Strategists (Cybersecurity)
 New-ADUser -Name "Athena Wisdom" -SamAccountName "athena.wisdom" -UserPrincipalName "athena.wisdom@olympus.local" -DisplayName "Athena Wisdom" -Department "War Strategists" -Title "CTO & CISO" -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
@@ -432,58 +446,58 @@ Add-ADGroupMember -Identity "Enterprise Admins" -Members "zeus.supreme"
 # Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "⚡ Olympus Systems Active Directory configuration completed successfully! ⚡" -ForegroundColor Green
 "@
 
-    $scriptPath = Join-Path $VMPath "Configure-OlympusAD.ps1"
-    $adScript | Out-File -FilePath $scriptPath -Encoding UTF8
-    Write-OlympusLog "Active Directory script created: $scriptPath" "SUCCESS"
-}
+                    $scriptPath = Join-Path $VMPath "Configure-OlympusAD.ps1"
+                    $adScript | Out-File -FilePath $scriptPath -Encoding UTF8
+                    Write-OlympusLog "Active Directory script created: $scriptPath" "SUCCESS"
+                }
 
-# Main deployment function
-function Start-OlympusDeployment {
-    Show-OlympusBanner
+                # Main deployment function
+                function Start-OlympusDeployment {
+                    Show-OlympusBanner
     
-    Write-OlympusLog "Starting Olympus Systems lab deployment..." "INFO"
-    Write-OlympusLog "Domain: $DomainName" "INFO"
-    Write-OlympusLog "VM Path: $VMPath" "INFO"
-    if ($ServerISOPath) { Write-OlympusLog "Server ISO: $(Split-Path $ServerISOPath -Leaf)" "INFO" }
-    if ($ClientISOPath) { Write-OlympusLog "Client ISO: $(Split-Path $ClientISOPath -Leaf)" "INFO" }
-    Write-OlympusLog "Log Path: $LogPath" "INFO"
+                    Write-OlympusLog "Starting Olympus Systems lab deployment..." "INFO"
+                    Write-OlympusLog "Domain: $DomainName" "INFO"
+                    Write-OlympusLog "VM Path: $VMPath" "INFO"
+                    if ($ServerISOPath) { Write-OlympusLog "Server ISO: $(Split-Path $ServerISOPath -Leaf)" "INFO" }
+                    if ($ClientISOPath) { Write-OlympusLog "Client ISO: $(Split-Path $ClientISOPath -Leaf)" "INFO" }
+                    Write-OlympusLog "Log Path: $LogPath" "INFO"
     
-    # Create VM directory
-    if (!(Test-Path $VMPath)) {
-        New-Item -Path $VMPath -ItemType Directory -Force | Out-Null
-        Write-OlympusLog "Created VM directory: $VMPath" "SUCCESS"
-    }
+                    # Create VM directory
+                    if (!(Test-Path $VMPath)) {
+                        New-Item -Path $VMPath -ItemType Directory -Force | Out-Null
+                        Write-OlympusLog "Created VM directory: $VMPath" "SUCCESS"
+                    }
     
-    # Create networks
-    if (-not $SkipNetworking) {
-        if (-not (New-OlympusNetwork)) {
-            Write-OlympusLog "Network creation failed. Aborting deployment." "ERROR"
-            return $false
-        }
-    }
+                    # Create networks
+                    if (-not $SkipNetworking) {
+                        if (-not (New-OlympusNetwork)) {
+                            Write-OlympusLog "Network creation failed. Aborting deployment." "ERROR"
+                            return $false
+                        }
+                    }
     
-    # Create VMs
-    if (-not $SkipVMs) {
-        # Create servers
-        if (-not (New-OlympusServer)) {
-            Write-OlympusLog "Server creation failed. Aborting deployment." "ERROR"
-            return $false
-        }
+                    # Create VMs
+                    if (-not $SkipVMs) {
+                        # Create servers
+                        if (-not (New-OlympusServer)) {
+                            Write-OlympusLog "Server creation failed. Aborting deployment." "ERROR"
+                            return $false
+                        }
         
-        # Create workstations
-        if (-not (New-OlympusWorkstation)) {
-            Write-OlympusLog "Workstation creation failed. Aborting deployment." "ERROR"
-            return $false
-        }
-    }
+                        # Create workstations
+                        if (-not (New-OlympusWorkstation)) {
+                            Write-OlympusLog "Workstation creation failed. Aborting deployment." "ERROR"
+                            return $false
+                        }
+                    }
     
-    # Generate AD configuration script
-    if (-not $SkipAD) {
-        New-OlympusADScript
-    }
+                    # Generate AD configuration script
+                    if (-not $SkipAD) {
+                        New-OlympusADScript
+                    }
     
-    Write-OlympusLog "Olympus Systems deployment completed successfully!" "SUCCESS"
-    Write-Host @"
+                    Write-OlympusLog "Olympus Systems deployment completed successfully!" "SUCCESS"
+                    Write-Host @"
 
     ⚡ ═══════════════════════════════════════════════════════════ ⚡
     
@@ -501,22 +515,22 @@ function Start-OlympusDeployment {
     
 "@ -ForegroundColor Blue
     
-    return $true
-}
+                    return $true
+                }
 
-# Execute deployment
-try {
-    $result = Start-OlympusDeployment
-    if ($result) {
-        Write-OlympusLog "Deployment completed successfully" "SUCCESS"
-        exit 0
-    }
-    else {
-        Write-OlympusLog "Deployment failed" "ERROR"
-        exit 1
-    }
-}
-catch {
-    Write-OlympusLog "Deployment failed with error: $($_.Exception.Message)" "ERROR"
-    exit 1
-} 
+                # Execute deployment
+                try {
+                    $result = Start-OlympusDeployment
+                    if ($result) {
+                        Write-OlympusLog "Deployment completed successfully" "SUCCESS"
+                        exit 0
+                    }
+                    else {
+                        Write-OlympusLog "Deployment failed" "ERROR"
+                        exit 1
+                    }
+                }
+                catch {
+                    Write-OlympusLog "Deployment failed with error: $($_.Exception.Message)" "ERROR"
+                    exit 1
+                } 
