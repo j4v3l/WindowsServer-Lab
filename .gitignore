@@ -137,7 +137,8 @@ TestResults/
 !Scripts/*.ps1
 !Scripts/*.psd1
 !Scripts/*.psm1
-!Demo/Scripts/*.ps1
+!Demo/Asgard/Scripts/*.ps1
+!Demo/Olympus/Scripts/*.ps1
 !Demo/**/*.ps1
 !LabSetupTutorials/*.ps1
 
@@ -159,7 +160,7 @@ TestResults/
 # Allow specific project files that might match blocked patterns
 !Scripts/WindowsServerLab.psd1
 !Scripts/WindowsServerLab.psm1
-!Demo/Scripts/Deploy-AsgardLab.ps1
+!Demo/Asgard/Scripts/Deploy-AsgardLab.ps1
 
 # =============================================================================
 # KEEP EMPTY DIRECTORIES
@@ -167,5 +168,6 @@ TestResults/
 
 # Keep important empty directories
 !Scripts/.gitkeep
-!Demo/Scripts/.gitkeep
+!Demo/Asgard/Scripts/.gitkeep
+!Demo/Olympus/Scripts/.gitkeep
 !LabSetupTutorials/.gitkeep
