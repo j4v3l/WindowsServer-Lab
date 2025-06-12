@@ -155,8 +155,8 @@ For a complete, realistic Windows Server lab experience:
 
 - **🏰 [Asgard Technologies Demo](../Demo/README.md)**: 25-VM Norse mythology enterprise
 
-  - Automated deployment: [Quick Start Guide](../Demo/Guides/QUICK_START_ASGARD.md)
-  - Manual step-by-step: [Manual Setup Guide](../Demo/MANUAL_SETUP_ASGARD.md)
+  - Automated deployment: [Quick Start Guide](../Demo/Asgard/Guides/QUICK_START_ASGARD.md)
+  - Manual step-by-step: [Manual Setup Guide](../Demo/Asgard/MANUAL_SETUP_ASGARD.md)
 
 - **⚡ [Olympus Systems Demo](../Demo/Olympus/README.md)**: 25-VM Greek mythology enterprise with advanced features
   - Automated deployment: [Quick Start Guide](../Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)

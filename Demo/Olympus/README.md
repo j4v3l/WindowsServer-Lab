@@ -58,7 +58,7 @@ cd Olympus/Scripts
 #### **🏃‍♂️ Quick Deployment**
 
 - Read: `Guides/QUICK_START_OLYMPUS.md`
-- Run: `Scripts/Deploy-OlympusLab.ps1`
+- Run: `Demo/Olympus/Scripts/Deploy-OlympusLab.ps1`
 - Time: 30-60 minutes
 
 #### **📚 Manual Step-by-Step Setup**
@@ -70,7 +70,7 @@ cd Olympus/Scripts
 #### **🛡️ Advanced Security Features (NEW!)**
 
 - Read: `../Guides/ADVANCED_SECURITY_QUICK_START.md`
-- Run: `../Scripts/Deploy-AdvancedSecurityDemo.ps1 -DemoType "Olympus"`
+- Run: `Demo/Olympus/Scripts/Deploy-AdvancedSecurityDemo.ps1 -DemoType "Olympus"`
 - Experience: 100+ enterprise security controls
 
 #### **🔧 Technical Implementation**
@@ -141,7 +141,7 @@ DMZ:         10.0.50.0/24  (External Services)
 
 - ✅ Active Directory Domain Services
 - ✅ DNS & DHCP Configuration
-- ✅ File Shares & Permissions
+- ✅ File Shares & Permissions ([Olympus Setup Guide](Guides/OLYMPUS_NETWORK_SHARE_SETUP.md))
 - ✅ Group Policy Management
 - ✅ Security Groups & User Management
 - ✅ Network Segmentation

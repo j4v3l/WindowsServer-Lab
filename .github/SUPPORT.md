@@ -16,7 +16,7 @@ Before reaching out for support, please check these resources:
 
 ### 🎯 Common Solutions
 
-- **[Hardware Performance Guide](../Demo/Documentation/HARDWARE_PERFORMANCE_GUIDE.md)**: System requirements and optimization
+- **[Hardware Performance Guide](../Demo/Asgard/Documentation/HARDWARE_PERFORMANCE_GUIDE.md)**: System requirements and optimization
 - **[PowerShell Module Documentation](../Scripts/)**: Module usage and functions
 - **[Security Best Practices](.github/SECURITY.md)**: Security guidelines and checklist
 
@@ -78,12 +78,14 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 When asking for help, please provide:
 
 1. **Environment Details**:
+
    - Operating System (Windows 11, Windows Server 2022, etc.)
    - PowerShell version (`$PSVersionTable`)
    - Hyper-V version
    - Hardware specifications
 
 2. **Problem Description**:
+
    - What you were trying to do
    - What happened instead
    - Complete error messages
@@ -105,7 +107,7 @@ Start-Transcript -Path "C:\Support\PowerShell-Log.txt"
 Stop-Transcript
 
 # Event logs
-Get-WinEvent -LogName "Microsoft-Windows-Hyper-V*" -MaxEvents 50 | 
+Get-WinEvent -LogName "Microsoft-Windows-Hyper-V*" -MaxEvents 50 |
     Export-Csv "C:\Support\Hyper-V-Events.csv"
 ```
 
@@ -138,7 +140,7 @@ For organizations needing dedicated support:
 - Priority issue resolution
 - Custom script development
 
-*Contact us for professional support options*
+_Contact us for professional support options_
 
 ## 📞 Contact Information
 

@@ -675,7 +675,7 @@ Test user accounts:
 
 - Log on to various workstations with created user accounts
 - Verify group membership and permissions
-- Test file share access
+- Test file share access ([Asgard Network Share Setup](Guides/ASGARD_NETWORK_SHARE_SETUP.md))
 - Confirm Group Policy application
 
 ---

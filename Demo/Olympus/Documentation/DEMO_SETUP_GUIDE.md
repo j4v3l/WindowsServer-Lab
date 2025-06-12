@@ -487,6 +487,9 @@ New-SmbShare -Name "Harmony-Relations" -Path "C:\Shares\Harmony-Relations" -Full
 # Create public shares
 New-SmbShare -Name "Public" -Path "C:\Shares\Public" -ReadAccess "Everyone"
 New-SmbShare -Name "Software" -Path "C:\Shares\Software" -ReadAccess "Domain Users" -ChangeAccess "GRP-Divine_Council"
+
+# For comprehensive Olympus network share setup instructions, see:
+# Guides/OLYMPUS_NETWORK_SHARE_SETUP.md
 ```
 
 ### **DFS Namespace**

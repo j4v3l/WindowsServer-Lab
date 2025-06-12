@@ -455,7 +455,7 @@ Get-VM | Select-Object Name, MemoryAssigned, CPUUsage
 - ✅ Domain controller configured (olympus.local)
 - ✅ All users and groups created
 - ✅ Network connectivity verified
-- ✅ File shares accessible
+- ✅ File shares accessible ([Olympus Setup Guide](OLYMPUS_NETWORK_SHARE_SETUP.md))
 - ✅ Web services running
 - ✅ Security monitoring active
 - ✅ Backup systems operational

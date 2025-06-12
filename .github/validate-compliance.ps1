@@ -28,8 +28,8 @@ if ($Fix) {
 
 # Initialize results
 $ComplianceResults = @{
-    Passed = @()
-    Failed = @()
+    Passed   = @()
+    Failed   = @()
     Warnings = @()
 }
 
@@ -80,7 +80,8 @@ function Test-GitHubDirectory {
     foreach ($file in $requiredFiles) {
         if (Test-Path $file) {
             Write-ComplianceLog "GitHub file exists: $file" "PASS"
-        } else {
+        }
+        else {
             Write-ComplianceLog "Missing GitHub file: $file" "FAIL"
         }
     }
@@ -101,7 +102,8 @@ function Test-VersionConsistency {
                 $manifestVersion = $matches[1]
                 if ($manifestVersion -eq $expectedVersion) {
                     Write-ComplianceLog "Module manifest version correct: $manifestVersion" "PASS"
-                } else {
+                }
+                else {
                     Write-ComplianceLog "Module manifest version mismatch: Expected $expectedVersion, found $manifestVersion" "FAIL"
                 }
             }
@@ -114,12 +116,14 @@ function Test-VersionConsistency {
                 $moduleVersion = $matches[1]
                 if ($moduleVersion -eq $expectedVersion) {
                     Write-ComplianceLog "Module file version correct: $moduleVersion" "PASS"
-                } else {
+                }
+                else {
                     Write-ComplianceLog "Module file version mismatch: Expected $expectedVersion, found $moduleVersion" "FAIL"
                 }
             }
         }
-    } else {
+    }
+    else {
         Write-ComplianceLog "VERSION file not found" "FAIL"
     }
 }
@@ -129,16 +133,17 @@ function Test-DemoStructure {
     
     $demoFiles = @(
         'Demo/README.md',
-        'Demo/Scripts/Deploy-AsgardLab.ps1',
-        'Demo/Documentation/DEMO_SETUP_GUIDE.md',
-        'Demo/Documentation/HARDWARE_PERFORMANCE_GUIDE.md',
-        'Demo/Guides/QUICK_START_ASGARD.md'
+        'Demo/Asgard/Scripts/Deploy-AsgardLab.ps1',
+        'Demo/Asgard/Documentation/DEMO_SETUP_GUIDE.md',
+        'Demo/Asgard/Documentation/HARDWARE_PERFORMANCE_GUIDE.md',
+        'Demo/Asgard/Guides/QUICK_START_ASGARD.md'
     )
     
     foreach ($file in $demoFiles) {
         if (Test-Path $file) {
             Write-ComplianceLog "Demo file exists: $file" "PASS"
-        } else {
+        }
+        else {
             Write-ComplianceLog "Missing Demo file: $file" "FAIL"
         }
     }
@@ -161,7 +166,8 @@ function Test-IssueTemplate {
             # Check for old "Asgard Demo Environment" references
             if ($content -match "Asgard Demo Environment") {
                 Write-ComplianceLog "Template contains old demo reference: $templateFile" "WARN"
-            } else {
+            }
+            else {
                 Write-ComplianceLog "Template demo references updated: $templateFile" "PASS"
             }
             
@@ -197,7 +203,8 @@ function Test-WorkflowCompliance {
             }
             
             Write-ComplianceLog "Workflow file validated: $workflowFile" "PASS"
-        } else {
+        }
+        else {
             Write-ComplianceLog "Missing workflow file: $workflowFile" "FAIL"
         }
     }
@@ -211,7 +218,8 @@ function Test-DocumentationCompliance {
         $changelogContent = Get-Content "CHANGELOG.md" -Raw
         if ($changelogContent -match "Demo.*Organization|Asgard.*Demo") {
             Write-ComplianceLog "CHANGELOG includes Demo organization changes" "PASS"
-        } else {
+        }
+        else {
             Write-ComplianceLog "CHANGELOG missing Demo organization details" "WARN"
         }
     }
@@ -219,7 +227,8 @@ function Test-DocumentationCompliance {
     # Check GitHub templates summary
     if (Test-Path "GITHUB_TEMPLATES_SUMMARY.md") {
         Write-ComplianceLog "GitHub templates summary exists" "PASS"
-    } else {
+    }
+    else {
         Write-ComplianceLog "Missing GitHub templates summary" "WARN"
     }
 }
@@ -269,11 +278,13 @@ if ($ComplianceResults.Failed.Count -gt 0) {
     # Using Write-Host for colored user output
     Write-Host "`nâŒ Compliance validation failed!" -ForegroundColor Red
     exit 1
-} elseif ($ComplianceResults.Warnings.Count -gt 0) {
+}
+elseif ($ComplianceResults.Warnings.Count -gt 0) {
     # Using Write-Host for colored user output
     Write-Host "`nâš ï¸  Compliance validation passed with warnings" -ForegroundColor Yellow
     exit 0
-} else {
+}
+else {
     # Using Write-Host for colored user output
     Write-Host "`n❌… All compliance checks passed!" -ForegroundColor Green
     exit 0

@@ -275,7 +275,7 @@ Test-NetConnection -ComputerName "10.0.10.10" -Port 3389
 - ✅ **25 VMs created** and running
 - ✅ **asgard.local domain** is functional
 - ✅ **25 users** can log in to their workstations
-- ✅ **Department file shares** are accessible
+- ✅ **Department file shares** are accessible ([Asgard Setup Guide](ASGARD_NETWORK_SHARE_SETUP.md))
 - ✅ **Group policies** are applied correctly
 - ✅ **DNS/DHCP** services are operational
 - ✅ **All demo scenarios** work perfectly

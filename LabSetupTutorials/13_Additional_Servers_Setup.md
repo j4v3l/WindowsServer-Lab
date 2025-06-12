@@ -66,6 +66,7 @@
 
 1. Open Server Manager
 2. Add roles and features:
+
    - Select "Active Directory Domain Services"
    - Click "Add Features" when prompted
    - Complete installation
@@ -163,32 +164,43 @@
    New-SmbShare -Name "Sales" -Path "C:\Shares\Sales" -FullAccess "LAB\Sales_Staff"
    ```
 
+```
+
+**📋 For comprehensive network share setup instructions, see:**
+- [Asgard Technologies Demo Guide](../Demo/Asgard/Guides/ASGARD_NETWORK_SHARE_SETUP.md)
+- [Olympus Systems Demo Guide](../Demo/Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md)
+- [Generic Setup Guide](../Demo/Asgard/Documentation/NETWORK_SHARE_SETUP_GUIDE.md)
+
 ## 💾 Setting Up SQL1 (SQL Server)
 
 ### Step 1: Create Virtual Machine
 
 1. Create new VM:
 
-   ```
-   Name: SQL1
-   Type: Microsoft Windows
-   Version: Windows Server 2019 (64-bit)
-   Memory: 4096 MB (4GB)
-   Hard disk: 100 GB
-   Processors: 2
-   ```
+```
+
+Name: SQL1
+Type: Microsoft Windows
+Version: Windows Server 2019 (64-bit)
+Memory: 4096 MB (4GB)
+Hard disk: 100 GB
+Processors: 2
+
+```
 
 ### Step 2: Install Windows Server
 
 1. Follow same installation steps
 2. Set static IP:
 
-   ```
-   IP Address: 192.168.1.103
-   Subnet Mask: 255.255.255.0
-   Default Gateway: 192.168.1.1
-   DNS Server: 192.168.1.100
-   ```
+```
+
+IP Address: 192.168.1.103
+Subnet Mask: 255.255.255.0
+Default Gateway: 192.168.1.1
+DNS Server: 192.168.1.100
+
+```
 
 ### Step 3: Join Domain
 
@@ -200,17 +212,19 @@
 1. Download SQL Server 2019 Developer Edition
 2. Run installation
 3. Select features:
-   - Database Engine Services
-   - SQL Server Replication
-   - Client Tools Connectivity
-   - Management Tools
+- Database Engine Services
+- SQL Server Replication
+- Client Tools Connectivity
+- Management Tools
 
 4. Configure instance:
 
-   ```
-   Instance Name: SQL1
-   Authentication: Windows Authentication
-   ```
+```
+
+Instance Name: SQL1
+Authentication: Windows Authentication
+
+````
 
 ## ✅ Verification Steps
 
@@ -218,9 +232,9 @@
 
 1. Verify domain membership:
 
-   ```powershell
-   Get-ComputerInfo | Select-Object CsDomain
-   ```
+```powershell
+Get-ComputerInfo | Select-Object CsDomain
+````
 
 2. Check network connectivity:
 

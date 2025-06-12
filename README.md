@@ -11,8 +11,8 @@ This repository contains comprehensive documentation and scripts for setting up 
 
 Both demos provide realistic enterprise environments perfect for demonstrations, learning, and showcasing Windows Server capabilities!
 
-👉 **[Get Started with Asgard Demo](Demo/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!  
-👉 **[Manual Asgard Setup Guide](Demo/MANUAL_SETUP_ASGARD.md)** - Step-by-step manual deployment!  
+👉 **[Get Started with Asgard Demo](Demo/Asgard/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!  
+👉 **[Manual Asgard Setup Guide](Demo/Asgard/MANUAL_SETUP_ASGARD.md)** - Step-by-step manual deployment!  
 👉 **[Get Started with Olympus Demo](Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)** - Deploy in 30-60 minutes!  
 👉 **[Manual Olympus Setup Guide](Demo/Olympus/MANUAL_SETUP_OLYMPUS.md)** - Advanced manual deployment!
 
@@ -28,6 +28,126 @@ Both demos provide realistic enterprise environments perfect for demonstrations,
 - Documentation may contain inaccuracies or outdated information
 
 Use at your own risk and always verify any changes in a safe testing environment before implementation.
+
+## 📁 **Project Directory Structure**
+
+This repository is organized into clearly defined sections for easy navigation and understanding:
+
+```
+WindowsServer-Lab/
+├── 📋 README.md                           # This file - Project overview and navigation
+├── 📋 CHANGELOG.md                        # Version history and updates
+├── 📋 LICENSE                             # MIT License terms
+├── 📋 CONTRIBUTING.md                     # Contribution guidelines and standards
+├── 📋 .gitignore                          # Git ignore patterns for lab files
+│
+├── 🏛️ Demo/                               # Complete enterprise demo environments
+│   ├── 📋 README.md                       # Demo overview and comparison
+│   ├── 🏰 Asgard/                         # Norse mythology enterprise demo
+│   │   ├── 📋 README.md                   # Asgard demo overview and features
+│   │   ├── 📋 MANUAL_SETUP_ASGARD.md     # Step-by-step manual deployment
+│   │   ├── ⚙️ Scripts/                    # Asgard deployment automation
+│   │   │   ├── Deploy-AsgardLab.ps1       # Main deployment script
+│   │   │   └── Deploy-AdvancedSecurityDemo.ps1  # Security features demo
+│   │   ├── 🚀 Guides/                     # Quick start and setup guides
+│   │   │   ├── QUICK_START_ASGARD.md      # 30-minute deployment guide
+│   │   │   ├── ASGARD_NETWORK_SHARE_SETUP.md  # Network shares setup
+│   │   │   └── ADVANCED_SECURITY_QUICK_START.md  # Security features guide
+│   │   └── 📚 Documentation/              # Technical documentation
+│   │       ├── DEMO_SETUP_GUIDE.md        # Complete setup reference
+│   │       ├── HARDWARE_PERFORMANCE_GUIDE.md  # Performance optimization
+│   │       └── NETWORK_SHARE_SETUP_GUIDE.md   # Network configuration
+│   └── ⚡ Olympus/                        # Greek mythology enterprise demo
+│       ├── 📋 README.md                   # Olympus demo overview and features
+│       ├── 📋 MANUAL_SETUP_OLYMPUS.md    # Step-by-step manual deployment
+│       ├── ⚙️ Scripts/                    # Olympus deployment automation
+│       │   ├── Deploy-OlympusLab.ps1      # Main deployment script
+│       │   └── Deploy-AdvancedSecurityDemo.ps1  # Security features demo
+│       ├── 🚀 Guides/                     # Quick start and setup guides
+│       │   ├── QUICK_START_OLYMPUS.md     # 30-minute deployment guide
+│       │   └── OLYMPUS_NETWORK_SHARE_SETUP.md  # Network shares setup
+│       └── 📚 Documentation/              # Technical documentation
+│           ├── DEMO_SETUP_GUIDE.md        # Complete setup reference
+│           └── HARDWARE_PERFORMANCE_GUIDE.md  # Performance optimization
+│
+├── ⚙️ Scripts/                            # Core PowerShell automation scripts
+│   ├── 📋 WindowsServerLab.psd1          # PowerShell module manifest
+│   ├── 📋 WindowsServerLab.psm1          # PowerShell module functions
+│   ├── 🚀 Lab_Setup.ps1                  # Initial lab environment setup
+│   ├── 🚀 Lab-FinishSetup.ps1            # Post-installation configuration
+│   ├── 🚀 Create-LabUsers.ps1            # User account creation
+│   ├── 🚀 DHCP_Setup.ps1                 # DHCP server setup
+│   ├── 🚀 Hyper-V_Lab_Setup.ps1          # Hyper-V environment setup
+│   ├── 🔧 Hyper-V_Management.ps1         # VM lifecycle management
+│   ├── 🛡️ AdvancedGroupPolicyManager.ps1 # 100+ security policies (NEW!)
+│   ├── 🛡️ AdvancedSecurityAudit.ps1      # Security assessment (NEW!)
+│   ├── 🛡️ GroupPolicyManager.ps1         # Basic GPO management
+│   ├── 🛡️ SecurityAudit.ps1              # Basic security assessment
+│   ├── 💾 BackupRestoreManager.ps1       # Backup and restore operations
+│   ├── 📊 SystemHealthMonitor.ps1        # System monitoring
+│   ├── 🧪 Test-ModuleIntegrity.ps1       # Module validation
+│   ├── 🧪 Test-LabEnvironment.ps1        # Environment testing
+│   ├── 🗑️ Lab-Uninstall.ps1              # Safe component removal (NEW!)
+│   ├── 🔄 Lab-Restore.ps1                # Backup restoration (NEW!)
+│   └── 📁 Modules/                       # Additional PowerShell modules
+│
+├── 📚 LabSetupTutorials/                  # Step-by-step learning guides
+│   ├── 🚀 00_Hyper-V_Quick_Start.md      # Hyper-V rapid setup guide
+│   ├── 🏗️ 01_Setup_Lab_Environment.md    # Lab environment foundation
+│   ├── 👥 02_Manage_Users_Computers_AD.md # Active Directory basics
+│   ├── 👥 03_AD_Groups_Management.md     # Group management
+│   ├── 🔒 04_GPO_Creation_and_Linking.md # Group Policy management
+│   ├── 🔧 05_Troubleshooting.md          # Problem solving guide
+│   ├── 📊 06_Monitoring_and_Maintenance.md # System maintenance
+│   ├── 🎯 07_Lab_Scenarios.md            # Practical scenarios
+│   ├── ⚠️ 08_Common_Mistakes.md          # Pitfalls and solutions
+│   ├── 🛡️ 09_Security_Hardening.md       # Security best practices
+│   ├── 🤖 10_Automation_and_Scripting.md # Automation strategies
+│   ├── 📝 11_Naming_Conventions.md       # Naming standards
+│   ├── 💾 12_Disaster_Recovery.md        # Backup and recovery
+│   ├── 🖥️ 13_Additional_Servers_Setup.md # Extended server roles
+│   ├── 💻 14_Additional_Clients_Setup.md # Client deployment
+│   ├── 🌐 15_DHCP_Server_Setup.md        # DHCP configuration
+│   ├── 🏢 16_Hyper-V_Setup_and_Configuration.md # Virtualization setup
+│   └── 🗑️ 17_Uninstall_and_Revert.md     # Safe removal procedures
+│
+├── 🔄 .github/                           # GitHub automation and templates
+│   ├── 🤖 workflows/                     # CI/CD automation workflows
+│   │   ├── ci.yml                        # Continuous integration
+│   │   ├── docs.yml                      # Documentation validation
+│   │   └── release.yml                   # Release automation
+│   ├── 📝 ISSUE_TEMPLATE/                # Issue reporting templates
+│   ├── 📝 pull_request_template.md       # PR template
+│   ├── 🛡️ SECURITY.md                    # Security policy
+│   ├── 🤝 SUPPORT.md                     # Support resources
+│   ├── 📋 CODE_OF_CONDUCT.md             # Community guidelines
+│   ├── 💰 FUNDING.yml                    # Sponsorship information
+│   └── 🔧 validate-compliance.ps1       # Compliance validation
+│
+├── 🧪 test-local-ci.ps1                  # Local CI testing script
+├── 🧪 test-local-ci.sh                   # Local CI testing (Linux/macOS)
+├── 📊 VERSION                            # Current version number
+├── 📋 CODEBASE_AUDIT_REPORT.md           # Code quality audit results
+├── 📋 AUDIT_REPORT.md                    # Security audit summary
+├── 📋 DOCUMENTATION_AUDIT_SUMMARY.md    # Documentation review
+└── 📋 DIRECTORY_STRUCTURE_AUDIT_REPORT.md # This audit's results
+```
+
+### **Key Directory Purposes**
+
+| Directory                 | Purpose                          | Best Used For                               |
+| ------------------------- | -------------------------------- | ------------------------------------------- |
+| **🏛️ Demo/**              | Complete enterprise environments | Production-like deployments, demonstrations |
+| **⚙️ Scripts/**           | Core automation tools            | Individual tasks, custom deployments        |
+| **📚 LabSetupTutorials/** | Learning materials               | Step-by-step learning, troubleshooting      |
+| **🔄 .github/**           | Project automation               | CI/CD, issue tracking, community            |
+
+### **Getting Started Navigation**
+
+- **🚀 New Users**: Start with [Demo/README.md](Demo/README.md) for quick deployment
+- **📚 Learners**: Begin with [LabSetupTutorials/01_Setup_Lab_Environment.md](LabSetupTutorials/01_Setup_Lab_Environment.md)
+- **⚙️ Developers**: Explore [Scripts/](Scripts/) for automation tools
+- **🤝 Contributors**: Read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ## Table of Contents
 
@@ -159,7 +279,8 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 
 - [**Advanced Group Policy Manager**](Scripts/AdvancedGroupPolicyManager.ps1) - Comprehensive GPO management with camera, USB, device controls
 - [**Advanced Security Audit**](Scripts/AdvancedSecurityAudit.ps1) - Complete security assessment with scoring and recommendations
-- [**Advanced Security Demo**](Demo/Scripts/Deploy-AdvancedSecurityDemo.ps1) - Interactive demonstration of all security features
+- [**Advanced Security Demo - Asgard**](Demo/Asgard/Scripts/Deploy-AdvancedSecurityDemo.ps1) - Interactive demonstration of all security features (Asgard)
+  - [**Advanced Security Demo - Olympus**](Demo/Olympus/Scripts/Deploy-AdvancedSecurityDemo.ps1) - Interactive demonstration of all security features (Olympus)
 
 #### Traditional Management Scripts
 

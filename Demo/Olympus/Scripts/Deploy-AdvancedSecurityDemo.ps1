@@ -42,7 +42,7 @@
     Purpose: Olympus Systems Advanced Security Demo Wrapper
     
     This script wraps the main Deploy-AdvancedSecurityDemo.ps1 located in
-    Demo/Scripts/ and automatically configures it for the Olympus environment.
+    the root Scripts/ directory and automatically configures it for the Olympus environment.
     
 .LINK
     https://github.com/YourRepo/WindowsServer-Lab
@@ -108,7 +108,7 @@ try {
   if (-not (Test-Path $MainScriptPath)) {
     Write-OlympusError "Main Deploy-AdvancedSecurityDemo.ps1 script not found at: $MainScriptPath"
     Write-Information "" -InformationAction Continue
-    Write-Information "Expected location: Demo/Scripts/Deploy-AdvancedSecurityDemo.ps1" -InformationAction Continue
+    Write-Information "Expected location: Scripts/AdvancedSecurityAudit.ps1" -InformationAction Continue
     Write-Information "Please ensure the main Windows Server Lab project structure is intact." -InformationAction Continue
     Write-Information "" -InformationAction Continue
     Read-Host "Press Enter to exit"

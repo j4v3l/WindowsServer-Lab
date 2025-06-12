@@ -242,7 +242,7 @@ Get-AdvancedSecurityReport -OutputPath "C:\Demo\Reports"
 - [Advanced Group Policy Manager](../../Scripts/AdvancedGroupPolicyManager.ps1)
 - [Advanced Security Audit](../../Scripts/AdvancedSecurityAudit.ps1)
 - [Asgard Demo Deployment](../Scripts/Deploy-AsgardLab.ps1)
-- [Olympus Demo Deployment](../Olympus/Scripts/Deploy-OlympusLab.ps1)
+- [Olympus Demo Deployment](../../Olympus/Scripts/Deploy-OlympusLab.ps1)
 
 ## 🆘 Troubleshooting
 

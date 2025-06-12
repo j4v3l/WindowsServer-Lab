@@ -480,6 +480,9 @@ Install-WindowsFeature -Name NET-Framework-45-Features
 # Create AI/ML development shares
 New-SmbShare -Name "AI-DataSets" -Path "C:\AI-ML\DataSets" -FullAccess "Innovation-Forge"
 New-SmbShare -Name "ML-Models" -Path "C:\AI-ML\Models" -FullAccess "Innovation-Forge"
+
+# For comprehensive network share setup instructions, see:
+# Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md
 ```
 
 ---

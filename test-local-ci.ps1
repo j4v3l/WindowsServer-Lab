@@ -64,7 +64,8 @@ if ($overallSuccess) {
                     $color = if ($issue.Severity -eq 'Error') { 'Red' } else { 'Yellow' }
                     # Using Write-Host for colored user output`n    Write-Host "      [$($issue.Severity)] Line $($issue.Line): $($issue.Message)" -ForegroundColor $color
                 }
-            } else {
+            }
+            else {
                 # Using Write-Host for colored user output`n    Write-Host "    ✅ No issues found" -ForegroundColor Green
             }
         }
@@ -82,9 +83,11 @@ if ($overallSuccess) {
     if ($criticalErrors -gt 0) {
         Write-Host "❌ Critical errors found - CI would fail" -ForegroundColor Red
         $overallSuccess = $false
-    } elseif ($totalIssues -gt 0) {
+    }
+    elseif ($totalIssues -gt 0) {
         Write-Host "⚠️  Warnings found but no critical errors - CI would pass" -ForegroundColor Yellow
-    } else {
+    }
+    else {
         # Using Write-Host for colored user output`n    Write-Host "✅ All scripts passed analysis!" -ForegroundColor Green
     }
 }
@@ -101,7 +104,8 @@ if (Test-Path "Scripts/Test-ModuleIntegrity.ps1") {
         $result = .\Test-ModuleIntegrity.ps1 2>&1
         if ($LASTEXITCODE -eq 0) {
             # Using Write-Host for colored user output`n    Write-Host "✅ Module integrity test passed!" -ForegroundColor Green
-        } else {
+        }
+        else {
             # Using Write-Host for colored user output`n    Write-Host "❌ Module integrity test failed!" -ForegroundColor Red
             # Using Write-Host for colored user output`n    Write-Host $result -ForegroundColor Red
             $overallSuccess = $false
@@ -114,7 +118,8 @@ if (Test-Path "Scripts/Test-ModuleIntegrity.ps1") {
     finally {
         Pop-Location
     }
-} else {
+}
+else {
     # Using Write-Host for colored user output`n    Write-Host "⚠️  Module integrity test script not found, skipping..." -ForegroundColor Yellow
 }
 #endregion
@@ -130,7 +135,8 @@ $missingDocs = @()
 foreach ($doc in $requiredDocs) {
     if (Test-Path $doc) {
         # Using Write-Host for colored user output`n    Write-Host "  ✅ Found: $doc" -ForegroundColor Green
-    } else {
+    }
+    else {
         $missingDocs += $doc
         # Using Write-Host for colored user output`n    Write-Host "  ❌ Missing: $doc" -ForegroundColor Red
     }
@@ -140,7 +146,8 @@ foreach ($doc in $requiredDocs) {
 foreach ($doc in $githubDocs) {
     if (Test-Path $doc) {
         # Using Write-Host for colored user output`n    Write-Host "  ✅ Found: $doc" -ForegroundColor Green
-    } else {
+    }
+    else {
         # Using Write-Host for colored user output`n    Write-Host "  ⚠️  Missing: $doc" -ForegroundColor Yellow
     }
 }
@@ -148,7 +155,8 @@ foreach ($doc in $githubDocs) {
 if ($missingDocs.Count -gt 0) {
     Write-Host "❌ Missing critical documentation files: $($missingDocs -join ', ')" -ForegroundColor Red
     $overallSuccess = $false
-} else {
+}
+else {
     # Using Write-Host for colored user output`n    Write-Host "✅ All required documentation present!" -ForegroundColor Green
 }
 #endregion
@@ -171,7 +179,8 @@ $missingTemplates = @()
 foreach ($template in $templatePaths) {
     if (Test-Path $template) {
         # Using Write-Host for colored user output`n    Write-Host "  ✅ Found: $template" -ForegroundColor Green
-    } else {
+    }
+    else {
         $missingTemplates += $template
         # Using Write-Host for colored user output`n    Write-Host "  ❌ Missing: $template" -ForegroundColor Red
     }
@@ -179,7 +188,8 @@ foreach ($template in $templatePaths) {
 
 if ($missingTemplates.Count -eq 0) {
     # Using Write-Host for colored user output`n    Write-Host "✅ All GitHub templates present!" -ForegroundColor Green
-} else {
+}
+else {
     # Using Write-Host for colored user output`n    Write-Host "❌ Missing templates: $($missingTemplates.Count)" -ForegroundColor Red
     $overallSuccess = $false
 }
@@ -195,7 +205,8 @@ if ($overallSuccess) {
     # Using Write-Host for colored user output`n    Write-Host "   Your code is ready for GitHub Actions CI/CD" -ForegroundColor Green
     # Using Write-Host for colored user output`n    Write-Host "   The workflows should run successfully" -ForegroundColor Green
     exit 0
-} else {
+}
+else {
     # Using Write-Host for colored user output`n    Write-Host "❌ SOME CHECKS FAILED! 💥" -ForegroundColor Red
     # Using Write-Host for colored user output`n    Write-Host "   Please fix the issues above before committing" -ForegroundColor Red
     # Using Write-Host for colored user output`n    Write-Host "   The GitHub Actions CI/CD may fail" -ForegroundColor Red

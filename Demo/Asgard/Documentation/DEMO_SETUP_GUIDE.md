@@ -283,6 +283,8 @@ asgard.local
 
 ## 📁 **File Share Structure**
 
+> **📋 For comprehensive setup instructions, see:** [Network Share Setup Guides Index](NETWORK_SHARE_GUIDES_INDEX.md)
+
 ### **Department Shares**
 
 ```
@@ -475,8 +477,11 @@ Set-AsgardActiveDirectory
 # Create users and groups
 New-AsgardUsers
 
-# Configure file shares
-New-AsgardFileShares
+# Configure file shares (See demo-specific setup guides)
+New-AsgardFileShares  # For automated setup
+# For manual setup, see:
+# - Asgard Demo: Guides/ASGARD_NETWORK_SHARE_SETUP.md
+# - Olympus Demo: Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md
 
 # Apply Group Policies
 Set-AsgardGroupPolicies
