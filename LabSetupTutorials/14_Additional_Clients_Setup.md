@@ -41,10 +41,12 @@
 1. Set static IP:
 
    ```
-   IP Address: 192.168.1.201
-   Subnet Mask: 255.255.255.0
-   Default Gateway: 192.168.1.1
-   DNS Server: 192.168.1.100
+   IP Address: 10.0.20.201
+
+Subnet Mask: 255.255.252.0
+Default Gateway: 10.0.20.1
+DNS Server: 10.0.10.10
+
    ```
 
 ### Step 4: Join Domain
@@ -61,8 +63,10 @@
 1. Log in as IT user:
 
    ```
-   Username: thor@lab.local
+
+   Username: <thor@lab.local>
    Password: (your set password)
+
    ```
 
 2. Test access to IT share:
@@ -92,10 +96,12 @@
 2. Set static IP:
 
    ```
-   IP Address: 192.168.1.202
-   Subnet Mask: 255.255.255.0
-   Default Gateway: 192.168.1.1
-   DNS Server: 192.168.1.100
+   IP Address: 10.0.20.202
+
+Subnet Mask: 255.255.252.0
+Default Gateway: 10.0.20.1
+DNS Server: 10.0.10.10
+
    ```
 
 ### Step 3: Join Domain
@@ -108,8 +114,10 @@
 1. Log in as HR user:
 
    ```
-   Username: freya@lab.local
+
+   Username: <freya@lab.local>
    Password: (your set password)
+
    ```
 
 2. Test access to HR share:
@@ -139,10 +147,12 @@
 2. Set static IP:
 
    ```
-   IP Address: 192.168.1.203
-   Subnet Mask: 255.255.255.0
-   Default Gateway: 192.168.1.1
-   DNS Server: 192.168.1.100
+   IP Address: 10.0.20.203
+
+Subnet Mask: 255.255.252.0
+Default Gateway: 10.0.20.1
+DNS Server: 10.0.10.10
+
    ```
 
 ### Step 3: Join Domain
@@ -155,8 +165,10 @@
 1. Log in as Sales user:
 
    ```
-   Username: sif@lab.local
+
+   Username: <sif@lab.local>
    Password: (your set password)
+
    ```
 
 2. Test access to Sales share:

@@ -120,7 +120,7 @@
 
    ```powershell
    # Create new cluster
-   New-Cluster -Name Cluster1 -Node Server1,Server2 -StaticAddress 192.168.1.100
+   New-Cluster -Name Cluster1 -Node Server1,Server2 -StaticAddress 10.0.10.100
    ```
 
 ### 2. Always On Availability Groups

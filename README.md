@@ -28,8 +28,10 @@ This repository contains comprehensive documentation and scripts for setting up 
 Both demos provide realistic enterprise environments perfect for demonstrations, learning, and showcasing Windows Server capabilities!
 
 👉 **[Get Started with Asgard Demo](Demo/Asgard/Guides/QUICK_START_ASGARD.md)** - Deploy in 30-60 minutes!  
+👉 **[Asgard Cheatsheet](Demo/Asgard/CHEATSHEET.md)** - Quick reference for commands and IPs!  
 👉 **[Manual Asgard Setup Guide](Demo/Asgard/MANUAL_SETUP_ASGARD.md)** - Step-by-step manual deployment!  
 👉 **[Get Started with Olympus Demo](Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)** - Deploy in 30-60 minutes!  
+👉 **[Olympus Cheatsheet](Demo/Olympus/CHEATSHEET.md)** - Quick reference for commands and IPs!  
 👉 **[Manual Olympus Setup Guide](Demo/Olympus/MANUAL_SETUP_OLYMPUS.md)** - Advanced manual deployment!
 
 ## ⚠️ Important Disclaimer
@@ -305,6 +307,8 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
 - [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
 - [Hyper-V Management Script](Scripts/Hyper-V_Management.ps1) - Hyper-V lab lifecycle management
+- [Oh My Posh Setup Script](Scripts/Setup-OhMyPosh.ps1) - PowerShell prompt customization with themes and icons
+- [Quick Oh My Posh Install](Scripts/Quick-InstallOhMyPosh.ps1) - Streamlined installation of Oh My Posh
 
 #### Uninstall and Recovery Scripts (NEW)
 
