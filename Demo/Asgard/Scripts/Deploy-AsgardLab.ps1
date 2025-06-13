@@ -390,6 +390,7 @@ Import-Module ActiveDirectory
 New-ADOrganizationalUnit -Name "Asgard Technologies" -Path "DC=asgard,DC=local"
 New-ADOrganizationalUnit -Name "Departments" -Path "OU=Asgard Technologies,DC=asgard,DC=local"
 New-ADOrganizationalUnit -Name "Service_Accounts" -Path "OU=Asgard Technologies,DC=asgard,DC=local"
+New-ADOrganizationalUnit -Name "Servers" -Path "OU=Asgard Technologies,DC=asgard,DC=local"
 New-ADOrganizationalUnit -Name "Workstations" -Path "OU=Asgard Technologies,DC=asgard,DC=local"
 
 # Create department OUs
@@ -397,6 +398,29 @@ $departments = @("IT_Operations", "Cybersecurity", "Research_Development", "Fina
 foreach ($dept in $departments) {
     New-ADOrganizationalUnit -Name $dept -Path "OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     New-ADOrganizationalUnit -Name "$dept" -Path "OU=Workstations,OU=Asgard Technologies,DC=asgard,DC=local"
+}
+
+# Create server computer accounts in Servers OU
+$servers = @("ODIN-DC01", "FRIGG-DC02", "HEIMDALL-FS01", "BALDER-WEB01", "VIDAR-SEC01")
+foreach ($server in $servers) {
+    New-ADComputer -Name $server -Path "OU=Servers,OU=Asgard Technologies,DC=asgard,DC=local" -Description "Asgard Technologies Server" -Enabled $true
+}
+
+# Create sample workstation computer accounts in Workstations OU
+$workstations = @(
+    @{Name="ODIN-WS01"; Dept="IT_Operations"; Description="Odin's Command Center"},
+    @{Name="THOR-WS01"; Dept="IT_Operations"; Description="Thor's Thunder Station"},
+    @{Name="HEIMDALL-WS01"; Dept="Cybersecurity"; Description="Heimdall's Watchtower"},
+    @{Name="MIMIR-WS01"; Dept="Cybersecurity"; Description="Mimir's Wisdom Terminal"},
+    @{Name="FREYA-WS01"; Dept="Research_Development"; Description="Freya's Innovation Lab"},
+    @{Name="NJORD-WS01"; Dept="Research_Development"; Description="Njord's Wind Tunnel"},
+    @{Name="FRIGG-WS01"; Dept="Finance_Admin"; Description="Frigg's Treasury Terminal"},
+    @{Name="EIR-WS01"; Dept="Finance_Admin"; Description="Eir's Healing Touch"},
+    @{Name="SIF-WS01"; Dept="Human_Resources"; Description="Sif's Golden Gateway"},
+    @{Name="IDUN-WS01"; Dept="Human_Resources"; Description="Idun's Eternal Garden"}
+)
+foreach ($ws in $workstations) {
+    New-ADComputer -Name $ws.Name -Path "OU=$($ws.Dept),OU=Workstations,OU=Asgard Technologies,DC=asgard,DC=local" -Description $ws.Description -Enabled $true
 }
 
 # Create security groups

@@ -387,6 +387,29 @@ New-ADOrganizationalUnit -Name "Harmony Relations" -Path $OlympusOU
 # Create computer OUs
 New-ADOrganizationalUnit -Name "Servers" -Path $OlympusOU
 New-ADOrganizationalUnit -Name "Workstations" -Path $OlympusOU
+
+# Create server computer accounts in Servers OU
+$servers = @("ZEUS-DC01", "HERA-DC02", "HERMES-FS01", "APOLLO-WEB01", "ATHENA-SEC01")
+foreach ($server in $servers) {
+    New-ADComputer -Name $server -Path "OU=Servers,$OlympusOU" -Description "Olympus Systems Server" -Enabled $true
+}
+
+# Create sample workstation computer accounts in Workstations OU
+$workstations = @(
+    @{Name="ZEUS-WS01"; Dept="Divine Council"; Description="Zeus Supreme Command Center"},
+    @{Name="POSEIDON-WS01"; Dept="Divine Council"; Description="Poseidon's Ocean Terminal"},
+    @{Name="ATHENA-WS01"; Dept="War Strategists"; Description="Athena's Wisdom Tower"},
+    @{Name="ARES-WS01"; Dept="War Strategists"; Description="Ares' War Room"},
+    @{Name="APOLLO-WS01"; Dept="Innovation Forge"; Description="Apollo's Light Laboratory"},
+    @{Name="ARTEMIS-WS01"; Dept="Innovation Forge"; Description="Artemis' Hunt Station"},
+    @{Name="HERA-WS01"; Dept="Abundance Treasury"; Description="Hera's Queen Station"},
+    @{Name="DEMETER-WS01"; Dept="Abundance Treasury"; Description="Demeter's Harvest Terminal"},
+    @{Name="APHRODITE-WS01"; Dept="Harmony Relations"; Description="Aphrodite's Harmony Hub"},
+    @{Name="EROS-WS01"; Dept="Harmony Relations"; Description="Eros' Love Portal"}
+)
+foreach ($ws in $workstations) {
+    New-ADComputer -Name $ws.Name -Path "OU=$($ws.Dept),$OlympusOU" -Description $ws.Description -Enabled $true
+}
 ```
 
 ### **Step 5.2: Create Security Groups**

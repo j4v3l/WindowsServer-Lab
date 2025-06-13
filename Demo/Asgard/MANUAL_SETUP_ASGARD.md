@@ -505,6 +505,29 @@ New-ADOrganizationalUnit -Name "Human Resources" -Path $AsgardOU
 # Create computer OUs
 New-ADOrganizationalUnit -Name "Servers" -Path $AsgardOU
 New-ADOrganizationalUnit -Name "Workstations" -Path $AsgardOU
+
+# Create server computer accounts in Servers OU
+$servers = @("ODIN-DC01", "FRIGG-DC02", "HEIMDALL-FS01", "BALDER-WEB01", "VIDAR-SEC01")
+foreach ($server in $servers) {
+    New-ADComputer -Name $server -Path "OU=Servers,$AsgardOU" -Description "Asgard Technologies Server" -Enabled $true
+}
+
+# Create sample workstation computer accounts in Workstations OU
+$workstations = @(
+    @{Name="ODIN-WS01"; Dept="IT Operations"; Description="Odin's Command Center"},
+    @{Name="THOR-WS01"; Dept="IT Operations"; Description="Thor's Thunder Station"},
+    @{Name="HEIMDALL-WS01"; Dept="Cybersecurity"; Description="Heimdall's Watchtower"},
+    @{Name="MIMIR-WS01"; Dept="Cybersecurity"; Description="Mimir's Wisdom Terminal"},
+    @{Name="FREYA-WS01"; Dept="Research & Development"; Description="Freya's Innovation Lab"},
+    @{Name="NJORD-WS01"; Dept="Research & Development"; Description="Njord's Wind Tunnel"},
+    @{Name="FRIGG-WS01"; Dept="Finance & Administration"; Description="Frigg's Treasury Terminal"},
+    @{Name="EIR-WS01"; Dept="Finance & Administration"; Description="Eir's Healing Touch"},
+    @{Name="SIF-WS01"; Dept="Human Resources"; Description="Sif's Golden Gateway"},
+    @{Name="IDUN-WS01"; Dept="Human Resources"; Description="Idun's Eternal Garden"}
+)
+foreach ($ws in $workstations) {
+    New-ADComputer -Name $ws.Name -Path "OU=$($ws.Dept),$AsgardOU" -Description $ws.Description -Enabled $true
+}
 ```
 
 ### **Step 5.2: Create Security Groups**
