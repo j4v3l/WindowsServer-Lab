@@ -29,6 +29,24 @@
 
 **Important Note:** When creating external VM switches, use `-NetAdapterName` instead of `-SwitchType External`. The `-AllowManagementOS $true` parameter allows the host OS to also use the network adapter.
 
+### **Windows 11 Client Setup & OOBE Network Bypass**
+
+**Critical for Lab Environment:** When setting up Windows 11 client VMs in this lab, use the OOBE network bypass to avoid Microsoft account requirements and ensure smooth integration with the domain.
+
+**OOBE Bypass Steps:**
+
+1. During Windows 11 initial setup, when prompted for network connection
+2. Press `Shift + F10` to open Command Prompt
+3. Type: `OOBE\BYPASSNRO`
+4. Press Enter - the system will restart and skip network requirements
+5. You can then create local accounts and join the domain without Microsoft account interference
+
+**Alternative Methods:**
+
+- Kill network flow: `taskkill /f /im NetworkConnectionFlow.exe`
+- Disable network adapter temporarily during OOBE
+- Use registry modification for automated deployments
+
 ```powershell
 # Core Production Network (External Switch)
 New-VMSwitch -Name "ASGARD-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true

@@ -6,7 +6,7 @@
 
 ```
 Production:  10.0.10.0/24   (Servers)
-Management:  10.0.100.0/24  (Admin Access)  
+Management:  10.0.100.0/24  (Admin Access)
 Clients:     10.0.20.0/22   (Workstations - 1022 addresses)
 DMZ:         10.0.50.0/24   (External Services)
 IoT/Devices: 10.0.60.0/24   (Printers, cameras, sensors)
@@ -22,33 +22,137 @@ BALDER-WEB01:  10.0.10.30  (Web Server)
 VIDAR-SEC01:   10.0.10.40  (Security Server)
 ```
 
+## 🔧 **Network Troubleshooting & Routing**
+
+### **Routing Table Analysis**
+
+```powershell
+# [HOST] View complete routing table for all networks
+route print
+
+# [HOST] Expected output shows multiple network interfaces:
+# - 10.0.10.0/24 with interface 10.0.10.1 (Server network)
+# - 10.0.20.0/22 with interface 10.0.20.1 (Client network)
+# - 10.0.100.0/24 with interface 10.0.100.1 (Management network)
+
+# [SERVER VM] or [CLIENT VM] Check VM routing table
+route print
+
+# [CLIENT VM] Common issue: Wrong gateway configuration
+# If VM shows gateway 10.0.23.1 but should be 10.0.20.1
+```
+
+### **Network Connectivity Troubleshooting**
+
+```powershell
+# [CLIENT VM] Test connectivity to domain controller
+ping 10.0.10.10 -n 2
+
+# [CLIENT VM] If getting "Destination host unreachable" from 10.0.23.10:
+# This indicates gateway misconfiguration
+
+# [CLIENT VM] Trace route to see network path
+tracert 10.0.10.10
+
+# [CLIENT VM] Check network configuration
+ipconfig /all
+
+# [HOST] Verify host has correct network interfaces
+Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Select Name, InterfaceDescription, LinkSpeed
+```
+
+### **Gateway Configuration Fixes**
+
+```powershell
+# [CLIENT VM] Fix incorrect gateway (common issue)
+# Remove wrong gateway first
+Remove-NetRoute -DestinationPrefix "0.0.0.0/0" -Confirm:$false
+
+# [CLIENT VM] Add correct gateway for 10.0.20.0/22 network
+New-NetRoute -DestinationPrefix "0.0.0.0/0" -NextHop "10.0.20.1" -InterfaceAlias "Ethernet"
+
+# [CLIENT VM] Alternative method - Set complete network config
+netsh interface ip set address "Ethernet" static 10.0.20.50 255.255.252.0 10.0.20.1
+
+# [CLIENT VM] Set DNS to domain controller
+netsh interface ip set dns "Ethernet" static 10.0.10.10
+```
+
+### **IP Address Conflict Resolution**
+
+```powershell
+# [HOST] Check for IP conflicts on host network interfaces
+Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | Sort-Object IPAddress
+
+# [CLIENT VM] Assign unique IP in client range (avoid conflicts)
+# Use IPs like 10.0.20.50, 10.0.20.51, etc. (not 10.0.23.10 which might conflict)
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 10.0.20.50 -PrefixLength 22 -DefaultGateway 10.0.20.1
+
+# [CLIENT VM] Verify no duplicate IPs
+ping 10.0.20.50  # Should get reply if IP is in use
+
+# [CLIENT VM] Release and renew DHCP (if using DHCP)
+ipconfig /release
+ipconfig /renew
+```
+
+### **Domain Join Network Prerequisites**
+
+```powershell
+# [CLIENT VM] Pre-domain join network validation checklist
+# 1. Test DNS resolution
+nslookup asgard.local 10.0.10.10
+nslookup 10.0.10.10
+
+# 2. Test required ports to DC
+$DCPorts = @(53, 88, 389, 636, 445, 3268, 3269)
+$DCPorts | ForEach-Object {
+    $Result = Test-NetConnection -ComputerName 10.0.10.10 -Port $_
+    Write-Host "Port $_ : $($Result.TcpTestSucceeded)" -ForegroundColor $(if($Result.TcpTestSucceeded){"Green"}else{"Red"})
+}
+
+# 3. Verify time sync (critical for Kerberos)
+w32tm /query /status
+w32tm /config /manualpeerlist:"10.0.10.10" /syncfromflags:manual
+
+# [CLIENT VM] Fix common domain join network issues
+# Set correct DNS
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 10.0.10.10
+
+# Clear DNS cache
+ipconfig /flushdns
+
+# Register with DNS
+ipconfig /registerdns
+```
+
 ## 🚀 **Quick Deployment Commands**
 
 ### **Virtual Switch Setup**
 
 ```powershell
-# Production Network
+# [HOST] Production Network
 New-VMSwitch -Name "ASGARD-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
 
-# Management Network
+# [HOST] Management Network
 New-VMSwitch -Name "ASGARD-Management" -SwitchType Internal
 New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceAlias "vEthernet (ASGARD-Management)"
 
-# Client Network
-New-VMSwitch -Name "ASGARD-Clients" -SwitchType Internal  
+# [HOST] Client Network
+New-VMSwitch -Name "ASGARD-Clients" -SwitchType Internal
 New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceAlias "vEthernet (ASGARD-Clients)"
 
-# NAT Configuration
+# [HOST] NAT Configuration
 New-NetNat -Name "ASGARD-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8
 ```
 
 ### **DHCP Configuration**
 
 ```powershell
-# DHCP Scope
+# [SERVER VM] DHCP Scope
 Add-DhcpServerV4Scope -Name "Client Network" -StartRange 10.0.20.100 -EndRange 10.0.23.200 -SubnetMask 255.255.252.0
 
-# DHCP Options
+# [SERVER VM] DHCP Options (CRITICAL: Correct gateway)
 Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 3 -Value 10.0.20.1    # Gateway
 Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 6 -Value 10.0.10.10   # DNS
 Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 15 -Value "asgard.local" # Domain
@@ -60,7 +164,7 @@ Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 15 -Value "asgard.local
 
 ```
 odin.allfather     - CTO & Domain Admin
-heimdall.guardian  - CISO  
+heimdall.guardian  - CISO
 frigg.queen       - CFO
 ```
 
@@ -76,28 +180,53 @@ HR:               sif.golden (Sif's Domain)
 
 ## 🔧 **Advanced PowerShell Arsenal**
 
+### **Windows 11 Client Setup & OOBE Bypass**
+
+```cmd
+# Windows 11 Network Bypass during OOBE Setup
+# This command bypasses network requirements and goes directly to local account setup
+OOBE\BYPASSNRO
+
+# Alternative methods for Windows 11 OOBE bypass:
+# 1. During network setup screen, press Shift+F10 to open Command Prompt
+# 2. Type: OOBE\BYPASSNRO
+# 3. Press Enter - the system will restart and skip network requirements
+# 4. You can then create a local account without Microsoft account requirement
+
+# For automated deployment via PowerShell (run as administrator):
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c OOBE\BYPASSNRO" -Wait
+
+# Additional Windows 11 OOBE bypass techniques:
+# Method 1: Kill network connection during setup
+taskkill /f /im NetworkConnectionFlow.exe
+
+# Method 2: Disable network adapter temporarily
+Get-NetAdapter | Disable-NetAdapter -Confirm:$false
+# Re-enable after OOBE: Get-NetAdapter | Enable-NetAdapter -Confirm:$false
+```
+
 ### **Domain Operations & Authentication**
 
 ```powershell
-# Domain join with comprehensive error handling
+# [CLIENT VM] Domain join with comprehensive error handling
 Add-Computer -DomainName "asgard.local" -Credential (Get-Credential) -Restart -Force -Verbose -ErrorAction Stop
 
-# Force domain replication across all DCs
+# [SERVER VM] Force domain replication across all DCs
 repadmin /syncall /AdeP /e /q
 
-# Check Kerberos tickets for current user
+# [CLIENT VM] or [SERVER VM] Check Kerberos tickets for current user
 klist tickets
 
-# Test domain controller health
+# [SERVER VM] Test domain controller health
 dcdiag /v /c /d /e /s:ODIN-DC01
 
-# Force Group Policy refresh
+# [CLIENT VM] or [SERVER VM] Force Group Policy refresh
 gpupdate /force /boot
 
-# Check domain trust relationships
+# [SERVER VM] Check domain trust relationships
 Get-ADTrust -Filter * | Format-Table -AutoSize
 
-# Validate domain controller secure channel
+# [CLIENT VM] Validate domain controller secure channel
 Test-ComputerSecureChannel -Server "ODIN-DC01.asgard.local" -Credential (Get-Credential) -Verbose
 ```
 
@@ -137,7 +266,7 @@ Get-ADGroupMember "Domain Admins" | Get-ADUser -Properties PasswordNeverExpires 
 ### **Network Diagnostics & Penetration Testing**
 
 ```powershell
-# Comprehensive network connectivity test suite
+# [CLIENT VM] or [HOST] Comprehensive network connectivity test suite
 $TestPorts = @(
     @{Host="10.0.10.10"; Port=53; Service="DNS"},
     @{Host="10.0.10.10"; Port=88; Service="Kerberos"},
@@ -192,11 +321,11 @@ Get-WmiObject -Class Win32_LogicalDisk | ForEach-Object {
 }
 
 # Event log analysis with filtering
-Get-WinEvent -FilterHashtable @{LogName='System','Application'; Level=1,2,3; StartTime=(Get-Date).AddHours(-24)} | 
+Get-WinEvent -FilterHashtable @{LogName='System','Application'; Level=1,2,3; StartTime=(Get-Date).AddHours(-24)} |
     Group-Object Id | Sort-Object Count -Descending | Select Count, Name, @{n="Sample";e={$_.Group[0].Message.Substring(0,[Math]::Min(100,$_.Group[0].Message.Length))}}
 
 # Service health check
-Get-Service | Where-Object {$_.StartType -eq "Automatic" -and $_.Status -ne "Running"} | 
+Get-Service | Where-Object {$_.StartType -eq "Automatic" -and $_.Status -ne "Running"} |
     Select Name, Status, StartType, @{n="Description";e={(Get-WmiObject -Class Win32_Service -Filter "Name='$($_.Name)'").Description}}
 
 # Windows Update status
@@ -207,13 +336,13 @@ Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10 HotFi
 
 ```powershell
 # Failed login analysis
-Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625; StartTime=(Get-Date).AddDays(-1)} | 
-    Select TimeCreated, @{n="Account";e={$_.Properties[5].Value}}, @{n="SourceIP";e={$_.Properties[19].Value}}, @{n="Reason";e={$_.Properties[8].Value}} | 
+Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625; StartTime=(Get-Date).AddDays(-1)} |
+    Select TimeCreated, @{n="Account";e={$_.Properties[5].Value}}, @{n="SourceIP";e={$_.Properties[19].Value}}, @{n="Reason";e={$_.Properties[8].Value}} |
     Group-Object Account | Sort-Object Count -Descending
 
 # Successful logons from external IPs
-Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4624; StartTime=(Get-Date).AddDays(-1)} | 
-    Where-Object {$_.Properties[18].Value -notlike "10.0.*" -and $_.Properties[18].Value -ne "-" -and $_.Properties[18].Value -ne "127.0.0.1"} | 
+Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4624; StartTime=(Get-Date).AddDays(-1)} |
+    Where-Object {$_.Properties[18].Value -notlike "10.0.*" -and $_.Properties[18].Value -ne "-" -and $_.Properties[18].Value -ne "127.0.0.1"} |
     Select TimeCreated, @{n="Account";e={$_.Properties[5].Value}}, @{n="SourceIP";e={$_.Properties[18].Value}}
 
 # Local administrators audit
@@ -269,21 +398,21 @@ Get-VM | Export-VM -Path "C:\VMBackups" -Verbose
 
 ```powershell
 # Find large files consuming space
-Get-ChildItem -Path "C:\" -Recurse -File -ErrorAction SilentlyContinue | 
-    Where-Object {$_.Length -gt 100MB} | 
-    Sort-Object Length -Descending | 
+Get-ChildItem -Path "C:\" -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object {$_.Length -gt 100MB} |
+    Sort-Object Length -Descending |
     Select-Object -First 20 Name, @{n="Size(GB)";e={[math]::Round($_.Length/1GB,2)}}, DirectoryName, LastWriteTime
 
 # Recent file modifications (potential data exfiltration)
-Get-ChildItem -Path "C:\Users" -Recurse -File -ErrorAction SilentlyContinue | 
-    Where-Object {$_.LastWriteTime -gt (Get-Date).AddDays(-1)} | 
-    Sort-Object LastWriteTime -Descending | 
+Get-ChildItem -Path "C:\Users" -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object {$_.LastWriteTime -gt (Get-Date).AddDays(-1)} |
+    Sort-Object LastWriteTime -Descending |
     Select-Object -First 50 Name, LastWriteTime, @{n="Size(KB)";e={[math]::Round($_.Length/1KB,2)}}, DirectoryName
 
 # Duplicate file finder
-Get-ChildItem -Path "C:\Users" -Recurse -File | 
-    Group-Object -Property @{Expression={Get-FileHash $_.FullName -Algorithm MD5 | Select-Object -ExpandProperty Hash}} | 
-    Where-Object {$_.Count -gt 1} | 
+Get-ChildItem -Path "C:\Users" -Recurse -File |
+    Group-Object -Property @{Expression={Get-FileHash $_.FullName -Algorithm MD5 | Select-Object -ExpandProperty Hash}} |
+    Where-Object {$_.Count -gt 1} |
     ForEach-Object {$_.Group | Select Name, FullName, @{n="DuplicateHash";e={$_.Group[0].Hash}}}
 
 # File permission audit
@@ -377,12 +506,13 @@ dnscmd /StartScavenging
 # Emergency network reset
 netsh int ip reset
 netsh winsock reset
+# [CLIENT VM] or [SERVER VM] DNS flush and network refresh
 ipconfig /flushdns
 ipconfig /release
 ipconfig /renew
 ipconfig /registerdns
 
-# Route table emergency backup/restore
+# [HOST] or [CLIENT VM] or [SERVER VM] Route table emergency backup/restore
 route print > C:\route_backup.txt
 # route add 0.0.0.0 mask 0.0.0.0 10.0.100.1 metric 1
 
@@ -417,7 +547,7 @@ Get-ChildItem -Path @("C:\Windows\Temp", "C:\Users\*\AppData\Local\Temp") -Recur
 # CPU alert
 if((Get-Counter "\Processor(_Total)\% Processor Time").CounterSamples.CookedValue -gt 80) {Write-Warning "HIGH CPU!"}
 
-# Memory alert  
+# Memory alert
 if((Get-Counter "\Memory\Available MBytes").CounterSamples.CookedValue -lt 1000) {Write-Warning "LOW MEMORY!"}
 
 # Disk space alert
@@ -456,6 +586,7 @@ Enter-PSSession -ComputerName ODIN-DC01 -Credential (Get-Credential)
 - **[Hardware Performance Guide](Documentation/HARDWARE_PERFORMANCE_GUIDE.md)** - Optimization
 
 ---
+
 **🔥 Master these commands and become the Odin of Windows Server administration! 🔥**
 
 **📖 For complete setup instructions, see: [QUICK_START_ASGARD.md](Guides/QUICK_START_ASGARD.md)**

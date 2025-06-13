@@ -59,19 +59,40 @@ cd Demo/Olympus/Scripts
 
 ---
 
+## 🔧 **Windows 11 OOBE Network Bypass (NEW!)**
+
+**Critical Feature for Lab Deployment**: Both demo environments now include comprehensive Windows 11 OOBE (Out-of-Box Experience) network bypass capabilities to ensure smooth client VM setup without Microsoft account requirements.
+
+### **Quick OOBE Bypass Command**
+
+```cmd
+# During Windows 11 setup, press Shift+F10 and run:
+OOBE\BYPASSNRO
+```
+
+This command bypasses network requirements and allows direct local account creation for seamless domain joining in both lab environments.
+
+**Benefits:**
+
+- ✅ Skip forced Microsoft account creation
+- ✅ Create local accounts for domain joining
+- ✅ Avoid network dependency during setup
+- ✅ Streamlined lab deployment process
+
 ## 📋 **Demo Comparison**
 
-| Feature                   | Asgard Technologies | Olympus Systems |
-| ------------------------- | ------------------- | --------------- |
-| **Virtual Machines**      | 25 VMs              | 25 VMs          |
-| **Mythology Theme**       | Norse               | Greek           |
-| **Domain Name**           | asgard.local        | olympus.local   |
-| **Enterprise Features**   | ✅ Complete         | ✅ Complete     |
-| **Cloud Integration**     | 🔶 Basic            | ✅ Advanced     |
-| **AI/ML Capabilities**    | ❌                  | ✅ Full Suite   |
-| **Security Suite**        | ✅ Standard         | ✅ Advanced     |
-| **Deployment Time**       | 30-60 min           | 45-90 min       |
-| **Hardware Requirements** | 32GB RAM            | 64GB RAM        |
+| Feature                    | Asgard Technologies | Olympus Systems |
+| -------------------------- | ------------------- | --------------- |
+| **Virtual Machines**       | 25 VMs              | 25 VMs          |
+| **Mythology Theme**        | Norse               | Greek           |
+| **Domain Name**            | asgard.local        | olympus.local   |
+| **Enterprise Features**    | ✅ Complete         | ✅ Complete     |
+| **Windows 11 OOBE Bypass** | ✅ Included         | ✅ Included     |
+| **Cloud Integration**      | 🔶 Basic            | ✅ Advanced     |
+| **AI/ML Capabilities**     | ❌                  | ✅ Full Suite   |
+| **Security Suite**         | ✅ Standard         | ✅ Advanced     |
+| **Deployment Time**        | 30-60 min           | 45-90 min       |
+| **Hardware Requirements**  | 32GB RAM            | 64GB RAM        |
 
 ---
 

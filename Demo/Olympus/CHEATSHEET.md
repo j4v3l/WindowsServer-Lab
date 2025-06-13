@@ -22,33 +22,139 @@ APOLLO-WEB01:  10.0.10.30  (Web Server)
 ATHENA-SEC01:  10.0.10.40  (Security Server)
 ```
 
+## ⚡ **Divine Network Troubleshooting & Routing**
+
+### **Divine Routing Table Analysis**
+
+```powershell
+# [HOST] View complete routing table for all divine networks
+route print
+
+# [HOST] Expected divine output shows multiple network interfaces:
+# - 10.0.10.0/24 with interface 10.0.10.1 (Divine Server network)
+# - 10.0.20.0/22 with interface 10.0.20.1 (Divine Client network)
+# - 10.0.100.0/24 with interface 10.0.100.1 (Divine Management network)
+
+# [SERVER VM] or [CLIENT VM] Check VM divine routing table
+route print
+
+# [CLIENT VM] Common divine issue: Wrong gateway configuration
+# If divine VM shows gateway 10.0.23.1 but should be 10.0.20.1
+# This angers Zeus and breaks divine connectivity
+```
+
+### **Divine Network Connectivity Troubleshooting**
+
+```powershell
+# [CLIENT VM] Test divine connectivity to Zeus (domain controller)
+ping 10.0.10.10 -n 2
+
+# [CLIENT VM] If getting "Destination host unreachable" from 10.0.23.10:
+# This indicates Zeus is displeased with gateway misconfiguration
+
+# [CLIENT VM] Divine trace route to see network path to Mount Olympus
+tracert 10.0.10.10
+
+# [CLIENT VM] Check divine network configuration
+ipconfig /all
+
+# [HOST] Verify host has correct divine network interfaces
+Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Select Name, InterfaceDescription, LinkSpeed
+```
+
+### **Divine Gateway Configuration Fixes**
+
+```powershell
+# [CLIENT VM] Fix incorrect divine gateway (common divine transgression)
+# Remove wrong gateway first (banish false gods)
+Remove-NetRoute -DestinationPrefix "0.0.0.0/0" -Confirm:$false
+
+# [CLIENT VM] Add correct divine gateway for 10.0.20.0/22 network
+New-NetRoute -DestinationPrefix "0.0.0.0/0" -NextHop "10.0.20.1" -InterfaceAlias "Ethernet"
+
+# [CLIENT VM] Alternative divine method - Set complete network config
+netsh interface ip set address "Ethernet" static 10.0.20.50 255.255.252.0 10.0.20.1
+
+# [CLIENT VM] Set DNS to Zeus (divine domain controller)
+netsh interface ip set dns "Ethernet" static 10.0.10.10
+```
+
+### **Divine IP Address Conflict Resolution**
+
+```powershell
+# [HOST] Check for IP conflicts on divine host network interfaces
+Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | Sort-Object IPAddress
+
+# [CLIENT VM] Assign unique divine IP in client range (avoid divine conflicts)
+# Use IPs like 10.0.20.50, 10.0.20.51, etc. (not 10.0.23.10 which might anger Zeus)
+New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 10.0.20.50 -PrefixLength 22 -DefaultGateway 10.0.20.1
+
+# [CLIENT VM] Verify no duplicate divine IPs (Zeus despises duplicates)
+ping 10.0.20.50  # Should get reply if divine IP is in use
+
+# [CLIENT VM] Release and renew divine DHCP (if using divine DHCP)
+ipconfig /release
+ipconfig /renew
+```
+
+### **Divine Domain Join Network Prerequisites**
+
+```powershell
+# [CLIENT VM] Pre-domain join divine network validation checklist
+# 1. Test divine DNS resolution
+nslookup olympus.local 10.0.10.10
+nslookup 10.0.10.10
+
+# 2. Test required divine ports to Zeus
+$ZeusPorts = @(53, 88, 389, 636, 445, 3268, 3269)
+$ZeusPorts | ForEach-Object {
+    $Result = Test-NetConnection -ComputerName 10.0.10.10 -Port $_
+    $Status = if($Result.TcpTestSucceeded){"⚡ DIVINE"}else{"💀 MORTAL"}
+    Write-Host "Divine Port $_ : $Status" -ForegroundColor $(if($Result.TcpTestSucceeded){"Cyan"}else{"Red"})
+}
+
+# 3. Verify divine time sync (critical for divine Kerberos)
+w32tm /query /status
+w32tm /config /manualpeerlist:"10.0.10.10" /syncfromflags:manual
+
+# [CLIENT VM] Fix common divine domain join network issues
+# Set correct divine DNS
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 10.0.10.10
+
+# Clear divine DNS cache
+ipconfig /flushdns
+
+# Register with divine DNS
+ipconfig /registerdns
+```
+
 ## 🚀 **Quick Deployment Commands**
 
 ### **Virtual Switch Setup**
 
 ```powershell
-# Production Network
+# [HOST] Production Network
 New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
 
-# Management Network
+# [HOST] Management Network
 New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal
 New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceAlias "vEthernet (OLYMPUS-Management)"
 
-# Client Network
+# [HOST] Client Network
 New-VMSwitch -Name "OLYMPUS-Clients" -SwitchType Internal
 New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceAlias "vEthernet (OLYMPUS-Clients)"
 
-# NAT Configuration
+# [HOST] NAT Configuration
 New-NetNat -Name "OLYMPUS-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8
 ```
 
 ### **DHCP Configuration**
 
 ```powershell
-# DHCP Scope
+# [SERVER VM] DHCP Scope
 Add-DhcpServerV4Scope -Name "Divine Client Network" -StartRange 10.0.20.100 -EndRange 10.0.23.200 -SubnetMask 255.255.252.0
 
-# DHCP Options
+# [SERVER VM] DHCP Options (CRITICAL: Correct divine gateway)
 Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 3 -Value 10.0.20.1      # Gateway
 Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 6 -Value 10.0.10.10     # DNS
 Set-DhcpServerV4OptionValue -ScopeId 10.0.20.0 -OptionId 15 -Value "olympus.local" # Domain
@@ -77,30 +183,58 @@ Harmony Relations: aphrodite.love (Human Resources)
 
 ## ⚡ **Divine PowerShell Arsenal**
 
+### **Windows 11 Divine Client Setup & OOBE Bypass**
+
+```cmd
+# Windows 11 Network Bypass during OOBE Setup - Divine Technique
+# This command bypasses network requirements and goes directly to local account setup
+OOBE\BYPASSNRO
+
+# Divine methods for Windows 11 OOBE bypass:
+# 1. During network setup screen, invoke divine powers with Shift+F10 (Command Prompt)
+# 2. Channel divine authority: OOBE\BYPASSNRO
+# 3. Press Enter - Zeus will restart the system and skip network requirements
+# 4. Create local divine accounts without Microsoft account bondage
+
+# For automated divine deployment via PowerShell (run with divine privileges):
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c OOBE\BYPASSNRO" -Wait -Verb RunAs
+
+# Additional divine OOBE bypass techniques:
+# Divine Method 1: Smite the network connection during setup
+taskkill /f /im NetworkConnectionFlow.exe
+
+# Divine Method 2: Temporarily banish network adapter
+Get-NetAdapter | Disable-NetAdapter -Confirm:$false
+# Restore divine connection: Get-NetAdapter | Enable-NetAdapter -Confirm:$false
+
+# Divine Method 3: Registry manipulation for local account preference
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" -Name "BypassNRO" -Value 1 -PropertyType DWORD -Force
+```
+
 ### **Domain Operations & Divine Authentication**
 
 ```powershell
-# Domain join with divine powers
+# [CLIENT VM] Domain join with divine powers
 Add-Computer -DomainName "olympus.local" -Credential (Get-Credential) -Restart -Force -Verbose -ErrorAction Stop
 
-# Replicate across the divine realm
+# [SERVER VM] Replicate across the divine realm
 repadmin /syncall /AdeP /e /q
 
-# Divine Kerberos inspection
+# [CLIENT VM] or [SERVER VM] Divine Kerberos inspection
 klist tickets
 klist tgt
 
-# Test the divine connection
+# [SERVER VM] Test the divine connection
 dcdiag /v /c /d /e /s:ZEUS-DC01
 
-# Force divine policy refresh
+# [CLIENT VM] or [SERVER VM] Force divine policy refresh
 gpupdate /force /boot /target:computer
 gpupdate /force /target:user
 
-# Check trust between divine realms
+# [SERVER VM] Check trust between divine realms
 Get-ADTrust -Filter * | Format-Table -AutoSize
 
-# Validate divine secure channel
+# [CLIENT VM] Validate divine secure channel
 Test-ComputerSecureChannel -Server "ZEUS-DC01.olympus.local" -Credential (Get-Credential) -Verbose
 ```
 
@@ -144,7 +278,7 @@ Get-ADGroupMember "Domain Admins" | Get-ADUser -Properties PasswordNeverExpires,
 ### **Network Oracles & Divine Reconnaissance**
 
 ```powershell
-# Divine connectivity test suite
+# [CLIENT VM] or [HOST] Divine connectivity test suite
 $DivinePorts = @(
     @{Host="10.0.10.10"; Port=53; Service="DNS Oracle"},
     @{Host="10.0.10.10"; Port=88; Service="Kerberos Divine Auth"},
@@ -218,18 +352,18 @@ function Start-OlympianMonitor {
         Clear-Host
         Write-Host "⚡⚡⚡ OLYMPUS DIVINE SYSTEM MONITOR ⚡⚡⚡" -ForegroundColor Magenta
         Write-Host "📊 System Vitals:" -ForegroundColor Cyan
-        
+
         $CPU = Get-Counter "\Processor(_Total)\% Processor Time" -SampleInterval 1 -MaxSamples 1
         $Memory = Get-Counter "\Memory\Available MBytes" -SampleInterval 1 -MaxSamples 1
         $Disk = Get-Counter "\LogicalDisk(C:)\% Free Space" -SampleInterval 1 -MaxSamples 1
-        
+
         Write-Host "🔥 CPU Usage: $([math]::Round($CPU.CounterSamples.CookedValue,2))%" -ForegroundColor $(if($CPU.CounterSamples.CookedValue -gt 80){"Red"}else{"Green"})
         Write-Host "💾 Available Memory: $([math]::Round($Memory.CounterSamples.CookedValue,0)) MB" -ForegroundColor $(if($Memory.CounterSamples.CookedValue -lt 1000){"Red"}else{"Green"})
         Write-Host "💿 Disk Free: $([math]::Round($Disk.CounterSamples.CookedValue,2))%" -ForegroundColor $(if($Disk.CounterSamples.CookedValue -lt 20){"Red"}else{"Green"})
-        
+
         Write-Host "`n🏆 Top Divine Processes:" -ForegroundColor Yellow
         Get-Process | Sort-Object WorkingSet -Descending | Select-Object -First 5 ProcessName, @{n="Memory(MB)";e={[math]::Round($_.WorkingSet/1MB,2)}}, CPU | Format-Table -AutoSize
-        
+
         Start-Sleep 5
     }
 }
@@ -256,11 +390,11 @@ Get-WmiObject -Class Win32_LogicalDisk | ForEach-Object {
 } | Format-Table -AutoSize
 
 # Divine event analysis
-Get-WinEvent -FilterHashtable @{LogName='System','Application','Security'; Level=1,2,3; StartTime=(Get-Date).AddHours(-24)} | 
+Get-WinEvent -FilterHashtable @{LogName='System','Application','Security'; Level=1,2,3; StartTime=(Get-Date).AddHours(-24)} |
     Group-Object Id | Sort-Object Count -Descending | Select-Object -First 10 Count, Name, @{n="Sample Message";e={$_.Group[0].Message.Substring(0,[Math]::Min(150,$_.Group[0].Message.Length))}} | Format-Table -Wrap
 
 # Divine service health check
-Get-Service | Where-Object {$_.StartType -eq "Automatic" -and $_.Status -ne "Running"} | 
+Get-Service | Where-Object {$_.StartType -eq "Automatic" -and $_.Status -ne "Running"} |
     ForEach-Object {
         $Service = Get-WmiObject -Class Win32_Service -Filter "Name='$($_.Name)'"
         [PSCustomObject]@{
@@ -284,7 +418,7 @@ Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10 HotFi
 Write-Host "🛡️ Analyzing Divine Security Events..." -ForegroundColor Red
 
 # Failed divine login attempts
-Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625; StartTime=(Get-Date).AddDays(-1)} | 
+Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625; StartTime=(Get-Date).AddDays(-1)} |
     ForEach-Object {
         [PSCustomObject]@{
             Time = $_.TimeCreated
@@ -300,8 +434,8 @@ Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625; StartTime=(Get-Date
     }
 
 # Divine successful logons from foreign realms
-Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4624; StartTime=(Get-Date).AddDays(-1)} | 
-    Where-Object {$_.Properties[18].Value -notlike "10.0.*" -and $_.Properties[18].Value -ne "-" -and $_.Properties[18].Value -ne "127.0.0.1"} | 
+Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4624; StartTime=(Get-Date).AddDays(-1)} |
+    Where-Object {$_.Properties[18].Value -notlike "10.0.*" -and $_.Properties[18].Value -ne "-" -and $_.Properties[18].Value -ne "127.0.0.1"} |
     Select-Object TimeCreated, @{n="Divine Account";e={$_.Properties[5].Value}}, @{n="Foreign IP";e={$_.Properties[18].Value}}, @{n="Logon Type";e={$_.Properties[8].Value}} | Format-Table -AutoSize
 
 # Divine administrative audit
@@ -341,7 +475,7 @@ Write-Host "📋 Divine Registry Persistence Audit:" -ForegroundColor Red
 
 # Divine scheduled tasks audit
 Write-Host "⏰ Divine Scheduled Tasks:" -ForegroundColor Magenta
-Get-ScheduledTask | Where-Object {$_.State -eq "Ready" -and $_.Principal.UserId -ne "SYSTEM" -and $_.TaskName -notlike "*Microsoft*"} | 
+Get-ScheduledTask | Where-Object {$_.State -eq "Ready" -and $_.Principal.UserId -ne "SYSTEM" -and $_.TaskName -notlike "*Microsoft*"} |
     Select TaskName, State, @{n="Divine User";e={$_.Principal.UserId}}, @{n="Divine Action";e={$_.Actions.Execute}}, @{n="Trigger";e={$_.Triggers.StartBoundary}} | Format-Table -Wrap
 ```
 
@@ -370,7 +504,7 @@ function New-OlympusAzureVPN {
         [string]$LocalGateway = "10.0.10.1",
         [string]$AzureGateway = "olympus-gateway"
     )
-    
+
     Write-Host "⚡ Creating divine connection to Azure..." -ForegroundColor Cyan
     # New-AzVirtualNetworkGatewayConnection -Name "OlympusToAzure" -ResourceGroupName "Olympus-RG" -Location "East US"
     Write-Host "🌩️ Divine VPN tunnel established!" -ForegroundColor Green
@@ -431,25 +565,25 @@ Get-VM | Get-VMNetworkAdapter | Select VMName, SwitchName, MacAddress, @{n="Divi
 ```powershell
 # Find divine artifacts (large files)
 Write-Host "🔍 Seeking Divine Artifacts (Large Files)..." -ForegroundColor Yellow
-Get-ChildItem -Path "C:\" -Recurse -File -ErrorAction SilentlyContinue | 
-    Where-Object {$_.Length -gt 500MB} | 
-    Sort-Object Length -Descending | 
+Get-ChildItem -Path "C:\" -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object {$_.Length -gt 500MB} |
+    Sort-Object Length -Descending |
     Select-Object -First 20 Name, @{n="Size(GB)";e={[math]::Round($_.Length/1GB,2)}}, @{n="Divine Location";e={$_.DirectoryName}}, @{n="Last Modified";e={$_.LastWriteTime}} | Format-Table -Wrap
 
 # Recent divine activities (file changes)
 Write-Host "📜 Recent Divine Activities..." -ForegroundColor Magenta
-Get-ChildItem -Path @("C:\Users", "C:\OlympusData") -Recurse -File -ErrorAction SilentlyContinue | 
-    Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-24)} | 
-    Sort-Object LastWriteTime -Descending | 
+Get-ChildItem -Path @("C:\Users", "C:\OlympusData") -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-24)} |
+    Sort-Object LastWriteTime -Descending |
     Select-Object -First 30 Name, @{n="Divine Activity Time";e={$_.LastWriteTime}}, @{n="Size(KB)";e={[math]::Round($_.Length/1KB,2)}}, @{n="Divine Path";e={$_.DirectoryName}} | Format-Table -Wrap
 
 # Divine duplicate detection
 Write-Host "🔮 Divine Duplicate Detection..." -ForegroundColor Blue
 $DivinePath = "C:\OlympusData"
 if(Test-Path $DivinePath) {
-    Get-ChildItem -Path $DivinePath -Recurse -File -ErrorAction SilentlyContinue | 
-        Group-Object -Property @{Expression={Get-FileHash $_.FullName -Algorithm MD5 | Select-Object -ExpandProperty Hash}} | 
-        Where-Object {$_.Count -gt 1} | 
+    Get-ChildItem -Path $DivinePath -Recurse -File -ErrorAction SilentlyContinue |
+        Group-Object -Property @{Expression={Get-FileHash $_.FullName -Algorithm MD5 | Select-Object -ExpandProperty Hash}} |
+        Where-Object {$_.Count -gt 1} |
         ForEach-Object {
             Write-Host "Divine Duplicate Found - Hash: $($_.Name.Substring(0,16))..." -ForegroundColor Red
             $_.Group | Select Name, @{n="Divine Path";e={$_.FullName}}, @{n="Size(KB)";e={[math]::Round($_.Length/1KB,2)}} | Format-Table -AutoSize
@@ -526,12 +660,13 @@ Write-Host "🌩️ Initiating Divine Network Resurrection..." -ForegroundColor 
 netsh int ip reset c:\divine_ip_reset.log
 netsh winsock reset
 netsh int tcp reset
+# [CLIENT VM] or [SERVER VM] Divine DNS flush and network refresh
 ipconfig /flushdns
 ipconfig /release
 ipconfig /renew
 ipconfig /registerdns
 
-# Divine routing table backup and restore
+# [HOST] or [CLIENT VM] or [SERVER VM] Divine routing table backup and restore
 route print > C:\divine_routes_backup.txt
 # Emergency route: route add 0.0.0.0 mask 0.0.0.0 10.0.100.1 metric 1
 
@@ -576,7 +711,7 @@ if($FailedLogins -gt 10) {
 ```powershell
 # Divine PowerShell profile customization
 # Add to $PROFILE:
-function Get-OlympianStatus { 
+function Get-OlympianStatus {
     Write-Host "⚡ Olympus System Status ⚡" -ForegroundColor Magenta
     Get-ADDomain | Select Name, DomainMode, PDCEmulator
     Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Select Name, LinkSpeed
@@ -632,6 +767,7 @@ Test-NetConnection bing.com | Select ComputerName, PingSucceeded, PingReplyDetai
 - **[Divine Performance Optimization](Documentation/HARDWARE_PERFORMANCE_GUIDE.md)** - Zeus-level performance
 
 ---
+
 **⚡ Wield these divine commands and ascend to Zeus-level Windows Server mastery! ⚡**
 **🏛️ May the power of Olympus flow through your PowerShell! 🏛️**
 

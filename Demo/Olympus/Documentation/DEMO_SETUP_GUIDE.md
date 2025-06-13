@@ -29,6 +29,25 @@
 
 **Important Note:** When creating external VM switches, use `-NetAdapterName` instead of `-SwitchType External`. The `-AllowManagementOS $true` parameter allows the host OS to also use the network adapter.
 
+### **Windows 11 Divine Client Setup & OOBE Network Bypass**
+
+**Divine Mandate for Lab Environment:** When setting up Windows 11 client VMs in the divine realm, use the OOBE network bypass to transcend Microsoft account bondage and ensure seamless integration with the olympus.local domain.
+
+**Divine OOBE Bypass Ritual:**
+
+1. During Windows 11 initial setup, when mortal network connection is demanded
+2. Invoke divine command prompt with `Shift + F10`
+3. Channel divine power: `OOBE\BYPASSNRO`
+4. Press Enter - Zeus will restart the system and liberate it from network requirements
+5. Create local divine accounts and join the olympus.local domain without Microsoft interference
+
+**Alternative Divine Methods:**
+
+- Divine smiting of network flow: `taskkill /f /im NetworkConnectionFlow.exe`
+- Temporary banishment of network adapter during OOBE
+- Registry blessing for automated divine deployments
+- Advanced PowerShell invocation with divine privileges
+
 ```powershell
 # Core Production Network (External Switch)
 New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
