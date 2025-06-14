@@ -143,8 +143,8 @@ Write-Host "✅ Camera security policies configured" -ForegroundColor Green
 ```powershell
 # Link to specific OUs for testing
 $TargetOUs = @(
-    "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
-    "OU=Research_Development,OU=Departments,DC=asgard,DC=local"
+    "OU=Cybersecurity,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local",
+    "OU=Research_Development,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
 )
 
 foreach ($OU in $TargetOUs) {
@@ -153,7 +153,7 @@ foreach ($OU in $TargetOUs) {
         Write-Host "✅ Linked $GPOName to $OU" -ForegroundColor Green
     }
     catch {
-        Write-Warning "Failed to link to: $OU"
+        Write-Warning "Failed to link to: $OU - Error: $($_.Exception.Message)"
     }
 }
 ```
@@ -356,7 +356,7 @@ $GPOLinks = @{
         "OU=Research_Development,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-USB-Control" = @(
-        "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
+        "OU=Cybersecurity,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local",
         "OU=Finance_Admin,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-Device-Control" = @(
