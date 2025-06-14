@@ -1,37 +1,37 @@
-# 🛡️ Advanced Security Features - Asgard Technologies Quick Start Guide
+# ⚡ Advanced Security Features - Olympus Systems Quick Start Guide
 
 ## 🎯 Overview
 
-This guide demonstrates how to manually deploy and configure the **100+ advanced security features** in the **Asgard Technologies** demo environment. Unlike automated scripts, this manual approach provides complete control over each security configuration step.
+This guide demonstrates how to manually deploy and configure the **100+ advanced security features** in the **Olympus Systems** demo environment. Unlike automated scripts, this manual approach provides complete control over each security configuration step.
 
-**Asgard Technologies** represents a traditional Norse mythology enterprise organization with comprehensive security controls and established Windows Server enterprise features.
+**Olympus Systems** represents a divine enterprise organization with advanced cloud integration, AI/ML capabilities, and comprehensive security controls themed around Greek mythology.
 
 ---
 
-## 🏰 Environment Overview
+## 🏛️ Environment Overview
 
 ### **Domain Information**
 
-- **Domain**: `asgard.local`
-- **NetBIOS**: `ASGARD`
+- **Domain**: `olympus.local`
+- **NetBIOS**: `OLYMPUS`
 - **Forest Functional Level**: Windows Server 2019+
-- **Theme**: Norse mythology enterprise
+- **Theme**: Greek mythology enterprise
 
 ### **Key Administrative Accounts**
 
-- **odin.allfather** - CEO & Domain Admin (All-Father Supreme Power)
-- **thor.thunderer** - CTO & Security Lead (Thunder God Protection)
-- **heimdall.guardian** - CISO & Network Security (Guardian of the Bifrost)
-- **frigg.queen** - CFO (Queen of Asgard)
-- **balder.light** - Head of Innovation (God of Light & Purity)
+- **zeus.supreme** - CEO & Domain Admin (Supreme Divine Power)
+- **athena.wisdom** - CTO & CISO (Strategy & Security)
+- **apollo.light** - Head of Innovation (R&D Leadership)
+- **hera.queen** - CFO (Financial Operations)
+- **aphrodite.harmony** - HR Director (Human Resources)
 
 ### **Organizational Structure**
 
-- **IT Operations** - Technology Infrastructure & Administration
-- **Cybersecurity** - Information Security & Threat Management
-- **Research & Development** - Innovation & Development
-- **Finance & Administration** - Financial Operations & Governance
-- **Human Resources** - Personnel & Employee Relations
+- **Divine Council** - IT Operations & Leadership
+- **War Strategists** - Cybersecurity Department
+- **Innovation Forge** - Research & Development
+- **Abundance Treasury** - Finance & Administration
+- **Harmony Relations** - Human Resources
 
 ---
 
@@ -42,11 +42,11 @@ This guide demonstrates how to manually deploy and configure the **100+ advanced
 #### **Step 1.1: Configure Domain Password Policy**
 
 ```powershell
-# Run on ODIN-DC01 as Domain Administrator
+# Run on ZEUS-DC01 as Domain Administrator
 Import-Module ActiveDirectory
 
 # Set domain password policy
-Set-ADDefaultDomainPasswordPolicy -Identity "asgard.local" `
+Set-ADDefaultDomainPasswordPolicy -Identity "olympus.local" `
     -MinPasswordLength 12 `
     -PasswordHistoryCount 24 `
     -MaxPasswordAge (New-TimeSpan -Days 90) `
@@ -64,16 +64,16 @@ Write-Host "✅ Domain password policy configured successfully" -ForegroundColor
 ```powershell
 # Create security-focused OUs
 $SecurityOUs = @(
-    "OU=Security_Groups,DC=asgard,DC=local",
-    "OU=Security_Policies,DC=asgard,DC=local",
-    "OU=Privileged_Accounts,DC=asgard,DC=local",
-    "OU=Service_Accounts,DC=asgard,DC=local",
-    "OU=Quarantine,DC=asgard,DC=local"
+    "OU=Security_Groups,DC=olympus,DC=local",
+    "OU=Security_Policies,DC=olympus,DC=local",
+    "OU=Privileged_Accounts,DC=olympus,DC=local",
+    "OU=Service_Accounts,DC=olympus,DC=local",
+    "OU=Quarantine,DC=olympus,DC=local"
 )
 
 foreach ($OU in $SecurityOUs) {
     try {
-        New-ADOrganizationalUnit -Path "DC=asgard,DC=local" -Name ($OU -split ',' | Select-Object -First 1).Replace('OU=','') -ProtectedFromAccidentalDeletion $true
+        New-ADOrganizationalUnit -Path "DC=olympus,DC=local" -Name ($OU -split ',' | Select-Object -First 1).Replace('OU=','') -ProtectedFromAccidentalDeletion $true
         Write-Host "✅ Created OU: $OU" -ForegroundColor Green
     }
     catch {
@@ -99,7 +99,7 @@ $SecurityGroups = @{
 
 foreach ($GroupName in $SecurityGroups.Keys) {
     try {
-        New-ADGroup -Name $GroupName -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=asgard,DC=local" -Description $SecurityGroups[$GroupName]
+        New-ADGroup -Name $GroupName -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=olympus,DC=local" -Description $SecurityGroups[$GroupName]
         Write-Host "✅ Created security group: $GroupName" -ForegroundColor Green
     }
     catch {
@@ -118,9 +118,9 @@ foreach ($GroupName in $SecurityGroups.Keys) {
 # Create new GPO for camera security
 Import-Module GroupPolicy
 
-$GPOName = "ASGARD-Camera-Security"
+$GPOName = "OLYMPUS-Camera-Security"
 try {
-    New-GPO -Name $GPOName -Comment "Asgard Technologies - Camera and Microphone Security Controls"
+    New-GPO -Name $GPOName -Comment "Olympus Systems - Camera and Microphone Security Controls"
     Write-Host "✅ Created GPO: $GPOName" -ForegroundColor Green
 }
 catch {
@@ -143,8 +143,8 @@ Write-Host "✅ Camera security policies configured" -ForegroundColor Green
 ```powershell
 # Link to specific OUs for testing
 $TargetOUs = @(
-    "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
-    "OU=Research_Development,OU=Departments,DC=asgard,DC=local"
+    "OU=War_Strategists,OU=Departments,DC=olympus,DC=local",
+    "OU=Innovation_Forge,OU=Departments,DC=olympus,DC=local"
 )
 
 foreach ($OU in $TargetOUs) {
@@ -165,8 +165,8 @@ foreach ($OU in $TargetOUs) {
 #### **Step 3.1: Create USB Security GPO**
 
 ```powershell
-$GPOName = "ASGARD-USB-Control"
-New-GPO -Name $GPOName -Comment "Asgard Technologies - USB and Removable Storage Security"
+$GPOName = "OLYMPUS-USB-Control"
+New-GPO -Name $GPOName -Comment "Olympus Systems - USB and Removable Storage Security"
 
 # Block removable storage devices
 $USBRegPath = "HKLM\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices"
@@ -208,8 +208,8 @@ Write-Host "✅ Device installation restrictions configured" -ForegroundColor Gr
 #### **Step 4.1: Create Device Control GPO**
 
 ```powershell
-$GPOName = "ASGARD-Device-Control"
-New-GPO -Name $GPOName -Comment "Asgard Technologies - Device and Peripheral Management"
+$GPOName = "OLYMPUS-Device-Control"
+New-GPO -Name $GPOName -Comment "Olympus Systems - Device and Peripheral Management"
 
 # Bluetooth restrictions
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\Bluetooth" -ValueName "AllowDiscoverableMode" -Type DWord -Value 0
@@ -233,8 +233,8 @@ Write-Host "✅ Device control policies configured" -ForegroundColor Green
 #### **Step 5.1: Create Application Control GPO**
 
 ```powershell
-$GPOName = "ASGARD-App-Control"
-New-GPO -Name $GPOName -Comment "Asgard Technologies - Application Control and PowerShell Security"
+$GPOName = "OLYMPUS-App-Control"
+New-GPO -Name $GPOName -Comment "Olympus Systems - Application Control and PowerShell Security"
 
 # PowerShell execution policy
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "EnableScripts" -Type DWord -Value 1
@@ -271,8 +271,8 @@ Write-Host "⚠️  AppLocker requires additional XML rule configuration" -Foreg
 #### **Step 6.1: Create Network Security GPO**
 
 ```powershell
-$GPOName = "ASGARD-Network-Security"
-New-GPO -Name $GPOName -Comment "Asgard Technologies - Network Security Controls"
+$GPOName = "OLYMPUS-Network-Security"
+New-GPO -Name $GPOName -Comment "Olympus Systems - Network Security Controls"
 
 # Windows Firewall settings
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "EnableFirewall" -Type DWord -Value 1
@@ -296,8 +296,8 @@ Write-Host "✅ Network security policies configured" -ForegroundColor Green
 #### **Step 7.1: Create Privacy Control GPO**
 
 ```powershell
-$GPOName = "ASGARD-Privacy-Control"
-New-GPO -Name $GPOName -Comment "Asgard Technologies - Data Protection and Privacy Controls"
+$GPOName = "OLYMPUS-Privacy-Control"
+New-GPO -Name $GPOName -Comment "Olympus Systems - Data Protection and Privacy Controls"
 
 # Telemetry restrictions
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -ValueName "AllowTelemetry" -Type DWord -Value 1
@@ -324,8 +324,8 @@ Write-Host "✅ Privacy control policies configured" -ForegroundColor Green
 #### **Step 8.1: Create Personalization GPO**
 
 ```powershell
-$GPOName = "ASGARD-Personalization"
-New-GPO -Name $GPOName -Comment "Asgard Technologies - Personalization and User Experience Controls"
+$GPOName = "OLYMPUS-Personalization"
+New-GPO -Name $GPOName -Comment "Olympus Systems - Personalization and User Experience Controls"
 
 # Desktop personalization restrictions
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop" -ValueName "NoChangingWallPaper" -Type DWord -Value 1
@@ -349,30 +349,30 @@ Write-Host "✅ Personalization control policies configured" -ForegroundColor Gr
 ### **Apply Security Policies**
 
 ```powershell
-# Define GPO to OU mappings for Asgard Technologies
+# Define GPO to OU mappings for Olympus Systems
 $GPOLinks = @{
-    "ASGARD-Camera-Security" = @(
-        "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
-        "OU=Research_Development,OU=Departments,DC=asgard,DC=local"
+    "OLYMPUS-Camera-Security" = @(
+        "OU=War_Strategists,OU=Departments,DC=olympus,DC=local",
+        "OU=Innovation_Forge,OU=Departments,DC=olympus,DC=local"
     )
-    "ASGARD-USB-Control" = @(
-        "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
-        "OU=Finance_Administration,OU=Departments,DC=asgard,DC=local"
+    "OLYMPUS-USB-Control" = @(
+        "OU=War_Strategists,OU=Departments,DC=olympus,DC=local",
+        "OU=Abundance_Treasury,OU=Departments,DC=olympus,DC=local"
     )
-    "ASGARD-Device-Control" = @(
-        "OU=Departments,DC=asgard,DC=local"
+    "OLYMPUS-Device-Control" = @(
+        "OU=Departments,DC=olympus,DC=local"
     )
-    "ASGARD-App-Control" = @(
-        "OU=Workstations,DC=asgard,DC=local"
+    "OLYMPUS-App-Control" = @(
+        "OU=Workstations,DC=olympus,DC=local"
     )
-    "ASGARD-Network-Security" = @(
-        "DC=asgard,DC=local"
+    "OLYMPUS-Network-Security" = @(
+        "DC=olympus,DC=local"
     )
-    "ASGARD-Privacy-Control" = @(
-        "OU=Workstations,DC=asgard,DC=local"
+    "OLYMPUS-Privacy-Control" = @(
+        "OU=Workstations,DC=olympus,DC=local"
     )
-    "ASGARD-Personalization" = @(
-        "OU=Workstations,DC=asgard,DC=local"
+    "OLYMPUS-Personalization" = @(
+        "OU=Workstations,DC=olympus,DC=local"
     )
 }
 
@@ -438,8 +438,8 @@ Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Par
 ### **Manual Security Audit Script**
 
 ```powershell
-# Comprehensive security audit for Asgard Technologies
-function Start-AsgardSecurityAudit {
+# Comprehensive security audit for Olympus Systems
+function Start-OlympusSecurityAudit {
     $AuditResults = @{
         CameraPolicy = $null
         USBPolicy = $null
@@ -452,7 +452,7 @@ function Start-AsgardSecurityAudit {
         Timestamp = Get-Date
     }
 
-    Write-Host "🔍 Starting Asgard Technologies Security Audit..." -ForegroundColor Cyan
+    Write-Host "🔍 Starting Olympus Systems Security Audit..." -ForegroundColor Cyan
 
     # Camera security audit
     try {
@@ -489,7 +489,7 @@ function Start-AsgardSecurityAudit {
     }
 
     # Generate audit report
-    $reportPath = "C:\Reports\AsgardSecurityAudit_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    $reportPath = "C:\Reports\OlympusSecurityAudit_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
     New-Item -Path "C:\Reports" -ItemType Directory -Force -ErrorAction SilentlyContinue
 
     $AuditResults | ConvertTo-Json -Depth 3 | Out-File -FilePath $reportPath
@@ -501,26 +501,26 @@ function Start-AsgardSecurityAudit {
 }
 
 # Run the audit
-Start-AsgardSecurityAudit
+Start-OlympusSecurityAudit
 ```
 
 ---
 
 ## 🚀 Deployment Scenarios
 
-### **Scenario 1: High-Security Department (Cybersecurity)**
+### **Scenario 1: High-Security Department (War Strategists)**
 
 ```powershell
 # Apply all security controls to cybersecurity team
-$TargetOU = "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local"
+$TargetOU = "OU=War_Strategists,OU=Departments,DC=olympus,DC=local"
 
 $SecurityGPOs = @(
-    "ASGARD-Camera-Security",
-    "ASGARD-USB-Control",
-    "ASGARD-Device-Control",
-    "ASGARD-App-Control",
-    "ASGARD-Network-Security",
-    "ASGARD-Privacy-Control"
+    "OLYMPUS-Camera-Security",
+    "OLYMPUS-USB-Control",
+    "OLYMPUS-Device-Control",
+    "OLYMPUS-App-Control",
+    "OLYMPUS-Network-Security",
+    "OLYMPUS-Privacy-Control"
 )
 
 foreach ($GPO in $SecurityGPOs) {
@@ -528,17 +528,17 @@ foreach ($GPO in $SecurityGPOs) {
 }
 ```
 
-### **Scenario 2: R&D Environment (Research & Development)**
+### **Scenario 2: R&D Environment (Innovation Forge)**
 
 ```powershell
 # Selective security for development environment
-$TargetOU = "OU=Research_Development,OU=Departments,DC=asgard,DC=local"
+$TargetOU = "OU=Innovation_Forge,OU=Departments,DC=olympus,DC=local"
 
 # Apply only essential security controls to maintain development flexibility
 $DeveloperGPOs = @(
-    "ASGARD-Camera-Security",
-    "ASGARD-Network-Security",
-    "ASGARD-Privacy-Control"
+    "OLYMPUS-Camera-Security",
+    "OLYMPUS-Network-Security",
+    "OLYMPUS-Privacy-Control"
 )
 
 foreach ($GPO in $DeveloperGPOs) {
@@ -546,17 +546,17 @@ foreach ($GPO in $DeveloperGPOs) {
 }
 ```
 
-### **Scenario 3: Executive Level (IT Operations)**
+### **Scenario 3: Executive Level (Divine Council)**
 
 ```powershell
 # Enhanced security for executive users
-$ExecutiveOU = "OU=IT_Operations,OU=Departments,DC=asgard,DC=local"
+$ExecutiveOU = "OU=Divine_Council,OU=Departments,DC=olympus,DC=local"
 
 # Create executive-specific security group
-New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=asgard,DC=local"
+New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=olympus,DC=local"
 
 # Add executives to enhanced security group
-$Executives = @("odin.allfather", "frigg.queen", "thor.thunderer")
+$Executives = @("zeus.supreme", "hera.queen", "athena.wisdom")
 foreach ($Executive in $Executives) {
     Add-ADGroupMember -Identity "SEC-Executive-Enhanced" -Members $Executive
 }
@@ -588,7 +588,7 @@ Get-ADOrganizationalUnit -Filter * | Select-Object Name, DistinguishedName
 Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Camera"
 
 # Verify GPO linkage
-Get-GPInheritance -Target "OU=TargetOU,DC=asgard,DC=local"
+Get-GPInheritance -Target "OU=TargetOU,DC=olympus,DC=local"
 
 # Test specific user
 gpresult /user username /r
@@ -608,7 +608,7 @@ Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStora
 
 ## 📈 Security Scoring
 
-### **Asgard Security Score Calculation**
+### **Olympus Security Score Calculation**
 
 - **Camera/Microphone Control**: 25 points
 - **USB/Storage Security**: 30 points
@@ -622,43 +622,11 @@ Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStora
 
 ### **Security Maturity Levels**
 
-- **130-145 points (90-100%)**: 🛡️ **Valhalla Protection** - Asgardian-level security
-- **115-129 points (80-89%)**: ⚡ **Thor's Shield** - Strong security posture
-- **100-114 points (70-79%)**: 🏰 **Fortress Guard** - Good security foundation
-- **85-99 points (60-69%)**: ⚠️ **Midgard Risk** - Requires improvement
-- **Below 85 points (60%)**: 🚨 **Ragnarok Warning** - Critical security gaps
-
----
-
-## 🎯 Testing Scenarios
-
-### **Scenario 1: Device Control Testing**
-
-1. **Camera Access**: Try using camera in various applications
-2. **USB Devices**: Plug in USB drives, external storage
-3. **Bluetooth**: Attempt to pair Bluetooth devices
-4. **Printer Access**: Try adding new printers
-
-### **Scenario 2: Application Restrictions**
-
-1. **Software Installation**: Try installing unauthorized software
-2. **PowerShell Execution**: Run scripts with different execution policies
-3. **Windows Store**: Access Windows Store and try downloading apps
-4. **Web Browsing**: Test browser security restrictions
-
-### **Scenario 3: Personalization Limits**
-
-1. **Desktop Changes**: Try changing wallpaper, themes
-2. **Start Menu**: Modify Start menu layout and shortcuts
-3. **Taskbar**: Customize taskbar settings
-4. **Screen Saver**: Change screen saver settings
-
-### **Scenario 4: Network Security**
-
-1. **Remote Desktop**: Test RDP access restrictions
-2. **File Sharing**: Try accessing network shares
-3. **Firewall**: Verify firewall rule enforcement
-4. **WiFi**: Test automatic connection restrictions
+- **130-145 points (90-100%)**: 🛡️ **Divine Protection** - Olympian-level security
+- **115-129 points (80-89%)**: ⚡ **Heroic Defense** - Strong security posture
+- **100-114 points (70-79%)**: 🏛️ **Temple Guard** - Good security foundation
+- **85-99 points (60-69%)**: ⚠️ **Mortal Realm** - Requires improvement
+- **Below 85 points (60%)**: 🚨 **Underworld Risk** - Critical security gaps
 
 ---
 
@@ -693,16 +661,16 @@ Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStora
 
 - **Advanced Security Audit**: `Scripts\AdvancedSecurityAudit.ps1`
 - **GPO Management**: `Scripts\AdvancedGroupPolicyManager.ps1`
-- **Deployment Script**: `Demo\Asgard\Scripts\Deploy-AdvancedSecurityDemo.ps1`
+- **Deployment Script**: `Demo\Olympus\Scripts\Deploy-AdvancedSecurityDemo.ps1`
 
 ### **Documentation References**
 
-- **Full Setup Guide**: `Demo\Asgard\MANUAL_SETUP_ASGARD.md`
-- **Cheat Sheet**: `Demo\Asgard\CHEATSHEET.md`
-- **Demo Overview**: `Demo\Asgard\README.md`
+- **Full Setup Guide**: `Demo\Olympus\MANUAL_SETUP_OLYMPUS.md`
+- **Cheat Sheet**: `Demo\Olympus\CHEATSHEET.md`
+- **Demo Overview**: `Demo\Olympus\README.md`
 
 ---
 
-**🏰 May the power of Asgard protect your digital realm! 🏰**
+**⚡ May the power of Olympus protect your digital realm! ⚡**
 
-_This guide provides comprehensive manual security configuration for the Asgard Technologies demo environment. Each step can be customized based on your specific security requirements and organizational policies._
+_This guide provides comprehensive manual security configuration for the Olympus Systems demo environment. Each step can be customized based on your specific security requirements and organizational policies._
