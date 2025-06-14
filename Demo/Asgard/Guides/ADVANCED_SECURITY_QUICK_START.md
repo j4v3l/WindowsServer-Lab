@@ -352,27 +352,27 @@ Write-Host "✅ Personalization control policies configured" -ForegroundColor Gr
 # Define GPO to OU mappings for Asgard Technologies
 $GPOLinks = @{
     "ASGARD-Camera-Security" = @(
-        "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
-        "OU=Research_Development,OU=Departments,DC=asgard,DC=local"
+        "OU=Cybersecurity,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local",
+        "OU=Research_Development,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-USB-Control" = @(
         "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local",
-        "OU=Finance_Administration,OU=Departments,DC=asgard,DC=local"
+        "OU=Finance_Admin,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-Device-Control" = @(
-        "OU=Departments,DC=asgard,DC=local"
+        "OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-App-Control" = @(
-        "OU=Workstations,DC=asgard,DC=local"
+        "OU=Workstations,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-Network-Security" = @(
         "DC=asgard,DC=local"
     )
     "ASGARD-Privacy-Control" = @(
-        "OU=Workstations,DC=asgard,DC=local"
+        "OU=Workstations,OU=Asgard Technologies,DC=asgard,DC=local"
     )
     "ASGARD-Personalization" = @(
-        "OU=Workstations,DC=asgard,DC=local"
+        "OU=Workstations,OU=Asgard Technologies,DC=asgard,DC=local"
     )
 }
 
@@ -512,7 +512,7 @@ Start-AsgardSecurityAudit
 
 ```powershell
 # Apply all security controls to cybersecurity team
-$TargetOU = "OU=Cybersecurity,OU=Departments,DC=asgard,DC=local"
+$TargetOU = "OU=Cybersecurity,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
 
 $SecurityGPOs = @(
     "ASGARD-Camera-Security",
@@ -532,7 +532,7 @@ foreach ($GPO in $SecurityGPOs) {
 
 ```powershell
 # Selective security for development environment
-$TargetOU = "OU=Research_Development,OU=Departments,DC=asgard,DC=local"
+$TargetOU = "OU=Research_Development,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
 
 # Apply only essential security controls to maintain development flexibility
 $DeveloperGPOs = @(
@@ -550,7 +550,7 @@ foreach ($GPO in $DeveloperGPOs) {
 
 ```powershell
 # Enhanced security for executive users
-$ExecutiveOU = "OU=IT_Operations,OU=Departments,DC=asgard,DC=local"
+$ExecutiveOU = "OU=IT_Operations,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
 
 # Create executive-specific security group
 New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=asgard,DC=local"

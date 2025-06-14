@@ -143,8 +143,8 @@ Write-Host "✅ Camera security policies configured" -ForegroundColor Green
 ```powershell
 # Link to specific OUs for testing
 $TargetOUs = @(
-    "OU=War_Strategists,OU=Departments,DC=olympus,DC=local",
-    "OU=Innovation_Forge,OU=Departments,DC=olympus,DC=local"
+    "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local",
+    "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 )
 
 foreach ($OU in $TargetOUs) {
@@ -512,7 +512,7 @@ Start-OlympusSecurityAudit
 
 ```powershell
 # Apply all security controls to cybersecurity team
-$TargetOU = "OU=War_Strategists,OU=Departments,DC=olympus,DC=local"
+$TargetOU = "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 $SecurityGPOs = @(
     "OLYMPUS-Camera-Security",
@@ -532,7 +532,7 @@ foreach ($GPO in $SecurityGPOs) {
 
 ```powershell
 # Selective security for development environment
-$TargetOU = "OU=Innovation_Forge,OU=Departments,DC=olympus,DC=local"
+$TargetOU = "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Apply only essential security controls to maintain development flexibility
 $DeveloperGPOs = @(
@@ -550,7 +550,7 @@ foreach ($GPO in $DeveloperGPOs) {
 
 ```powershell
 # Enhanced security for executive users
-$ExecutiveOU = "OU=Divine_Council,OU=Departments,DC=olympus,DC=local"
+$ExecutiveOU = "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Create executive-specific security group
 New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=olympus,DC=local"
