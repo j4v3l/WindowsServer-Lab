@@ -62,18 +62,18 @@ Write-Host "✅ Domain password policy configured successfully" -ForegroundColor
 #### **Step 1.2: Create Security Organizational Units**
 
 ```powershell
-# Create security-focused OUs
+# Create security-focused OUs under Asgard Technologies
 $SecurityOUs = @(
-    "OU=Security_Groups,DC=asgard,DC=local",
-    "OU=Security_Policies,DC=asgard,DC=local",
-    "OU=Privileged_Accounts,DC=asgard,DC=local",
-    "OU=Service_Accounts,DC=asgard,DC=local",
-    "OU=Quarantine,DC=asgard,DC=local"
+    "OU=Security_Groups,OU=Asgard Technologies,DC=asgard,DC=local",
+    "OU=Security_Policies,OU=Asgard Technologies,DC=asgard,DC=local",
+    "OU=Privileged_Accounts,OU=Asgard Technologies,DC=asgard,DC=local",
+    "OU=Quarantine,OU=Asgard Technologies,DC=asgard,DC=local"
 )
 
 foreach ($OU in $SecurityOUs) {
     try {
-        New-ADOrganizationalUnit -Path "DC=asgard,DC=local" -Name ($OU -split ',' | Select-Object -First 1).Replace('OU=','') -ProtectedFromAccidentalDeletion $true
+        $ouName = ($OU -split ',' | Select-Object -First 1).Replace('OU=','')
+        New-ADOrganizationalUnit -Path "OU=Asgard Technologies,DC=asgard,DC=local" -Name $ouName -ProtectedFromAccidentalDeletion $true
         Write-Host "✅ Created OU: $OU" -ForegroundColor Green
     }
     catch {
@@ -99,7 +99,7 @@ $SecurityGroups = @{
 
 foreach ($GroupName in $SecurityGroups.Keys) {
     try {
-        New-ADGroup -Name $GroupName -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=asgard,DC=local" -Description $SecurityGroups[$GroupName]
+        New-ADGroup -Name $GroupName -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,OU=Asgard Technologies,DC=asgard,DC=local" -Description $SecurityGroups[$GroupName]
         Write-Host "✅ Created security group: $GroupName" -ForegroundColor Green
     }
     catch {
@@ -553,7 +553,7 @@ foreach ($GPO in $DeveloperGPOs) {
 $ExecutiveOU = "OU=IT_Operations,OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
 
 # Create executive-specific security group
-New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=asgard,DC=local"
+New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,OU=Asgard Technologies,DC=asgard,DC=local"
 
 # Add executives to enhanced security group
 $Executives = @("odin.allfather", "frigg.queen", "thor.thunderer")

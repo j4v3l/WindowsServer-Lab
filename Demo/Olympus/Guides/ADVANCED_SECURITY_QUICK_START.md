@@ -62,18 +62,18 @@ Write-Host "✅ Domain password policy configured successfully" -ForegroundColor
 #### **Step 1.2: Create Security Organizational Units**
 
 ```powershell
-# Create security-focused OUs
+# Create security-focused OUs under Olympus Systems
 $SecurityOUs = @(
-    "OU=Security_Groups,DC=olympus,DC=local",
-    "OU=Security_Policies,DC=olympus,DC=local",
-    "OU=Privileged_Accounts,DC=olympus,DC=local",
-    "OU=Service_Accounts,DC=olympus,DC=local",
-    "OU=Quarantine,DC=olympus,DC=local"
+    "OU=Security_Groups,OU=Olympus Systems,DC=olympus,DC=local",
+    "OU=Security_Policies,OU=Olympus Systems,DC=olympus,DC=local",
+    "OU=Privileged_Accounts,OU=Olympus Systems,DC=olympus,DC=local",
+    "OU=Quarantine,OU=Olympus Systems,DC=olympus,DC=local"
 )
 
 foreach ($OU in $SecurityOUs) {
     try {
-        New-ADOrganizationalUnit -Path "DC=olympus,DC=local" -Name ($OU -split ',' | Select-Object -First 1).Replace('OU=','') -ProtectedFromAccidentalDeletion $true
+        $ouName = ($OU -split ',' | Select-Object -First 1).Replace('OU=','')
+        New-ADOrganizationalUnit -Path "OU=Olympus Systems,DC=olympus,DC=local" -Name $ouName -ProtectedFromAccidentalDeletion $true
         Write-Host "✅ Created OU: $OU" -ForegroundColor Green
     }
     catch {
@@ -99,7 +99,7 @@ $SecurityGroups = @{
 
 foreach ($GroupName in $SecurityGroups.Keys) {
     try {
-        New-ADGroup -Name $GroupName -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=olympus,DC=local" -Description $SecurityGroups[$GroupName]
+        New-ADGroup -Name $GroupName -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,OU=Olympus Systems,DC=olympus,DC=local" -Description $SecurityGroups[$GroupName]
         Write-Host "✅ Created security group: $GroupName" -ForegroundColor Green
     }
     catch {
@@ -351,13 +351,13 @@ Write-Host "✅ Personalization control policies configured" -ForegroundColor Gr
 ```powershell
 # Define GPO to OU mappings for Olympus Systems
 $GPOLinks = @{
-    "OLYMPUS-Camera-Security" = @(
-        "OU=War_Strategists,OU=Departments,DC=olympus,DC=local",
-        "OU=Innovation_Forge,OU=Departments,DC=olympus,DC=local"
-    )
-    "OLYMPUS-USB-Control" = @(
-        "OU=War_Strategists,OU=Departments,DC=olympus,DC=local",
-        "OU=Abundance_Treasury,OU=Departments,DC=olympus,DC=local"
+          "OLYMPUS-Camera-Security" = @(
+          "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local",
+          "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+      )
+      "OLYMPUS-USB-Control" = @(
+          "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local",
+        "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
     )
     "OLYMPUS-Device-Control" = @(
         "OU=Departments,DC=olympus,DC=local"
@@ -553,7 +553,7 @@ foreach ($GPO in $DeveloperGPOs) {
 $ExecutiveOU = "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Create executive-specific security group
-New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,DC=olympus,DC=local"
+New-ADGroup -Name "SEC-Executive-Enhanced" -GroupScope DomainLocal -GroupCategory Security -Path "OU=Security_Groups,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Add executives to enhanced security group
 $Executives = @("zeus.supreme", "hera.queen", "athena.wisdom")

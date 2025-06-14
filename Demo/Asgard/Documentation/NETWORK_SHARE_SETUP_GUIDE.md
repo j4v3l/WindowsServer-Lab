@@ -341,11 +341,11 @@ foreach ($share in $asgardShares) {
 ```powershell
 # Olympus-specific share creation
 $olympusShares = @(
-    @{Name = "Divine_Council"; Path = "C:\Shares\Divine_Council"; Group = "GRP-Divine_Council"},
-    @{Name = "War_Strategists"; Path = "C:\Shares\War_Strategists"; Group = "GRP-War_Strategists"},
-    @{Name = "Innovation_Forge"; Path = "C:\Shares\Innovation_Forge"; Group = "GRP-Innovation_Forge"},
-    @{Name = "Abundance_Treasury"; Path = "C:\Shares\Abundance_Treasury"; Group = "GRP-Abundance_Treasury"},
-    @{Name = "Harmony_Relations"; Path = "C:\Shares\Harmony_Relations"; Group = "GRP-Harmony_Relations"}
+    @{Name = "Divine Council"; Path = "C:\Shares\Divine Council"; Group = "GRP-Divine Council"},
+    @{Name = "War Strategists"; Path = "C:\Shares\War Strategists"; Group = "GRP-War Strategists"},
+    @{Name = "Innovation Forge"; Path = "C:\Shares\Innovation Forge"; Group = "GRP-Innovation Forge"},
+    @{Name = "Abundance Treasury"; Path = "C:\Shares\Abundance Treasury"; Group = "GRP-Abundance Treasury"},
+    @{Name = "Harmony Relations"; Path = "C:\Shares\Harmony Relations"; Group = "GRP-Harmony Relations"}
 )
 
 foreach ($share in $olympusShares) {

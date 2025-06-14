@@ -410,15 +410,15 @@ foreach ($ws in $workstations) {
 }
 
 # Create Security Groups
-New-ADGroup -Name "GRP-Divine_Council" -GroupScope Global -GroupCategory Security -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
-New-ADGroup -Name "GRP-War_Strategists" -GroupScope Global -GroupCategory Security -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
-New-ADGroup -Name "GRP-Innovation_Forge" -GroupScope Global -GroupCategory Security -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
-New-ADGroup -Name "GRP-Abundance_Treasury" -GroupScope Global -GroupCategory Security -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
-New-ADGroup -Name "GRP-Harmony_Relations" -GroupScope Global -GroupCategory Security -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-Divine Council" -GroupScope Global -GroupCategory Security -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-War Strategists" -GroupScope Global -GroupCategory Security -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-Innovation Forge" -GroupScope Global -GroupCategory Security -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-Abundance Treasury" -GroupScope Global -GroupCategory Security -Path "OU=Abundance Treasury,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-Harmony Relations" -GroupScope Global -GroupCategory Security -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Create Admin Groups
-New-ADGroup -Name "GRP-Domain_Admins_Olympus" -GroupScope Global -GroupCategory Security -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
-New-ADGroup -Name "GRP-Security_Admins" -GroupScope Global -GroupCategory Security -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-Domain Admins Olympus" -GroupScope Global -GroupCategory Security -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+New-ADGroup -Name "GRP-Security Admins" -GroupScope Global -GroupCategory Security -Path "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
 
 # Create User Accounts - Divine Council (IT Operations) - FIXED: Added PasswordNeverExpires for lab environment
 New-ADUser -Name "Zeus Supreme" -SamAccountName "zeus.supreme" -UserPrincipalName "zeus.supreme@olympus.local" -DisplayName "Zeus Supreme" -Department "Divine Council" -Title "CEO & Domain Admin" -Path "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true -PasswordNeverExpires `$true
@@ -456,11 +456,11 @@ New-ADUser -Name "Harmonia Peace" -SamAccountName "harmonia.peace" -UserPrincipa
 New-ADUser -Name "Iris Rainbow" -SamAccountName "iris.rainbow" -UserPrincipalName "iris.rainbow@olympus.local" -DisplayName "Iris Rainbow" -Department "Harmony Relations" -Title "Communications Specialist" -Path "OU=Harmony Relations,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword `$DefaultUserPassword -Enabled `$true
 
 # Add users to groups
-Add-ADGroupMember -Identity "GRP-Divine_Council" -Members "zeus.supreme", "poseidon.seas", "hades.underworld", "hermes.messenger", "dionysus.wine"
-Add-ADGroupMember -Identity "GRP-War_Strategists" -Members "athena.wisdom", "ares.war", "nike.victory", "kratos.strength", "bia.force"
-Add-ADGroupMember -Identity "GRP-Innovation_Forge" -Members "apollo.light", "artemis.hunt", "hephaestus.forge", "prometheus.fire", "daedalus.craft"
-Add-ADGroupMember -Identity "GRP-Abundance_Treasury" -Members "hera.queen", "demeter.harvest", "plutus.wealth", "tyche.fortune", "nemesis.balance"
-Add-ADGroupMember -Identity "GRP-Harmony_Relations" -Members "aphrodite.harmony", "eros.love", "psyche.soul", "harmonia.peace", "iris.rainbow"
+Add-ADGroupMember -Identity "GRP-Divine Council" -Members "zeus.supreme", "poseidon.seas", "hades.underworld", "hermes.messenger", "dionysus.wine"
+Add-ADGroupMember -Identity "GRP-War Strategists" -Members "athena.wisdom", "ares.war", "nike.victory", "kratos.strength", "bia.force"
+Add-ADGroupMember -Identity "GRP-Innovation Forge" -Members "apollo.light", "artemis.hunt", "hephaestus.forge", "prometheus.fire", "daedalus.craft"
+Add-ADGroupMember -Identity "GRP-Abundance Treasury" -Members "hera.queen", "demeter.harvest", "plutus.wealth", "tyche.fortune", "nemesis.balance"
+Add-ADGroupMember -Identity "GRP-Harmony Relations" -Members "aphrodite.harmony", "eros.love", "psyche.soul", "harmonia.peace", "iris.rainbow"
 
 # Add admin users to Domain Admins
 Add-ADGroupMember -Identity "Domain Admins" -Members "zeus.supreme", "athena.wisdom"

@@ -210,7 +210,7 @@ function Deploy-SecurityPolicies {
     }
     else {
       $ouMappings = @{
-        "Security"           = "OU=Divine Council,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
+        "Security"           = "OU=War Strategists,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
         "DeviceControl"      = "OU=Workstations,OU=Olympus Systems,DC=olympus,DC=local"
         "ApplicationControl" = "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local"
         "NetworkSecurity"    = "OU=Servers,OU=Olympus Systems,DC=olympus,DC=local"

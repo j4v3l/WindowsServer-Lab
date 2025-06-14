@@ -481,7 +481,15 @@ foreach ($user in $users) {
     New-ADUser -Name $user.Name -SamAccountName $user.Username -UserPrincipalName $upn -DisplayName $user.Name -Title $user.Title -Department $user.Department -Path $ouPath -AccountPassword $DefaultUserPassword -Enabled $true -ChangePasswordAtLogon $false -PasswordNeverExpires $true
     
     # Add to department group
-    Add-ADGroupMember -Identity "GRP-$($user.Department.Replace('_', ''))" -Members $user.Username -ErrorAction SilentlyContinue
+    $groupName = switch ($user.Department) {
+        "IT_Operations" { "GRP-IT_Staff" }
+        "Cybersecurity" { "GRP-Security_Team" }
+        "Research_Development" { "GRP-Research_Team" }
+        "Finance_Admin" { "GRP-Finance_Team" }
+        "Human_Resources" { "GRP-HR_Team" }
+        default { "GRP-$($user.Department)" }
+    }
+    Add-ADGroupMember -Identity $groupName -Members $user.Username -ErrorAction SilentlyContinue
     
     # Add domain admins
     if ($user.IsAdmin) {

@@ -497,15 +497,15 @@ Add-DhcpServerv4Reservation -ScopeId "10.0.10.0" -IPAddress "10.0.10.11" -Client
 
 ```powershell
 # Create department shares
-New-SmbShare -Name "Divine-Council" -Path "C:\Shares\Divine-Council" -FullAccess "GRP-Divine_Council"
-New-SmbShare -Name "War-Strategists" -Path "C:\Shares\War-Strategists" -FullAccess "GRP-War_Strategists"
-New-SmbShare -Name "Innovation-Forge" -Path "C:\Shares\Innovation-Forge" -FullAccess "GRP-Innovation_Forge"
-New-SmbShare -Name "Abundance-Treasury" -Path "C:\Shares\Abundance-Treasury" -FullAccess "GRP-Abundance_Treasury"
-New-SmbShare -Name "Harmony-Relations" -Path "C:\Shares\Harmony-Relations" -FullAccess "GRP-Harmony_Relations"
+New-SmbShare -Name "Divine Council" -Path "C:\Shares\Divine Council" -FullAccess "GRP-Divine Council"
+New-SmbShare -Name "War Strategists" -Path "C:\Shares\War Strategists" -FullAccess "GRP-War Strategists"
+New-SmbShare -Name "Innovation Forge" -Path "C:\Shares\Innovation Forge" -FullAccess "GRP-Innovation Forge"
+New-SmbShare -Name "Abundance Treasury" -Path "C:\Shares\Abundance Treasury" -FullAccess "GRP-Abundance Treasury"
+New-SmbShare -Name "Harmony Relations" -Path "C:\Shares\Harmony Relations" -FullAccess "GRP-Harmony Relations"
 
 # Create public shares
 New-SmbShare -Name "Public" -Path "C:\Shares\Public" -ReadAccess "Everyone"
-New-SmbShare -Name "Software" -Path "C:\Shares\Software" -ReadAccess "Domain Users" -ChangeAccess "GRP-Divine_Council"
+New-SmbShare -Name "Software" -Path "C:\Shares\Software" -ReadAccess "Domain Users" -ChangeAccess "GRP-Divine Council"
 
 # For comprehensive Olympus network share setup instructions, see:
 # Guides/OLYMPUS_NETWORK_SHARE_SETUP.md
@@ -574,10 +574,10 @@ foreach ($server in @("ZEUS-DC01", "HERA-DC02", "HERMES-FS01")) {
 
 ```powershell
 # Create new user
-New-ADUser -Name "Icarus Soaring" -SamAccountName "icarus.soaring" -Department "Innovation_Forge" -Title "Junior AI Developer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled $true
+New-ADUser -Name "Icarus Soaring" -SamAccountName "icarus.soaring" -Department "Innovation Forge" -Title "Junior AI Developer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled $true
 
 # Add to appropriate groups
-Add-ADGroupMember -Identity "GRP-Innovation_Forge" -Members "icarus.soaring"
+Add-ADGroupMember -Identity "GRP-Innovation Forge" -Members "icarus.soaring"
 Add-ADGroupMember -Identity "GRP-Developers" -Members "icarus.soaring"
 
 # Create user profile and home directory
