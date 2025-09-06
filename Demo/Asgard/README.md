@@ -1,5 +1,18 @@
 # 🏰 **WINDOWS SERVER DEMO ENVIRONMENTS**
 
+# 🚨 **CRITICAL SECURITY WARNING**
+
+**⚠️ IMPORTANT:** This environment contains DEFAULT CONFIGURATIONS that are NOT suitable for production use. Before any deployment:
+
+1. **Change ALL default passwords** - Never use demo passwords in production
+2. **Implement production security policies** - Review SECURITY_HARDENING_GUIDE.md  
+3. **Complete security assessment** - Run SECURITY_VALIDATION_SCRIPT.ps1
+4. **Review all configurations** - Ensure proper network isolation and access controls
+
+**🔒 SECURITY NOTE:** All deployment scripts now require secure password entry - no credentials are hardcoded.
+
+---
+
 ## 🎯 **Overview**
 
 This directory contains comprehensive Windows Server demo environments that showcase every feature of the WindowsServer project. Choose from two epic mythology-themed labs, each creating realistic enterprise environments with 25 virtual machines, complete organizational structures, and professional-grade configurations.
@@ -137,8 +150,9 @@ All passwords are handled securely with no hardcoded credentials.
 ### **Start Here**
 
 1. **[QUICK_START_ASGARD.md](Guides/QUICK_START_ASGARD.md)** - 3-step deployment guide
-2. **[DEMO_SETUP_GUIDE.md](Documentation/DEMO_SETUP_GUIDE.md)** - Complete technical reference
-3. **[HARDWARE_PERFORMANCE_GUIDE.md](Documentation/HARDWARE_PERFORMANCE_GUIDE.md)** - Performance optimization
+2. **[NETWORK_TOPOLOGY_ASGARD.md](NETWORK_TOPOLOGY_ASGARD.md)** - Complete network architecture guide
+3. **[DEMO_SETUP_GUIDE.md](Documentation/DEMO_SETUP_GUIDE.md)** - Complete technical reference
+4. **[HARDWARE_PERFORMANCE_GUIDE.md](Documentation/HARDWARE_PERFORMANCE_GUIDE.md)** - Performance optimization
 
 ### **For Different Audiences**
 
@@ -228,7 +242,7 @@ DMZ:         10.0.50.0/24  (External Services)
 - ✅ Network Segmentation
 - ✅ Monitoring & Auditing
 - ✅ Backup & Recovery
-- ✅ Hyper-V Virtualization
+- ✅ Proxmox VE Virtualization
 - ✅ PowerShell Automation
 
 #### **🛡️ Advanced Security Features (NEW!)**
@@ -278,14 +292,14 @@ The demo environment supports any Windows Server scenario:
 - **RAM**: 64GB DDR5
 - **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows 11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ### **⚙️ Minimum Requirements**
 
 - **RAM**: 32GB (64GB recommended)
 - **CPU**: 8+ cores (12+ recommended)
 - **Storage**: 1TB+ NVMe SSD
-- **OS**: Windows 10/11 Pro with Hyper-V enabled
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ---
 
@@ -326,19 +340,22 @@ Start-QuickSecurityCheck
 ### **VM Management**
 
 ```powershell
-# Start all Asgard VMs
-Get-VM | Where-Object {$_.Name -like "*ASGARD*" -or $_.Name -like "*ODIN*"} | Start-VM
+# Start all Asgard VMs via Proxmox VE (Run on Proxmox host)
+ssh root@proxmox-host
+for vm in {100..104} {110..134}; do qm start $vm; done
 
-# Check status
-Get-VM | Where-Object {$_.Name -like "*ASGARD*"} | Select-Object Name, State, Status
+# Check status via Proxmox VE (Run on Proxmox host)
+qm list  # List all VMs with status
+qm status 100  # Check ODIN-DC01 specific status
 ```
 
 ### **Performance Monitoring**
 
 ```powershell
-# Resource usage
-Get-VM | Measure-Object -Property MemoryAssigned -Sum
-Get-Counter "\Memory\Available MBytes"
+# Resource usage via Proxmox VE
+# Monitor VM resource usage via Proxmox web interface dashboard
+# Check host memory: free -h (on Proxmox host)
+# Check VM memory allocation via web interface
 ```
 
 ---
@@ -357,9 +374,9 @@ This demo showcases features from:
 
 The demo leverages core project scripts:
 
-- `Scripts/Hyper-V_Lab_Setup.ps1` - Base VM creation
-- `Scripts/Test-LabEnvironment.ps1` - Environment validation
-- `Scripts/WindowsServerLab.psm1` - PowerShell module functions
+- Manual VM creation using Proxmox VE interface
+- Manual environment validation and testing
+- Manual Windows Server configuration and setup
 - `Scripts/AdvancedGroupPolicyManager.ps1` - 100+ security policies _(NEW!)_
 - `Scripts/AdvancedSecurityAudit.ps1` - Comprehensive security scoring _(NEW!)_
 
@@ -407,7 +424,7 @@ Experience 100+ enterprise security features including:
 ### **Common Issues**
 
 - **Memory constraints**: Reduce VM allocations in `Deploy-AsgardLab.ps1`
-- **Network conflicts**: Check existing Hyper-V switches
+- **Network conflicts**: Check existing Proxmox bridges
 - **Storage space**: Ensure adequate disk space for VMs
 
 ### **Getting Help**

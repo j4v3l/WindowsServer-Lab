@@ -132,14 +132,14 @@ ipconfig /registerdns
 
 ```powershell
 # [HOST] Production Network
-New-VMSwitch -Name "ASGARD-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
+# Create production bridge vmbr0 via Proxmox VE web interface
 
 # [HOST] Management Network
-New-VMSwitch -Name "ASGARD-Management" -SwitchType Internal
+# Create management bridge vmbr1 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceAlias "vEthernet (ASGARD-Management)"
 
 # [HOST] Client Network
-New-VMSwitch -Name "ASGARD-Clients" -SwitchType Internal
+# Create client bridge vmbr2 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceAlias "vEthernet (ASGARD-Clients)"
 
 # [HOST] NAT Configuration
@@ -370,28 +370,28 @@ Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" | F
 Get-ScheduledTask | Where-Object {$_.State -eq "Ready" -and $_.Principal.UserId -ne "SYSTEM"} | Select TaskName, State, @{n="User";e={$_.Principal.UserId}}, @{n="Action";e={$_.Actions.Execute}}
 ```
 
-### **Hyper-V & Virtualization Management**
+### **Proxmox VE & Virtualization Management**
 
 ```powershell
 # VM status dashboard
-Get-VM | Select Name, State, CPUUsage, @{n="Memory(MB)";e={$_.MemoryAssigned/1MB}}, Uptime, Status
+# Monitor VMs via Proxmox VE web interface dashboard
 
 # VM performance monitoring
-Get-VM | Get-VMProcessor | Select VMName, @{n="CPU%";e={$_.CPUUsage}}
-Get-VM | Get-VMMemory | Select VMName, @{n="MemoryGB";e={[math]::Round($_.Assigned/1GB,2)}}, @{n="Demand%";e={[math]::Round(($_.Assigned/$_.Maximum)*100,2)}}
+# Check CPU usage via Proxmox VE web interface
+# Check memory usage via Proxmox VE web interface
 
 # Quick VM operations
 # Start all VMs
-Get-VM | Where-Object {$_.State -eq "Off"} | Start-VM -Verbose
+# Start stopped VMs via Proxmox VE: qm start <vmid>
 
 # Create VM snapshot for all running VMs
-Get-VM | Where-Object {$_.State -eq "Running"} | Checkpoint-VM -SnapshotName "Emergency-$(Get-Date -Format 'yyyy-MM-dd-HHmm')"
+# Create emergency snapshots via Proxmox VE web interface
 
 # VM network troubleshooting
-Get-VM | Get-VMNetworkAdapter | Select VMName, SwitchName, MacAddress, IPAddresses
+# Check VM network adapters via Proxmox VE web interface
 
 # Export VM configuration for backup
-Get-VM | Export-VM -Path "C:\VMBackups" -Verbose
+# Export VMs via Proxmox VE: vzdump command
 ```
 
 ### **File System & Storage Forensics**

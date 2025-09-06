@@ -27,7 +27,7 @@
 
 ### **Virtual Switch Configuration**
 
-**Important Note:** When creating external VM switches, use `-NetAdapterName` instead of `-SwitchType External`. The `-AllowManagementOS $true` parameter allows the host OS to also use the network adapter.
+**Important Note:** Network bridges in Proxmox VE are configured via the web interface under Node → Network. External connectivity is managed through the physical network interface attached to the bridge.
 
 ### **Windows 11 Client Setup & OOBE Network Bypass**
 
@@ -49,17 +49,17 @@
 
 ```powershell
 # Core Production Network (External Switch)
-New-VMSwitch -Name "ASGARD-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
+# Create production bridge vmbr0 via Proxmox VE web interface
 
 # Management Network
-New-VMSwitch -Name "ASGARD-Management" -SwitchType Internal
+# Create management bridge vmbr1 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceAlias "vEthernet (ASGARD-Management)"
 
 # DMZ Network
-New-VMSwitch -Name "ASGARD-DMZ" -SwitchType Private
+# Create DMZ bridge vmbr3 via Proxmox VE web interface
 
 # Client Network
-New-VMSwitch -Name "ASGARD-Clients" -SwitchType Internal
+# Create client bridge vmbr2 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceAlias "vEthernet (ASGARD-Clients)"
 ```
 
@@ -642,7 +642,7 @@ This **Asgard Technologies** lab environment showcases every feature in your Win
 - **RAM**: 64GB DDR5
 - **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows 11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 **💪 What This Hardware Can Handle:**
 

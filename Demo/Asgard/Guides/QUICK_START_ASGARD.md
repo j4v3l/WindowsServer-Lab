@@ -22,7 +22,7 @@
 - **RAM**: 64GB DDR5
 - **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows 11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ### **💪 Performance Capabilities**
 
@@ -38,22 +38,22 @@ With the above specs, you can run:
 - **32GB RAM** (minimum 16GB, 64GB recommended)
 - **1TB+ NVMe storage**
 - **8+ CPU cores** (12+ recommended)
-- **Windows 10/11 Pro or Enterprise**
+- **Proxmox VE 8.0+**
 - **Dedicated GPU** (recommended for multiple VMs)
 
 ### **Software Requirements**
 
-- **Hyper-V enabled**
+- **Proxmox VE environment ready**
 - **Windows Server 2019/2022 ISO**
 - **Windows 10/11 ISO** (for workstations)
 
 ---
 
-## 🚀 **Step 1: Enable Hyper-V**
+## 🚀 **Step 1: Prepare Proxmox VE**
 
-```powershell
-# Run as Administrator
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All
+```bash
+# Create VMs using Proxmox VE web interface
+# Follow the Proxmox setup documentation
 
 # Restart when prompted
 Restart-Computer
@@ -205,6 +205,10 @@ VIDAR-SEC01:   10.0.10.40  (Security Server)
 
 ### **🔥 Scenario 1: New Employee Onboarding**
 
+**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights**
+
 ```powershell
 # Create new user for R&D department
 New-ADUser -Name "Baldr Lightbringer" -SamAccountName "baldr.light" -Department "Research_Development"
@@ -217,6 +221,10 @@ New-AsgardVM -VMName "BALDR-WS01" -Memory 4GB -Networks @("ASGARD-Clients")
 ```
 
 ### **⚔️ Scenario 2: Security Incident Response**
+
+**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights**
 
 ```powershell
 # Simulate security breach
@@ -231,6 +239,10 @@ New-GPO -Name "Emergency-Lockdown" | New-GPLink -Target "OU=Departments,OU=Asgar
 ```
 
 ### **🛡️ Scenario 3: Compliance Audit**
+
+**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights**
 
 ```powershell
 # Generate compliance reports
@@ -247,20 +259,20 @@ Get-ADComputer -Filter * | Export-Csv "ComputerAudit.csv"
 
 ```powershell
 # Start all Asgard VMs
-Get-VM | Where-Object {$_.Name -like "*ASGARD*" -or $_.Name -like "*ODIN*" -or $_.Name -like "*THOR*"} | Start-VM
+# Start all Asgard VMs via Proxmox VE: qm start <vmid>
 
 # Stop all VMs
-Get-VM | Where-Object {$_.Name -like "*ASGARD*" -or $_.Name -like "*ODIN*" -or $_.Name -like "*THOR*"} | Stop-VM
+# Stop all Asgard VMs via Proxmox VE: qm stop <vmid>
 
 # Get VM status
-Get-VM | Where-Object {$_.Name -like "*ASGARD*" -or $_.Name -like "*ODIN*" -or $_.Name -like "*THOR*"} | Select-Object Name, State, Status
+# Check VM status via Proxmox VE: qm status <vmid>
 ```
 
 ### **Network Diagnostics**
 
 ```powershell
 # Check virtual switches
-Get-VMSwitch | Where-Object {$_.Name -like "ASGARD*"}
+# Check network bridges via Proxmox VE web interface
 
 # Test connectivity
 Test-NetConnection -ComputerName "10.0.10.10" -Port 3389
@@ -297,8 +309,8 @@ Test-NetConnection -ComputerName "10.0.10.10" -Port 3389
 #### **Network Issues**
 
 ```powershell
-# Check Hyper-V switches
-Get-VMSwitch
+# Check Proxmox network bridges
+# List all network bridges: ip link show | grep vmbr
 Get-NetAdapter | Where-Object {$_.Name -like "*vEthernet*"}
 ```
 

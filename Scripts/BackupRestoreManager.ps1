@@ -1,4 +1,8 @@
 # Backup and Restore Management Script
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers or File Servers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Local Administrator rights, sufficient storage space
+
 # This script provides automated backup and restore functionality for Windows Server
 
 # Import required modules

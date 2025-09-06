@@ -8,7 +8,7 @@
 - **RAM**: 64GB DDR5
 - **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows 11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ---
 
@@ -91,7 +91,7 @@ Your RAM:     64GB physical + Windows virtual memory management
    - Development workstations get enhanced specs
    - Standard workstations optimized for typical usage
 
-3. **Hyper-V Efficiency**
+3. **Proxmox VE Efficiency**
    - Memory compression and ballooning
    - Shared memory pages for similar VMs
    - Intelligent memory scheduling
@@ -104,7 +104,7 @@ Server CPU Allocation: 18 cores
 Workstation CPU Allocation: 40 cores (2 each × 20 VMs)
 Host OS Reserve: 4+ cores
 
-Note: Hyper-V efficiently schedules CPU time across VMs
+Note: Proxmox VE efficiently schedules CPU time across VMs using KVM
 ```
 
 ### **Storage Performance**
@@ -181,15 +181,17 @@ $serverMemory = @{
 # Your Ryzen 7900X has excellent multi-threading
 # VM CPU allocation is optimal for your hardware
 # Consider enabling:
-Set-VMProcessor -VMName "ODIN-DC01" -EnableHostResourceProtection $true
+# Configure CPU protection via Proxmox VE
+# qm set 100 --cpu host,flags=+aes  # Enable host CPU features for ODIN-DC01
 ```
 
 ### **Storage Optimization**
 
 ```powershell
 # Your NVMe SSD benefits from these settings:
-Set-VM -VMName "ODIN-DC01" -AutomaticCheckpointsEnabled $false
-Set-VHD -Path "C:\VMs\Asgard\ODIN-DC01\ODIN-DC01.vhdx" -PhysicalSectorSizeBytes 4096
+# Disable automatic snapshots via Proxmox VE
+# Configure via VM → Options → Protection (uncheck automatic snapshots)
+# Storage optimization handled automatically by Proxmox VE
 ```
 
 ---
@@ -202,10 +204,10 @@ Set-VHD -Path "C:\VMs\Asgard\ODIN-DC01\ODIN-DC01.vhdx" -PhysicalSectorSizeBytes 
 # Monitor your system performance
 Get-Counter "\Memory\Available MBytes"
 Get-Counter "\Processor(_Total)\% Processor Time"
-Get-VM | Measure-Object -Property MemoryAssigned -Sum
+# Check total VM memory allocation via Proxmox VE dashboard
 
 # Check VM performance
-Get-VM | Select-Object Name, State, @{Name="RAM(GB)";Expression={$_.MemoryAssigned/1GB}}
+# Monitor individual VM memory usage via Proxmox VE web interface
 ```
 
 ### **Performance Metrics to Watch**
@@ -241,10 +243,10 @@ Get-VM | Select-Object Name, State, @{Name="RAM(GB)";Expression={$_.MemoryAssign
    - GPU passthrough capabilities (if needed)
    - Excellent for development workstations
 
-5. **Windows 11 Pro**:
-   - Latest Hyper-V features
-   - Optimal memory management
-   - Best VM networking capabilities
+5. **Proxmox VE 8.0+**:
+   - Latest KVM virtualization features
+   - Optimal memory management with ballooning
+   - Best VM networking capabilities with VirtIO
 
 ---
 

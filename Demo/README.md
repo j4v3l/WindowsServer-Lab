@@ -1,5 +1,18 @@
 # 🏛️ **WINDOWS SERVER LAB DEMOS**
 
+# 🚨 **CRITICAL SECURITY WARNING**
+
+**⚠️ IMPORTANT:** This environment contains DEFAULT CONFIGURATIONS that are NOT suitable for production use. Before any deployment:
+
+1. **Change ALL default passwords** - Never use demo passwords in production
+2. **Implement production security policies** - Review SECURITY_HARDENING_GUIDE.md
+3. **Complete security assessment** - Run SECURITY_VALIDATION_SCRIPT.ps1
+4. **Review all configurations** - Ensure proper network isolation and access controls
+
+**🔒 SECURITY NOTE:** All deployment scripts now require secure password entry - no credentials are hardcoded.
+
+---
+
 Welcome to the comprehensive Windows Server Lab demonstration environments! This directory contains two complete enterprise lab setups that showcase the full capabilities of the Windows Server Lab project.
 
 ## 🛠️ **CRITICAL UPDATE: v1.3.1 Network Fixes Applied!**
@@ -186,7 +199,7 @@ Demo/
 - **CPU**: 8 cores
 - **RAM**: 32GB (Asgard) / 64GB (Olympus)
 - **Storage**: 500GB SSD
-- **OS**: Windows 10/11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ### **Recommended Hardware**
 

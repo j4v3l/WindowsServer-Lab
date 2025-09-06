@@ -1,4 +1,8 @@
 # System Health Monitoring Script
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Any Windows Server VM)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Local Administrator rights, Windows Server Management Tools
+
 # This script monitors various aspects of server health and generates a report
 
 # Import required modules

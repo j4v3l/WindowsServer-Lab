@@ -96,32 +96,10 @@ if ($overallSuccess) {
 #region Module Integrity Test
 # Using Write-Host for colored user output`n    Write-Host "`n🔧 Step 2: Module Integrity Test" -ForegroundColor Yellow
 
-if (Test-Path "Scripts/Test-ModuleIntegrity.ps1") {
-    try {
-        Push-Location Scripts
-        # Using Write-Host for colored user output`n    Write-Host "Running module integrity test..." -ForegroundColor Cyan
-        
-        $result = .\Test-ModuleIntegrity.ps1 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            # Using Write-Host for colored user output`n    Write-Host "✅ Module integrity test passed!" -ForegroundColor Green
-        }
-        else {
-            # Using Write-Host for colored user output`n    Write-Host "❌ Module integrity test failed!" -ForegroundColor Red
-            # Using Write-Host for colored user output`n    Write-Host $result -ForegroundColor Red
-            $overallSuccess = $false
-        }
-    }
-    catch {
-        # Using Write-Host for colored user output`n    Write-Host "❌ Module integrity test failed: $($_.Exception.Message)" -ForegroundColor Red
-        $overallSuccess = $false
-    }
-    finally {
-        Pop-Location
-    }
-}
-else {
-    # Using Write-Host for colored user output`n    Write-Host "⚠️  Module integrity test script not found, skipping..." -ForegroundColor Yellow
-}
+Write-Host "Module Integrity Tests:" -ForegroundColor Cyan
+Write-Host "Module integrity testing is no longer available - removed during Proxmox adaptation" -ForegroundColor Yellow
+Write-Host "Use manual validation procedures instead" -ForegroundColor Yellow
+
 #endregion
 
 #region Documentation Validation

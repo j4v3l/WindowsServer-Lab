@@ -163,12 +163,12 @@ If you experience lag in your terminal:
 - [Windows Terminal Documentation](https://docs.microsoft.com/en-us/windows/terminal/)
 - [Nerd Fonts Website](https://www.nerdfonts.com/)
 
-## 🔄 Integration with WindowsServerLab
+## 🔄 Integration with Windows Server Lab Environment
 
-This Oh My Posh setup script is part of the WindowsServerLab module and follows the same standards and conventions as other scripts in the module. You can use it as a standalone script or as part of the module.
+This Oh My Posh setup script is part of the Windows Server Lab Environment project adapted for Proxmox VE. It follows the same standards and conventions as other scripts in the project.
 
-For a smooth integration with other WindowsServerLab components:
+For a smooth integration:
 
-1. Make sure to run the script from the WindowsServerLab directory
+1. Make sure to run the script from the project directory
 2. Consider configuring all your lab machines with the same theme for consistency
 3. Include the setup as part of your lab deployment automation scripts

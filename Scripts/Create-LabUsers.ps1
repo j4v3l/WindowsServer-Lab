@@ -1,5 +1,9 @@
 # Create Lab Users Script
 # This script creates users for the Windows Server lab environment
+#
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM
+# PREREQUISITES: Active Directory Domain Services installed, Domain Admin rights
 
 [CmdletBinding()]
 param(

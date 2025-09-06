@@ -1,4 +1,8 @@
 # Advanced Security Audit Script
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers or Member Servers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Domain Administrator rights, Group Policy Management Tools
+
 # Comprehensive security auditing including camera, USB, device controls, and advanced GPO settings
 
 # Import required modules

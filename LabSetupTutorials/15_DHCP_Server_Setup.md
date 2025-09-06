@@ -23,6 +23,10 @@
 
 ### Using PowerShell
 
+**EXECUTION CONTEXT: Run INSIDE Windows Server VM (DHCP Server)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to DHCP Server VM**  
+**PREREQUISITES: Local Administrator rights, DHCP role installed**
+
 ```powershell
 Install-WindowsFeature -Name DHCP -IncludeManagementTools
 

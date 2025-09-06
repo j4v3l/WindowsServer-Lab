@@ -64,12 +64,13 @@ When using the Windows Server Lab Environment, please follow these security best
 - **Credentials**: Use strong, unique passwords for all lab accounts
 - **Monitoring**: Enable logging and monitor for suspicious activities
 
-### 💻 Host System Security
+### 💻 Proxmox VE Host Security
 
-- **Antivirus**: Ensure your host system has up-to-date antivirus software
-- **Patches**: Keep your hypervisor (Hyper-V/VMware) updated
-- **Backups**: Maintain regular backups of your lab configurations
-- **Network**: Isolate lab traffic from production networks
+- **Updates**: Keep Proxmox VE updated with latest security patches
+- **Firewall**: Configure Proxmox VE firewall rules properly
+- **Backups**: Maintain regular VM backups via Proxmox backup system
+- **Network**: Isolate lab traffic from production networks using VLANs
+- **Access Control**: Use strong authentication for Proxmox VE web interface
 
 ### 🔐 PowerShell Security
 
@@ -117,7 +118,7 @@ For more information about Windows Server security:
 - [Microsoft Security Compliance Toolkit](https://www.microsoft.com/en-us/download/details.aspx?id=55319)
 - [Windows Server Security Documentation](https://docs.microsoft.com/en-us/windows-server/security/security-and-assurance)
 - [PowerShell Security Best Practices](https://docs.microsoft.com/en-us/powershell/scripting/security/overview)
-- [Hyper-V Security Guide](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-security)
+- [Proxmox VE Security Guide](https://pve.proxmox.com/wiki/Security)
 
 ---
 

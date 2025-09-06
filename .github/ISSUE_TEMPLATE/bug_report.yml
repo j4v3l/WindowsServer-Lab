@@ -15,7 +15,7 @@ body:
     attributes:
       label: Environment
       description: What environment are you running in?
-      placeholder: Windows Server 2022, Windows 11, Hyper-V, VMware, etc.
+      placeholder: Windows Server 2022, Windows 11, Proxmox VE, etc.
     validations:
       required: true
 
@@ -71,8 +71,8 @@ body:
         - DHCP Configuration
         - Group Policy
         - Security Tools
-        - Hyper-V Management
-        - PowerShell Module
+        - Proxmox VE Management
+        - Manual Setup Procedures
         - Backup/Restore
         - System Monitoring
         - Documentation

@@ -12,6 +12,10 @@
 - A working Windows Server domain (from [01_Setup_Lab_Environment.md](01_Setup_Lab_Environment.md))
 - Basic understanding of OUs and groups (from [02_Manage_Users_Computers_AD.md](02_Manage_Users_Computers_AD.md) and [03_AD_Groups_Management.md](03_AD_Groups_Management.md))
 
+**EXECUTION CONTEXT: All Group Policy operations run INSIDE Windows Server VMs (Domain Controllers)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights, Group Policy Management Tools**
+
 ## 🔍 Understanding Group Policy
 
 ### What are GPOs?
@@ -788,6 +792,7 @@ Get-AdvancedGPOReport
    ```
 
 3. **Force Policy Update**
+
    ```powershell
    gpupdate /force
    ```
@@ -801,6 +806,7 @@ Get-AdvancedGPOReport
    ```
 
 2. **Verify Removable Storage Settings**
+
    ```powershell
    $usbPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices\{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}"
    Get-ItemProperty -Path $usbPath
@@ -815,6 +821,7 @@ Get-AdvancedGPOReport
    ```
 
 2. **Verify AppLocker Service**
+
    ```powershell
    Get-Service -Name "AppIDSvc"
    Start-Service -Name "AppIDSvc"

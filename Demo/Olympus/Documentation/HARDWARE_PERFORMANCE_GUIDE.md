@@ -20,7 +20,7 @@ GPU: NVIDIA RTX 5070 (12GB VRAM) - For AI/ML workloads
 Motherboard: ASUS ROG STRIX X670E-E GAMING WIFI
 PSU: 850W 80+ Gold Modular
 Cooling: AIO Liquid Cooling (280mm radiator)
-OS: Windows 11 Pro (Build 22631+)
+OS: Proxmox VE 8.0+ (Debian-based hypervisor)
 ```
 
 ### **💪 Performance Capabilities**
@@ -43,8 +43,8 @@ With this configuration, you can achieve:
 ```yaml
 Physical RAM: 64GB Total
 
-Hypervisor Overhead: 8GB
-Host OS Reserve: 8GB
+Proxmox VE Overhead: 4GB
+Host System Reserve: 4GB
 Available for VMs: 48GB
 
 VM Allocation Strategy:
@@ -68,8 +68,8 @@ Buffer for Growth: 16GB
 ```yaml
 Physical Cores: 12 cores, 24 threads
 
-Host OS Reserve: 4 logical processors
-Hypervisor Overhead: 4 logical processors
+Proxmox VE Reserve: 2 logical processors
+System Overhead: 2 logical processors
 Available for VMs: 16 logical processors
 
 VM CPU Strategy:
@@ -109,7 +109,7 @@ VM Storage Allocation:
     - Standard: 60GB each (15 × 60GB = 900GB)
     - Enhanced: 100GB each (5 × 100GB = 500GB)
   
-  Host OS + Hypervisor: 200GB
+  Proxmox VE System: 100GB
   Free Space Buffer: 500GB
 ```
 
@@ -149,76 +149,70 @@ SR-IOV: Enabled (if available)
 ACS Override: Enabled (for GPU passthrough)
 ```
 
-### **Windows Host Optimization**
+### **Proxmox VE Host Optimization**
 
 #### **Power Management**
 
-```powershell
-# Set high performance power plan
-powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+```bash
+# Set CPU governor to performance mode
+echo 'performance' | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 
-# Disable CPU parking
-powercfg /setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 0
-powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+# Disable CPU frequency scaling for consistent performance
+echo 'performance' > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 
-# Disable USB selective suspend
-powercfg /setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0
+# Configure power management in /etc/default/grub
+# GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_pstate=disable processor.max_cstate=1"
 ```
 
 #### **System Services Optimization**
 
-```powershell
+```bash
 # Disable unnecessary services for VM host
-$servicesToDisable = @(
-    "Fax", "WSearch", "Themes", "TabletInputService",
-    "WbioSrvc", "SysMain", "Spooler"
-)
+systemctl disable bluetooth
+systemctl disable cups
+systemctl disable avahi-daemon
+systemctl disable ModemManager
 
-foreach ($service in $servicesToDisable) {
-    Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
-    Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
-}
+# Optimize kernel parameters for virtualization
+echo 'vm.swappiness=10' >> /etc/sysctl.conf
+echo 'vm.dirty_ratio=5' >> /etc/sysctl.conf
+echo 'vm.dirty_background_ratio=2' >> /etc/sysctl.conf
 ```
 
 #### **Memory Management**
 
-```powershell
-# Configure large page support
-bcdedit /set increaseuserva 3072
-bcdedit /set pae ForceEnable
+```bash
+# Configure huge pages for better VM performance
+echo 'vm.nr_hugepages=1024' >> /etc/sysctl.conf
 
-# Enable lock pages in memory
-# (Configure via Local Security Policy: User Rights Assignment)
+# Optimize memory allocation
+echo 'vm.overcommit_memory=1' >> /etc/sysctl.conf
+echo 'vm.overcommit_ratio=80' >> /etc/sysctl.conf
 ```
 
-### **Hyper-V Host Configuration**
+#### **Network Bridge Optimization**
 
-#### **Virtual Switch Optimization**
+```bash
+# Enable SR-IOV for production bridge via Proxmox VE
+# Configure via web interface: Node → Network → Bridge → Advanced
 
-```powershell
-# Enable SR-IOV for production switch
-Set-VMSwitch -Name "OLYMPUS-Production" -EnableIov $true
+# Optimize network bridge settings
+echo 'net.bridge.bridge-nf-call-iptables=0' >> /etc/sysctl.conf
+echo 'net.bridge.bridge-nf-call-ip6tables=0' >> /etc/sysctl.conf
 
-# Configure RSS and VMQ
-Set-NetAdapterAdvancedProperty -Name "Ethernet" -DisplayName "Receive Side Scaling" -DisplayValue "Enabled"
-Set-NetAdapterAdvancedProperty -Name "Ethernet" -DisplayName "Virtual Machine Queues" -DisplayValue "Enabled"
-
-# Optimize network adapter buffers
-Set-NetAdapterAdvancedProperty -Name "Ethernet" -DisplayName "Receive Buffers" -DisplayValue "2048"
-Set-NetAdapterAdvancedProperty -Name "Ethernet" -DisplayName "Transmit Buffers" -DisplayValue "2048"
+# Configure network interface optimization
+ethtool -K vmbr0 gso off
+ethtool -K vmbr0 tso off
+ethtool -K vmbr0 ufo off
 ```
 
 #### **CPU Resource Management**
 
 ```powershell
-# Configure NUMA topology awareness
-Set-VMHost -NumaSpanningEnabled $false
-
-# Set CPU reserve for host
-Set-VMHost -MaximumStorageMigrations 2 -MaximumVirtualMachineMigrations 2
-
-# Configure processor scheduling
-Set-VMHost -VirtualMachinePath "C:\VMs" -VirtualHardDiskPath "C:\VMs"
+# Configure NUMA topology via Proxmox VE
+# qm set <vmid> --numa 1  # Enable NUMA for large VMs
+# Migration limits configured via Datacenter → Options
+# VM storage paths managed via Proxmox storage configuration
 ```
 
 ---
@@ -237,9 +231,8 @@ $counters = @(
     "\Memory\Pages/sec",
     "\PhysicalDisk(_Total)\Disk Transfers/sec",
     "\PhysicalDisk(_Total)\% Disk Time",
-    "\Hyper-V Hypervisor\Logical Processors",
-    "\Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time",
-    "\Hyper-V Dynamic Memory Balancer(*)\Available Memory Per Node"
+    # Check Proxmox VE performance via web interface
+# Monitor CPU, memory, and storage utilization
 )
 
 # Start continuous monitoring
@@ -272,29 +265,25 @@ $memoryScript | Out-File "C:\Scripts\MemoryAlert.ps1"
 # Optimize dynamic memory for AI/ML workloads
 $aiWorkstations = @("APOLLO-WS01", "ARTEMIS-WS01", "HEPHAESTUS-WS01", "PROMETHEUS-WS01", "DAEDALUS-WS01")
 
-foreach ($vm in $aiWorkstations) {
-    Set-VM -Name $vm -DynamicMemory -MemoryStartupBytes 6GB -MemoryMinimumBytes 4GB -MemoryMaximumBytes 12GB -MemoryBuffer 20
-}
+# Configure dynamic memory for AI workstations via Proxmox VE
+# qm set <vmid> --memory 6144,balloon=4096  # AI workstation memory
+# qm set <vmid> --memory 12288,balloon=0    # High-performance AI (no ballooning)
 
-# Standard workstation memory optimization
-$standardWorkstations = Get-VM | Where-Object {$_.Name -like "*-WS*" -and $_.Name -notin $aiWorkstations}
-foreach ($vm in $standardWorkstations) {
-    Set-VM -Name $vm -DynamicMemory -MemoryStartupBytes 3GB -MemoryMinimumBytes 2GB -MemoryMaximumBytes 8GB -MemoryBuffer 15
-}
+# Standard workstation memory optimization via Proxmox VE
+# Configure memory for standard workstations:
+# qm set <vmid> --memory 3072,balloon=2048  # Enable memory ballooning
+# For AI workstations, allocate more:
+# qm set <vmid> --memory 6144,balloon=4096
 ```
 
 #### **Storage Performance Tuning**
 
 ```powershell
-# Enable storage QoS for critical VMs
-$criticalVMs = @("ZEUS-DC01", "HERA-DC02", "ATHENA-SEC01")
-foreach ($vm in $criticalVMs) {
-    $vhd = Get-VMHardDiskDrive -VMName $vm
-    Set-VMHardDiskDrive -VMName $vm -Path $vhd.Path -QoSPolicyID (New-StorageQosPolicy -Name "$vm-Priority" -MaximumIops 10000 -MinimumIops 1000).PolicyId
-}
-
-# Configure VHD optimization
-Get-VM | Get-VMHardDiskDrive | Set-VMHardDiskDrive -WriteHardeningPolicy WriteCacheEnabled
+# Storage QoS for critical VMs via Proxmox VE
+# Configure storage performance for critical VMs:
+# qm set <vmid> --scsi0 local-lvm:80,cache=writeback,iothread=1
+# For high-performance storage:
+# qm set <vmid> --scsi0 local-lvm:80,cache=none,iothread=1,ssd=1
 ```
 
 ---
@@ -306,31 +295,23 @@ Get-VM | Get-VMHardDiskDrive | Set-VMHardDiskDrive -WriteHardeningPolicy WriteCa
 #### **NVIDIA GPU Setup for AI Workstations**
 
 ```powershell
-# Configure GPU passthrough for AI development
-$aiVMs = @("APOLLO-WS01", "ARTEMIS-WS01", "PROMETHEUS-WS01")
-
-# First, enable GPU-PV (GPU Paravirtualization)
-foreach ($vm in $aiVMs) {
-    Set-VM -Name $vm -GpuResourceAllocationMode PerVm
-    Add-VMGpuPartitionAdapter -VMName $vm
-    Set-VMGpuPartitionAdapter -VMName $vm -MinPartitionVRAM 2GB -MaxPartitionVRAM 4GB -OptimalPartitionVRAM 3GB
-}
+# Configure GPU passthrough for AI development via Proxmox VE
+# Enable GPU passthrough for AI workstations:
+# qm set <vmid> --hostpci0 01:00,pcie=1  # Pass through GPU
+# For multiple AI VMs, consider GPU SR-IOV or virtual GPU solutions
+# Configure in Proxmox: VM → Hardware → Add → PCI Device
 ```
 
 #### **Machine Learning Environment Setup**
 
 ```powershell
-# Configure enhanced processing for ML workloads
-foreach ($vm in $aiVMs) {
-    # Increase CPU weight for AI workloads
-    Set-VMProcessor -VMName $vm -RelativeWeight 200 -EnableHostResourceProtection $false
-    
-    # Configure NUMA alignment
-    Set-VMProcessor -VMName $vm -EnableHostResourceProtection $false -ExposeVirtualizationExtensions $true
-    
-    # Optimize memory for large datasets
-    Set-VM -Name $vm -MemoryStartupBytes 8GB -CheckpointType Disabled
-}
+# Configure enhanced processing for ML workloads via Proxmox VE
+# Optimize CPU for AI workstations:
+# qm set <vmid> --cpu host,flags=+aes --numa 1
+# Allocate more resources for ML workloads:
+# qm set <vmid> --cores 8 --memory 16384
+# Disable memory ballooning for performance:
+# qm set <vmid> --balloon 0
 ```
 
 ### **Storage Optimization for Data Science**
@@ -458,30 +439,30 @@ Get-Counter "\Memory\Available MBytes", "\Memory\Pages/sec", "\Paging File(_Tota
 # 3. Add more physical RAM
 # 4. Reduce number of running VMs
 
-# Emergency memory optimization
-$vms = Get-VM | Where-Object State -eq "Running"
-foreach ($vm in $vms) {
-    if ($vm.MemoryAssigned -gt $vm.MemoryMinimum) {
-        Set-VM -Name $vm.Name -MemoryStartupBytes ($vm.MemoryAssigned * 0.8)
-    }
-}
+# Emergency memory optimization via Proxmox VE
+# Reduce memory allocation for running VMs:
+# for vm in $(qm list | grep running | awk '{print $1}'); do
+#   current_mem=$(qm config $vm | grep '^memory:' | awk '{print $2}')
+#   new_mem=$((current_mem * 80 / 100))
+#   qm set $vm --memory $new_mem
+# done
 ```
 
 #### **CPU Bottlenecks**
 
 ```powershell
 # Monitor CPU performance
-Get-Counter "\Processor(_Total)\% Processor Time", "\Hyper-V Hypervisor\Logical Processors"
+# Monitor system performance via Proxmox VE dashboard
 
-# Optimize CPU scheduling
-Set-VMProcessor -VMName "ZEUS-DC01" -RelativeWeight 200
-Set-VMProcessor -VMName "HERA-DC02" -RelativeWeight 150
+# CPU optimization via Proxmox VE
+# Set CPU priority for critical VMs:
+# qm set 200 --cpu host,flags=+aes --cpulimit 2  # Prioritize ZEUS-DC01
+# qm set 201 --cpu host,flags=+aes --cpulimit 1.5  # Prioritize HERA-DC02
 
-# Emergency CPU optimization
-$nonCriticalVMs = Get-VM | Where-Object {$_.Name -like "*-WS*"}
-foreach ($vm in $nonCriticalVMs) {
-    Set-VMProcessor -VMName $vm.Name -RelativeWeight 50
-}
+# Limit CPU for non-critical VMs:
+# for vm in $(qm list | grep WS | awk '{print $1}'); do
+#   qm set $vm --cpulimit 0.5
+# done
 ```
 
 #### **Storage Performance Issues**
@@ -527,13 +508,14 @@ Write-Host "Disk Usage: `$diskUsage%" -ForegroundColor Green
 
 # Test 4: VM Status
 Write-Host "Checking VM Status..." -ForegroundColor Yellow
-`$runningVMs = (Get-VM | Where-Object State -eq "Running").Count
-`$totalVMs = (Get-VM).Count
+# Check VM counts via Proxmox VE
+# Running VMs: qm list | grep running | wc -l
+# Total VMs: qm list | wc -l
 Write-Host "Running VMs: `$runningVMs / `$totalVMs" -ForegroundColor Green
 
 # Test 5: Network Performance
 Write-Host "Testing Network Performance..." -ForegroundColor Yellow
-`$networkSwitches = (Get-VMSwitch | Where-Object Name -like "OLYMPUS-*").Count
+# Count network bridges via Proxmox VE web interface
 Write-Host "Olympus Network Switches: `$networkSwitches" -ForegroundColor Green
 
 Write-Host "⚡ Performance validation completed! ⚡" -ForegroundColor Blue
@@ -585,7 +567,7 @@ Warning Alerts:
 - [ ] BIOS/UEFI performance settings configured
 - [ ] Windows power plan set to High Performance
 - [ ] Unnecessary services disabled
-- [ ] Hyper-V host optimizations applied
+- [ ] Proxmox VE host optimizations applied
 - [ ] Network adapters optimized
 - [ ] Storage performance validated
 
@@ -623,7 +605,7 @@ The **Olympus Systems** lab environment represents a modern, feature-rich Window
 ## 📚 **Additional Resources**
 
 - **AMD Ryzen Optimization Guide**: [Processor Performance Tuning](https://www.amd.com/en/support/kb/faq/cpu-optimization)
-- **Hyper-V Performance Best Practices**: [Microsoft Documentation](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-for-running-linux-on-hyper-v)
+- **Proxmox VE Performance Best Practices**: [Proxmox Documentation](https://pve.proxmox.com/wiki/Performance_Tweaks)
 - **NVIDIA AI Development**: [GPU Optimization for AI/ML](https://developer.nvidia.com/deep-learning-performance-engineering-and-optimization)
 - **Storage Performance**: [NVMe SSD Optimization](https://docs.microsoft.com/en-us/windows/win32/fileio/file-system-performance-tuning)
 

@@ -1,3 +1,11 @@
+# 🔒 Advanced Security Quick Start Guide
+
+**EXECUTION CONTEXT: All PowerShell commands run INSIDE Windows Server VMs (Domain Controllers)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights, Group Policy Management Tools**
+
+This guide provides comprehensive advanced security configurations for Windows Server environments running on Proxmox VE.
+
 # 🛡️ Advanced Security Features - Master Quick Start Guide
 
 ## 📋 Codebase Security Audit Summary
@@ -563,7 +571,7 @@ Get-GPPermission -Name "Advanced-Security-Policy" -All
 
 ```powershell
 # Verify VM status (both environments)
-Get-VM | Where-Object {$_.Name -match "(ASGARD|OLYMPUS)"}
+# Use Proxmox VE web interface to check VM status
 
 # Check domain connectivity
 Test-NetConnection -ComputerName "DC01" -Port 389
@@ -587,7 +595,7 @@ nslookup domain.local
 
 ```powershell
 # Environment status check
-Get-VM | Where-Object {$_.Name -match "(ASGARD|OLYMPUS)"} | Select-Object Name, State
+# Check VM status via Proxmox VE dashboard
 
 # Security audit (both environments)
 .\Scripts\AdvancedSecurityAudit.ps1
@@ -605,12 +613,13 @@ Get-VM | Where-Object {$_.Name -match "(ASGARD|OLYMPUS)"} | Select-Object Name, 
 
 ### **Prerequisites (Both Environments)**
 
-- [ ] **Hyper-V enabled** on host system
+- [ ] **Proxmox VE 8.0+** installed and configured
 - [ ] **64GB RAM minimum** (128GB recommended)
-- [ ] **Windows Server 2019+ ISO** available
-- [ ] **Windows 10/11 Client ISO** available
-- [ ] **PowerShell 5.1+** with execution policy set
-- [ ] **Administrative privileges** on host system
+- [ ] **Windows Server 2019+ ISO** uploaded to Proxmox storage
+- [ ] **Windows Server 2022 ISO** uploaded to Proxmox storage
+- [ ] **VirtIO drivers ISO** uploaded to Proxmox storage
+- [ ] **PowerShell 5.1+** with execution policy set (on Windows VMs)
+- [ ] **Administrative privileges** on Windows VMs
 
 ### **Environment Setup**
 
@@ -677,4 +686,4 @@ _This master guide provides complete manual setup procedures for both demo envir
 
 **Last Updated**: December 2024  
 **Version**: 2.0  
-**Compatibility**: Windows Server 2019/2022/2025, Windows 10/11
+**Compatibility**: Windows Server 2019/2022/2025 on Proxmox VE

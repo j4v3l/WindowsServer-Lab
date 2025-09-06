@@ -1,3 +1,11 @@
+# 🔒 Asgard Technologies - Advanced Security Quick Start
+
+**EXECUTION CONTEXT: All PowerShell commands run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights, Group Policy Management Tools**
+
+This guide provides comprehensive advanced security configurations specifically for the Asgard Technologies lab environment.
+
 # 🛡️ Advanced Security Features - Asgard Technologies Quick Start Guide
 
 ## 🎯 Overview
@@ -45,18 +53,34 @@ This guide demonstrates how to manually deploy and configure the **100+ advanced
 # Run on ODIN-DC01 as Domain Administrator
 Import-Module ActiveDirectory
 
-# Set domain password policy
+# SECURE: Enhanced domain password policy for production
 Set-ADDefaultDomainPasswordPolicy -Identity "asgard.local" `
-    -MinPasswordLength 12 `
-    -PasswordHistoryCount 24 `
-    -MaxPasswordAge (New-TimeSpan -Days 90) `
-    -MinPasswordAge (New-TimeSpan -Days 1) `
+    -MinPasswordLength 15 `
+    -PasswordHistoryCount 50 `
+    -MaxPasswordAge (New-TimeSpan -Days 60) `
+    -MinPasswordAge (New-TimeSpan -Days 7) `
     -ComplexityEnabled $true `
-    -LockoutDuration (New-TimeSpan -Minutes 30) `
-    -LockoutObservationWindow (New-TimeSpan -Minutes 30) `
-    -LockoutThreshold 5
+    -LockoutDuration (New-TimeSpan -Hours 2) `
+    -LockoutObservationWindow (New-TimeSpan -Minutes 15) `
+    -LockoutThreshold 3
 
-Write-Host "✅ Domain password policy configured successfully" -ForegroundColor Green
+# Create fine-grained password policy for administrators
+New-ADFineGrainedPasswordPolicy -Name "ASGARD-Admin-PSO" `
+    -MinPasswordLength 20 `
+    -PasswordHistoryCount 50 `
+    -MaxPasswordAge (New-TimeSpan -Days 30) `
+    -MinPasswordAge (New-TimeSpan -Days 1) `
+    -LockoutDuration (New-TimeSpan -Hours 4) `
+    -LockoutThreshold 2 `
+    -Precedence 10
+
+# Apply enhanced policy to privileged accounts
+$PrivilegedUsers = @("odin.allfather", "thor.thunderer", "heimdall.guardian")
+foreach ($User in $PrivilegedUsers) {
+    Add-ADFineGrainedPasswordPolicySubject -Identity "ASGARD-Admin-PSO" -Subjects $User
+}
+
+Write-Host "✅ SECURE: Enhanced password policies configured for production" -ForegroundColor Green
 ```
 
 #### **Step 1.2: Create Security Organizational Units**
@@ -70,14 +94,30 @@ $SecurityOUs = @(
     "OU=Quarantine,OU=Asgard Technologies,DC=asgard,DC=local"
 )
 
+# SECURE: Initialize security audit logging
+function Write-SecurityAuditLog {
+    param([string]$Action, [string]$Status, [string]$Details = "")
+    $LogEntry = @{
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Action = $Action; Status = $Status; User = $env:USERNAME; Details = $Details
+    }
+    $EventId = if ($Status -eq "SUCCESS") { 1000 } else { 1001 }
+    Write-EventLog -LogName "Application" -Source "SecurityAudit" -EventId $EventId -EntryType Information -Message ($LogEntry | ConvertTo-Json) -ErrorAction SilentlyContinue
+    if ($Status -eq "FAILED") { Write-Host "🚨 SECURITY ALERT: $Action failed - $Details" -ForegroundColor Red }
+}
+
+Register-EventLog -LogName "Application" -Source "SecurityAudit" -ErrorAction SilentlyContinue
+
 foreach ($OU in $SecurityOUs) {
     try {
         $ouName = ($OU -split ',' | Select-Object -First 1).Replace('OU=','')
         New-ADOrganizationalUnit -Path "OU=Asgard Technologies,DC=asgard,DC=local" -Name $ouName -ProtectedFromAccidentalDeletion $true
         Write-Host "✅ Created OU: $OU" -ForegroundColor Green
+        Write-SecurityAuditLog -Action "Create Security OU" -Status "SUCCESS" -Details $OU
     }
     catch {
-        Write-Warning "OU may already exist: $OU"
+        Write-SecurityAuditLog -Action "Create Security OU" -Status "FAILED" -Details "OU: $OU - Error: $($_.Exception.Message)"
+        Write-Warning "⚠️ Failed to create OU: $OU - Review security logs for details"
     }
 }
 ```
@@ -236,13 +276,19 @@ Write-Host "✅ Device control policies configured" -ForegroundColor Green
 $GPOName = "ASGARD-App-Control"
 New-GPO -Name $GPOName -Comment "Asgard Technologies - Application Control and PowerShell Security"
 
-# PowerShell execution policy
+# SECURE: Hardened PowerShell execution policy (AllSigned for production security)
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "EnableScripts" -Type DWord -Value 1
-Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "ExecutionPolicy" -Type String -Value "RemoteSigned"
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "ExecutionPolicy" -Type String -Value "AllSigned"
 
-# PowerShell logging
+# Enhanced PowerShell logging and transcription
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging" -ValueName "EnableModuleLogging" -Type DWord -Value 1
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -ValueName "EnableScriptBlockLogging" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -ValueName "EnableScriptBlockInvocationLogging" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" -ValueName "EnableTranscripting" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" -ValueName "OutputDirectory" -Type String -Value "C:\PSTranscripts"
+
+# Disable insecure PowerShell v2
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Microsoft\PowerShell\1\PowerShellEngine" -ValueName "PowerShellVersion" -Type String -Value "5.0"
 
 # Windows Store restrictions
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsStore" -ValueName "DisableStoreApps" -Type DWord -Value 1
@@ -274,17 +320,28 @@ Write-Host "⚠️  AppLocker requires additional XML rule configuration" -Foreg
 $GPOName = "ASGARD-Network-Security"
 New-GPO -Name $GPOName -Comment "Asgard Technologies - Network Security Controls"
 
-# Windows Firewall settings
+# SECURE: Advanced Windows Firewall with enhanced logging
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "EnableFirewall" -Type DWord -Value 1
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile" -ValueName "EnableFirewall" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "DefaultInboundAction" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "LogAllowedConnections" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "LogDroppedPackets" -Type DWord -Value 1
 
-# Remote Desktop restrictions
+# Enhanced RDP security hardening  
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" -ValueName "fDenyTSConnections" -Type DWord -Value 0
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -ValueName "UserAuthentication" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -ValueName "SecurityLayer" -Type DWord -Value 2
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -ValueName "MinEncryptionLevel" -Type DWord -Value 3
 
-# SMB security
+# Enhanced SMB security with encryption
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -ValueName "RequireSecuritySignature" -Type DWord -Value 1
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" -ValueName "RequireSecuritySignature" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -ValueName "EncryptSmb3Traffic" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -ValueName "RejectUnencryptedAccess" -Type DWord -Value 1
+
+# Network access restrictions
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" -ValueName "RestrictAnonymous" -Type DWord -Value 2
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" -ValueName "NoLMHash" -Type DWord -Value 1
 
 Write-Host "✅ Network security policies configured" -ForegroundColor Green
 ```

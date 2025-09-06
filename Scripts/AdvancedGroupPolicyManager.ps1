@@ -1,4 +1,8 @@
 # Advanced Group Policy Management Script
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM
+# PREREQUISITES: Domain Administrator rights, Group Policy Management Tools
+
 # Comprehensive Group Policy configuration for camera, USB, personalization, security, and more
 
 # Import required modules

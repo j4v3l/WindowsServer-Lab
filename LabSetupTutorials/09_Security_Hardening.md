@@ -57,6 +57,10 @@
 
 3. **Administrative Accounts**
 
+   **EXECUTION CONTEXT: Run INSIDE Windows Server VM (Domain Controller)**  
+   **ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+   **PREREQUISITES: Domain Administrator rights**
+
    ```powershell
    # Create separate admin accounts with secure password prompt
    $AdminPassword = Read-Host -AsSecureString -Prompt "Enter secure password for admin account"

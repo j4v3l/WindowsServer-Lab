@@ -31,7 +31,7 @@ body:
         - DHCP Server Setup
         - Group Policy Management
         - Security & Hardening
-        - Hyper-V & Virtual Machines
+        - Proxmox VE & Virtual Machines
         - PowerShell Scripts & Automation
         - Backup & Restore
         - System Monitoring
@@ -47,7 +47,7 @@ body:
     attributes:
       label: Environment Information
       description: What environment are you working with?
-      placeholder: Windows Server 2022, Windows 11, Hyper-V, VMware, etc.
+      placeholder: Windows Server 2022, Windows 11, Proxmox VE, etc.
     validations:
       required: false
 

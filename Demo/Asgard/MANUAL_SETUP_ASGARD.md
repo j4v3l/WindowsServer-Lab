@@ -1,5 +1,23 @@
 # 🏰 **ASGARD TECHNOLOGIES** - Manual Setup Guide
 
+## 📋 **EXECUTION CONTEXT GUIDE**
+
+**CRITICAL:** This guide contains commands that must be run on different systems. Pay attention to the execution context for each command:
+
+- **[PROXMOX HOST]** - Commands run on the Proxmox VE host via SSH or console
+- **[SERVER VM]** - Commands run inside Windows Server VMs (domain controllers, file servers, etc.)
+- **[CLIENT VM]** - Commands run inside Windows client VMs (workstations)
+
+### **Access Methods:**
+
+- **Proxmox Host:** SSH to Proxmox VE with root privileges
+- **Server VMs:** RDP, Console, or PowerShell Direct with Administrator/Domain Admin privileges
+- **Client VMs:** Local console or RDP with Local Administrator privileges
+
+### **Prerequisites Verification:**
+
+Before running any commands, ensure all prerequisites are met as listed in each section.
+
 ## 📋 **Overview**
 
 This manual setup guide provides step-by-step instructions for deploying the Asgard Technologies Windows Server lab environment without using the automated deployment script. This approach gives you complete control over the installation process and allows for customization at each step.
@@ -29,11 +47,11 @@ This manual setup guide provides step-by-step instructions for deploying the Asg
 
 ### **Software Requirements**
 
-- **Windows 10/11 Pro or Enterprise**
-- **Hyper-V Feature Enabled**
+- **Proxmox VE 8.0+ Environment Ready**
 - **Windows Server 2019/2022/2025 ISO**
 - **Windows 10/11 Client ISO**
-- **PowerShell 5.1 or later**
+- **VirtIO drivers ISO for optimal Windows performance**
+- **SSH access to Proxmox host (optional)**
 
 ### **Network Requirements**
 
@@ -44,107 +62,91 @@ This manual setup guide provides step-by-step instructions for deploying the Asg
 
 ## 🚀 **Phase 1: Environment Preparation**
 
-### **Step 1.1: Enable Hyper-V**
+### **Step 1.1: Prepare Proxmox VE Environment**
 
-```powershell
-# Run as Administrator
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All
-
-# Alternative: Using DISM
-DISM /Online /Enable-Feature /All /FeatureName:Microsoft-Hyper-V
-
-# Restart required
-Restart-Computer
+```bash
+# Create VMs using Proxmox VE web interface
+# Follow the Proxmox setup guides for VM creation
+# Ensure adequate resources are allocated:
+# - Domain Controller: 8GB RAM, 4 vCPU, 80GB disk
+# - File Server: 6GB RAM, 3 vCPU, 120GB disk
+# - Web Server: 6GB RAM, 3 vCPU, 80GB disk
 ```
 
-### **Step 1.2: Create Directory Structure**
+### **Step 1.2: Upload ISO Files to Proxmox**
 
-```powershell
-# Create main VM directory
-New-Item -Path "C:\VMs\Asgard" -ItemType Directory -Force
+```bash
+# Upload ISO files to Proxmox storage
+# Method 1: Via web interface
+# Navigate to: Datacenter > [Node] > local (storage) > ISO Images > Upload
 
-# Create subdirectories for organization
-New-Item -Path "C:\VMs\Asgard\Servers" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Asgard\Workstations" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Asgard\ISOs" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Asgard\Scripts" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Asgard\Documentation" -ItemType Directory -Force
+# Method 2: Via command line (on Proxmox host)
+cd /var/lib/vz/template/iso/
+# Upload your ISO files here:
+# - WindowsServer2022.iso (or your version)
+# - Windows11.iso (for client VMs)
+# - virtio-win.iso (VirtIO drivers)
 ```
 
-### **Step 1.3: Prepare ISO Files**
+### **Step 1.3: Configure Proxmox Storage**
 
-1. **Download Windows Server ISO**
+1. **Verify Local Storage**
+   - Ensure adequate space in `local-lvm` for VM disks
+   - Recommended: 500GB+ free space
 
-   - Windows Server 2019/2022/2025
-   - Place in: `C:\VMs\Asgard\ISOs\WindowsServer.iso`
+2. **Optional: Configure Additional Storage**
 
-2. **Download Windows Client ISO**
-   - Windows 10/11 (22H2 or later recommended)
-   - Place in: `C:\VMs\Asgard\ISOs\Windows10.iso`
+   ```bash
+   # Add additional storage if needed
+   # Via web interface: Datacenter > Storage > Add
+   # Configure shared storage for VM migration (optional)
+   ```
 
 ---
 
 ## 🌐 **Phase 2: Network Infrastructure Setup**
 
-### **Step 2.1: Create Virtual Switches**
+### **Step 2.1: Create Network Bridges in Proxmox VE**
 
 #### **Production Network (External)**
 
-```powershell
-# Get available physical adapters
-Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" }
-
-# Create external switch (replace with your adapter name)
-New-VMSwitch -Name "ASGARD-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
+```bash
+# Use Proxmox VE web interface to create network bridges
+# Navigate to: Datacenter > [Node] > System > Network
+# Create bridge vmbr0 for production network with physical interface
+# This provides internet access for VMs
 ```
 
 #### **Management Network (Internal)**
 
-```powershell
-# Create internal switch
-New-VMSwitch -Name "ASGARD-Management" -SwitchType Internal
-
-# Configure IP for host management
-$mgmtAdapter = Get-NetAdapter -Name "vEthernet (ASGARD-Management)"
-New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceIndex $mgmtAdapter.ifIndex
+```bash
+# Create bridge vmbr1 for management network
+# Configure as internal bridge without physical interface
+# IP: 10.0.100.1/24 for host management access
 ```
 
 #### **Client Network (Internal)**
 
-```powershell
-# Create client network switch
-New-VMSwitch -Name "ASGARD-Clients" -SwitchType Internal
-
-# Configure IP for host
-$clientAdapter = Get-NetAdapter -Name "vEthernet (ASGARD-Clients)"
-New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceIndex $clientAdapter.ifIndex
+```bash
+# Create bridge vmbr2 for client network
+# Configure as internal bridge
+# IP: 10.0.20.1/22 for client VMs
 ```
 
 #### **DMZ Network (Private)**
 
-```powershell
-# Create DMZ switch (isolated)
-New-VMSwitch -Name "ASGARD-DMZ" -SwitchType Private
-```
-
-#### **Configure NAT**
-
-```powershell
-# Create NAT for internal networks
-New-NetNat -Name "ASGARD-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8
+```bash
+# Create bridge vmbr3 for DMZ
+# Configure as isolated bridge for web servers
 ```
 
 ### **Step 2.2: Verify Network Configuration**
 
-```powershell
-# List all VM switches
-Get-VMSwitch | Format-Table Name, SwitchType, NetAdapterInterfaceDescription
-
-# Verify NAT configuration
-Get-NetNat
-
-# Check IP configurations
-Get-NetIPAddress | Where-Object { $_.InterfaceAlias -like "*ASGARD*" }
+```bash
+# Check network bridges on Proxmox host
+ip link show | grep vmbr
+# Verify bridge configurations
+brctl show
 ```
 
 ---
@@ -153,43 +155,51 @@ Get-NetIPAddress | Where-Object { $_.InterfaceAlias -like "*ASGARD*" }
 
 ### **Step 3.1: Create Primary Domain Controller (ODIN-DC01)**
 
-#### **Create VM**
+#### **Create VM using Proxmox VE Web Interface**
 
-```powershell
-# Define VM specifications
-$VMName = "ODIN-DC01"
-$VMPath = "C:\VMs\Asgard\Servers\$VMName"
-$Memory = 8GB
-$VHDSize = 80GB
-$CPUCount = 4
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **General Tab**:
+   - VM ID: 100
+   - Name: ODIN-DC01
+   - Resource Pool: (optional)
 
-# Create VM
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+3. **OS Tab**:
+   - Use CD/DVD disc image file (iso)
+   - Storage: local
+   - ISO image: WindowsServer2022.iso
 
-# Create and attach VHD
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+4. **System Tab**:
+   - Machine: q35
+   - BIOS: OVMF (UEFI)
+   - Add EFI Disk: Yes
+   - SCSI Controller: VirtIO SCSI
 
-# Configure network adapters
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Management" -Name "Management"
+5. **Hard Disk Tab**:
+   - Bus/Device: SCSI 0
+   - Storage: local-lvm
+   - Disk size: 80 GB
+   - Cache: Write back
+   - Discard: Yes
 
-# Attach ISO
-$ISOPath = "C:\VMs\Asgard\ISOs\WindowsServer.iso"
-Set-VMDvdDrive -VMName $VMName -Path $ISOPath
+6. **CPU Tab**:
+   - Cores: 4
+   - Type: host
 
-# Configure boot order
-$VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-$VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-```
+7. **Memory Tab**:
+   - Memory: 8192 MB
+
+8. **Network Tab**:
+   - Bridge: vmbr0 (Production)
+   - Model: VirtIO (paravirtualized)
+
+9. **Add Second Network Interface**:
+   - Bridge: vmbr1 (Management)
+   - Model: VirtIO
 
 #### **Install Windows Server**
 
-1. **Start VM**: `Start-VM -Name "ODIN-DC01"`
-2. **Connect**: Use Hyper-V Manager or `vmconnect localhost "ODIN-DC01"`
+1. **Start VM**: Click Start button in Proxmox web interface
+2. **Connect**: Use web console or VNC viewer
 3. **Install Windows Server** with Desktop Experience
 4. **Configure Basic Settings**:
    - Computer Name: `ODIN-DC01`
@@ -201,7 +211,10 @@ Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 #### **Promote to Domain Controller**
 
 ```powershell
-# Run on ODIN-DC01 after initial setup
+# [SERVER VM] - Run on ODIN-DC01 after initial Windows Server installation
+# EXECUTION CONTEXT: PowerShell session with Administrator privileges on ODIN-DC01
+# PREREQUISITES: Windows Server installed, network configured, system updated
+
 Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 
 # Import AD DS module
@@ -209,7 +222,7 @@ Import-Module ADDSDeployment
 
 # Create new forest
 $DomainName = "asgard.local"
-$SafeModePassword = ConvertTo-SecureString "YourSecurePassword123!" -AsPlainText -Force
+$SafeModePassword = ConvertTo-SecureString "[ADMIN_MUST_SET_SECURE_PASSWORD]" -AsPlainText -Force
 
 Install-ADDSForest `
     -CreateDnsDelegation:$false `
@@ -228,32 +241,16 @@ Install-ADDSForest `
 
 ### **Step 3.2: Create Secondary Domain Controller (FRIGG-DC02)**
 
-#### **Create VM**
+#### **Create VM using Proxmox VE Web Interface**
 
-```powershell
-$VMName = "FRIGG-DC02"
-$VMPath = "C:\VMs\Asgard\Servers\$VMName"
-$Memory = 6GB
-$VHDSize = 60GB
-$CPUCount = 3
-
-# Create VM (same process as ODIN-DC01)
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
-
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
-
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
-
-$VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-$VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-```
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 101
+   - Name: FRIGG-DC02
+   - Memory: 6144 MB
+   - CPU Cores: 3
+   - Disk: 60 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management)
 
 #### **Install and Configure**
 
@@ -266,37 +263,49 @@ Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
 
 ### **Step 3.3: Create File Server (HEIMDALL-FS01)**
 
-#### **Create VM**
+#### **Create VM using Proxmox VE Web Interface**
 
-```powershell
-$VMName = "HEIMDALL-FS01"
-$VMPath = "C:\VMs\Asgard\Servers\$VMName"
-$Memory = 8GB
-$VHDSize = 120GB
-$CPUCount = 4
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 102
+   - Name: HEIMDALL-FS01
+   - Memory: 8192 MB
+   - CPU Cores: 4
+   - Disk: 120 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management)
 
-# Create VM
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+3. **Or via Command Line**:
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
-
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
-
-$VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-$VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-```
+   ```bash
+   # [PROXMOX HOST] - Create file server VM using Proxmox CLI
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+   # PREREQUISITES: ISO files uploaded, storage configured, network bridges created
+   
+   qm create 102 \
+     --name "HEIMDALL-FS01" \
+     --memory 8192 \
+     --cores 4 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:120,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 #### **Configure File Server Role**
 
 ```powershell
-# Run on HEIMDALL-FS01 after domain join
+# [SERVER VM] - Run on HEIMDALL-FS01 after domain join
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on HEIMDALL-FS01
+# PREREQUISITES: VM joined to asgard.local domain, Windows Server installed
+
 Install-WindowsFeature -Name File-Services -IncludeManagementTools
 Install-WindowsFeature -Name FS-FileServer -IncludeManagementTools
 Install-WindowsFeature -Name FS-DFS-Namespace -IncludeManagementTools
@@ -305,38 +314,50 @@ Install-WindowsFeature -Name FS-DFS-Replication -IncludeManagementTools
 
 ### **Step 3.4: Create Web Server (BALDER-WEB01)**
 
-#### **Create VM**
+#### **Create VM using Proxmox VE Web Interface**
 
-```powershell
-$VMName = "BALDER-WEB01"
-$VMPath = "C:\VMs\Asgard\Servers\$VMName"
-$Memory = 6GB
-$VHDSize = 80GB
-$CPUCount = 3
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 103
+   - Name: BALDER-WEB01
+   - Memory: 6144 MB
+   - CPU Cores: 3
+   - Disk: 80 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management) + vmbr3 (DMZ)
 
-# Create VM (follow same pattern)
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+3. **Or via Command Line**:
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
-
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-DMZ" -Name "DMZ"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
-
-$VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-$VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-```
+   ```bash
+   # [PROXMOX HOST] - Create web server VM with DMZ access
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+   # PREREQUISITES: ISO files uploaded, network bridges vmbr0, vmbr1, vmbr3 created
+   
+   qm create 103 \
+     --name "BALDER-WEB01" \
+     --memory 6144 \
+     --cores 3 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:80,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --net2 virtio,bridge=vmbr3 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 #### **Configure IIS and Web Services**
 
 ```powershell
-# Run on BALDER-WEB01 after domain join
+# [SERVER VM] - Run on BALDER-WEB01 after domain join
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on BALDER-WEB01
+# PREREQUISITES: VM joined to asgard.local domain, Windows Server installed
+
 Install-WindowsFeature -Name Web-Server -IncludeManagementTools
 Install-WindowsFeature -Name Web-Asp-Net45 -IncludeManagementTools
 Install-WindowsFeature -Name Web-Net-Ext45 -IncludeManagementTools
@@ -344,37 +365,49 @@ Install-WindowsFeature -Name Web-Net-Ext45 -IncludeManagementTools
 
 ### **Step 3.5: Create Security Server (VIDAR-SEC01)**
 
-#### **Create VM**
+#### **Create VM using Proxmox VE Web Interface**
 
-```powershell
-$VMName = "VIDAR-SEC01"
-$VMPath = "C:\VMs\Asgard\Servers\$VMName"
-$Memory = 8GB
-$VHDSize = 100GB
-$CPUCount = 4
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 104
+   - Name: VIDAR-SEC01
+   - Memory: 8192 MB
+   - CPU Cores: 4
+   - Disk: 100 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management)
 
-# Create VM (follow same pattern)
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+3. **Or via Command Line**:
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
-
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\WindowsServer.iso"
-
-$VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-$VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-```
+   ```bash
+   # [PROXMOX HOST] - Create security server VM
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+   # PREREQUISITES: ISO files uploaded, network bridges vmbr0, vmbr1 created
+   
+   qm create 104 \
+     --name "VIDAR-SEC01" \
+     --memory 8192 \
+     --cores 4 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:100,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 #### **Configure WSUS and Security Features**
 
 ```powershell
-# Run on VIDAR-SEC01 after domain join
+# [SERVER VM] - Run on VIDAR-SEC01 after domain join
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on VIDAR-SEC01
+# PREREQUISITES: VM joined to asgard.local domain, Windows Server installed
+
 Install-WindowsFeature -Name UpdateServices -IncludeManagementTools
 Install-WindowsFeature -Name RSAT-AD-Tools -IncludeManagementTools
 ```
@@ -385,98 +418,494 @@ Install-WindowsFeature -Name RSAT-AD-Tools -IncludeManagementTools
 
 ### **Step 4.1: Create Workstation Template**
 
-**IMPORTANT:** First, run the following PowerShell function definition to create the `New-AsgardWorkstation` function. Copy and paste this entire function into your PowerShell session and press Enter:
+#### **Workstation VM Template (via Proxmox VE)**
 
-```powershell
-function New-AsgardWorkstation {
-    param(
-        [string]$VMName,
-        [int64]$Memory = 4GB,
-        [int64]$VHDSize = 60GB,
-        [int]$CPUCount = 2,
-        [string]$Description = ""
-    )
+All workstations will follow this template configuration:
 
-    $VMPath = "C:\VMs\Asgard\Workstations\$VMName"
+```bash
+# [PROXMOX HOST] - Template for creating Asgard workstations
+# EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+# VM IDs: 110-129 (20 workstations)
+# Standard configuration:
+# - Memory: 4096 MB (adjustable per workstation)
+# - CPU: 2 cores (adjustable per workstation)
+# - Disk: 60 GB (adjustable per workstation)
+# - Network: vmbr2 (Client network)
+# - OS: Windows 10/11
 
-    # Create VM
-    New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-    Set-VM -Name $VMName -ProcessorCount $CPUCount -Notes $Description
-
-    # Create and attach VHD
-    $VHDPath = "$VMPath\$VMName.vhdx"
-    New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-    Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
-
-    # Configure network
-    Add-VMNetworkAdapter -VMName $VMName -SwitchName "ASGARD-Clients" -Name "Clients"
-
-    # Attach client ISO
-    Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Asgard\ISOs\Windows10.iso"
-
-    # Configure boot order
-    $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-    $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-    Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-
-    Write-Host "Created workstation: $VMName" -ForegroundColor Green
-}
+# Example template command:
+qm create [VMID] \
+  --name "[VM_NAME]" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
-
-**✅ Verify Function Creation:** After running the above function, you should see no errors. The function is now available for use.
 
 ### **Step 4.2: Create All Workstations**
 
-**Now you can use the `New-AsgardWorkstation` function to create all workstations. Run each department's commands in sequence:**
-
 #### **IT Operations Department (Odin's Realm)**
 
-```powershell
-New-AsgardWorkstation -VMName "ODIN-WS01" -Memory 6GB -VHDSize 80GB -Description "Odin's Command Center"
-New-AsgardWorkstation -VMName "THOR-WS01" -Memory 4GB -VHDSize 60GB -Description "Thor's Thunder Station"
-New-AsgardWorkstation -VMName "LOKI-WS01" -Memory 3GB -VHDSize 60GB -Description "Loki's Mischief Machine"
-New-AsgardWorkstation -VMName "HERMOD-WS01" -Memory 3GB -VHDSize 60GB -Description "Hermod's Messenger Terminal"
-New-AsgardWorkstation -VMName "TYR-WS01" -Memory 3GB -VHDSize 60GB -Description "Tyr's Brave Station"
+```bash
+# Create IT Operations workstations via Proxmox VE
+
+# ODIN-WS01 (Command Center)
+qm create 110 \
+  --name "ODIN-WS01" \
+  --memory 6144 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# THOR-WS01 (Thunder Station)
+qm create 111 \
+  --name "THOR-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# LOKI-WS01 (Mischief Machine)
+qm create 112 \
+  --name "LOKI-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HERMOD-WS01 (Messenger Terminal)
+qm create 113 \
+  --name "HERMOD-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# TYR-WS01 (Brave Station)
+qm create 114 \
+  --name "TYR-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 #### **Cybersecurity Department (Heimdall's Watch)**
 
-```powershell
-New-AsgardWorkstation -VMName "HEIMDALL-WS01" -Memory 6GB -VHDSize 80GB -Description "Heimdall's Watchtower"
-New-AsgardWorkstation -VMName "MIMIR-WS01" -Memory 4GB -VHDSize 60GB -Description "Mimir's Wisdom Terminal"
-New-AsgardWorkstation -VMName "HUGINN-WS01" -Memory 3GB -VHDSize 60GB -Description "Huginn's Surveillance Station"
-New-AsgardWorkstation -VMName "MUNINN-WS01" -Memory 3GB -VHDSize 60GB -Description "Muninn's Memory Bank"
-New-AsgardWorkstation -VMName "FENRIR-WS01" -Memory 4GB -VHDSize 60GB -Description "Fenrir's Attack Lab"
+```bash
+# Create Cybersecurity workstations via Proxmox VE
+
+# HEIMDALL-WS01 (Watchtower)
+qm create 115 \
+  --name "HEIMDALL-WS01" \
+  --memory 6144 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# MIMIR-WS01 (Wisdom Terminal)
+qm create 116 \
+  --name "MIMIR-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HUGINN-WS01 (Surveillance Station)
+qm create 117 \
+  --name "HUGINN-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# MUNINN-WS01 (Memory Bank)
+qm create 118 \
+  --name "MUNINN-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# FENRIR-WS01 (Attack Lab)
+qm create 119 \
+  --name "FENRIR-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 #### **Research & Development (Freya's Workshop)**
 
-```powershell
-New-AsgardWorkstation -VMName "FREYA-WS01" -Memory 6GB -VHDSize 100GB -Description "Freya's Innovation Lab"
-New-AsgardWorkstation -VMName "NJORD-WS01" -Memory 4GB -VHDSize 80GB -Description "Njord's Wind Tunnel"
-New-AsgardWorkstation -VMName "FREY-WS01" -Memory 4GB -VHDSize 80GB -Description "Frey's Prosperity Engine"
-New-AsgardWorkstation -VMName "JORMUNGANDR-WS01" -Memory 4GB -VHDSize 80GB -Description "Jormungandr's Data Lake"
-New-AsgardWorkstation -VMName "SLEIPNIR-WS01" -Memory 4GB -VHDSize 80GB -Description "Sleipnir's Speed Demon"
+```bash
+# Create R&D workstations via Proxmox VE
+
+# FREYA-WS01 (Innovation Lab)
+qm create 120 \
+  --name "FREYA-WS01" \
+  --memory 6144 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:100,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# NJORD-WS01 (Wind Tunnel)
+qm create 121 \
+  --name "NJORD-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# FREY-WS01 (Prosperity Engine)
+qm create 122 \
+  --name "FREY-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# JORMUNGANDR-WS01 (Data Lake)
+qm create 123 \
+  --name "JORMUNGANDR-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# SLEIPNIR-WS01 (Speed Demon)
+qm create 124 \
+  --name "SLEIPNIR-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 #### **Finance & Administration (Frigg's Treasury)**
 
-```powershell
-New-AsgardWorkstation -VMName "FRIGG-WS01" -Memory 4GB -VHDSize 60GB -Description "Frigg's Treasury Terminal"
-New-AsgardWorkstation -VMName "EIR-WS01" -Memory 3GB -VHDSize 60GB -Description "Eir's Healing Touch"
-New-AsgardWorkstation -VMName "SAGA-WS01" -Memory 3GB -VHDSize 60GB -Description "Saga's Story Keeper"
-New-AsgardWorkstation -VMName "VAR-WS01" -Memory 3GB -VHDSize 60GB -Description "Var's Oath Guardian"
-New-AsgardWorkstation -VMName "FORSETI-WS01" -Memory 3GB -VHDSize 60GB -Description "Forseti's Justice Scale"
+```bash
+# Create Finance & Administration workstations via Proxmox VE
+
+# FRIGG-WS01 (Treasury Terminal)
+qm create 125 \
+  --name "FRIGG-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# EIR-WS01 (Healing Touch)
+qm create 126 \
+  --name "EIR-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# SAGA-WS01 (Story Keeper)
+qm create 127 \
+  --name "SAGA-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# VAR-WS01 (Oath Guardian)
+qm create 128 \
+  --name "VAR-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# FORSETI-WS01 (Justice Scale)
+qm create 129 \
+  --name "FORSETI-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 #### **Human Resources (Sif's Domain)**
 
-```powershell
-New-AsgardWorkstation -VMName "SIF-WS01" -Memory 4GB -VHDSize 60GB -Description "Sif's Golden Gateway"
-New-AsgardWorkstation -VMName "IDUN-WS01" -Memory 3GB -VHDSize 60GB -Description "Idun's Eternal Garden"
-New-AsgardWorkstation -VMName "BRAGI-WS01" -Memory 3GB -VHDSize 60GB -Description "Bragi's Poetic Portal"
-New-AsgardWorkstation -VMName "HEL-WS01" -Memory 3GB -VHDSize 60GB -Description "Hel's Dual Nature"
-New-AsgardWorkstation -VMName "SIGYN-WS01" -Memory 3GB -VHDSize 60GB -Description "Sigyn's Faithful Watch"
+```bash
+# Create Human Resources workstations via Proxmox VE
+
+# SIF-WS01 (Golden Gateway)
+qm create 130 \
+  --name "SIF-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# IDUN-WS01 (Eternal Garden)
+qm create 131 \
+  --name "IDUN-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# BRAGI-WS01 (Poetic Portal)
+qm create 132 \
+  --name "BRAGI-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HEL-WS01 (Dual Nature)
+qm create 133 \
+  --name "HEL-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# SIGYN-WS01 (Faithful Watch)
+qm create 134 \
+  --name "SIGYN-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ---
@@ -533,6 +962,10 @@ foreach ($ws in $workstations) {
 ### **Step 5.2: Create Security Groups**
 
 ```powershell
+# [SERVER VM] - Run on ODIN-DC01 (Primary Domain Controller)
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on ODIN-DC01
+# PREREQUISITES: Active Directory Domain Services installed and configured
+
 # Department groups
 New-ADGroup -Name "IT-Operations" -GroupScope Global -GroupCategory Security -Path "OU=IT Operations,$AsgardOU"
 New-ADGroup -Name "Cybersecurity" -GroupScope Global -GroupCategory Security -Path "OU=Cybersecurity,$AsgardOU"
@@ -551,8 +984,12 @@ New-ADGroup -Name "Workstation Users" -GroupScope Global -GroupCategory Security
 #### **IT Operations Department**
 
 ```powershell
+# [SERVER VM] - Run on ODIN-DC01 (Primary Domain Controller)  
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on ODIN-DC01
+# PREREQUISITES: Active Directory OUs and groups created
+
 $ITOperationsOU = "OU=IT Operations,$AsgardOU"
-$SecurePassword = ConvertTo-SecureString "TempPassword123!" -AsPlainText -Force
+$SecurePassword = ConvertTo-SecureString "[ADMIN_MUST_SET_SECURE_PASSWORD]" -AsPlainText -Force
 
 # Create users
 New-ADUser -Name "Odin Allfather" -SamAccountName "odin.allfather" -UserPrincipalName "odin.allfather@asgard.local" -Path $ITOperationsOU -AccountPassword $SecurePassword -Enabled $true -ChangePasswordAtLogon $true -Title "CTO & Domain Admin" -Department "IT Operations"
@@ -583,6 +1020,10 @@ _Note: Due to space constraints, the full user creation script would continue wi
 On ODIN-DC01:
 
 ```powershell
+# [SERVER VM] - Run on ODIN-DC01 (Primary Domain Controller)
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on ODIN-DC01  
+# PREREQUISITES: DNS Server role installed, domain functional
+
 # Create DNS zones for internal services
 Add-DnsServerPrimaryZone -Name "services.asgard.local" -ZoneFile "services.asgard.local.dns" -DynamicUpdate Secure
 
@@ -601,6 +1042,10 @@ Add-DnsServerResourceRecordCName -ZoneName "asgard.local" -Name "webserver" -Hos
 On ODIN-DC01:
 
 ```powershell
+# [SERVER VM] - Run on ODIN-DC01 (Primary Domain Controller)
+# EXECUTION CONTEXT: PowerShell session with Domain Administrator privileges on ODIN-DC01
+# PREREQUISITES: Domain controller functional, network configured
+
 # Install DHCP role
 Install-WindowsFeature -Name DHCP -IncludeManagementTools
 
@@ -652,7 +1097,7 @@ Set-ADDefaultDomainPasswordPolicy -Identity "asgard.local" -LockoutDuration 30 -
 ### **Step 8.1: Network Connectivity Tests**
 
 ```powershell
-# Test from host machine
+# Test from external machine or Proxmox VE host
 Test-NetConnection -ComputerName "10.0.10.10" -Port 53  # DNS to ODIN-DC01
 Test-NetConnection -ComputerName "10.0.10.20" -Port 445  # SMB to HEIMDALL-FS01
 Test-NetConnection -ComputerName "10.0.10.30" -Port 80   # HTTP to BALDER-WEB01
@@ -684,10 +1129,15 @@ For each workstation:
 
 1. **Install Windows 10/11**
 2. **Join to Domain**:
-   ```cmd
-   # Run as Administrator
+
+   ```powershell
+   # [CLIENT VM] - Run on each workstation as Local Administrator
+   # EXECUTION CONTEXT: PowerShell session with Local Administrator privileges on client workstation
+   # PREREQUISITES: Windows 10/11 installed, network connectivity to domain controller
+   
    Add-Computer -DomainName "asgard.local" -Credential (Get-Credential -UserName "odin.allfather" -Message "Enter domain credentials") -Restart
    ```
+
 3. **Configure Network Settings**:
    - Use DHCP for IP configuration
    - Verify DNS resolution to `asgard.local`

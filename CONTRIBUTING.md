@@ -11,8 +11,8 @@ This repository provides comprehensive documentation and scripts for setting up 
 ### Prerequisites
 
 - PowerShell 5.1 or later
-- Windows 10/11 Pro/Enterprise or Windows Server
-- Hyper-V enabled (for virtualization labs)
+- Proxmox VE 8.0+ for virtualization platform
+- Proxmox VE environment (for virtualization labs)
 - Git for version control
 
 ### Local Development Setup
@@ -51,7 +51,7 @@ function New-LabVirtualMachine {
     .SYNOPSIS
         Creates a new virtual machine for the lab environment
     .DESCRIPTION
-        This function creates a new Hyper-V virtual machine with standardized settings for lab use
+        This function creates a new Proxmox VM with standardized settings for lab use
     .PARAMETER VMName
         Name of the virtual machine to create
     .EXAMPLE
@@ -148,7 +148,7 @@ WindowsServer-Lab/
 
    ```
    Add: New DHCP setup automation script
-   Fix: Correct network configuration in Hyper-V setup
+   Fix: Correct network configuration in Proxmox setup
    Update: Add Windows Server 2022 compatibility notes
    ```
 
@@ -253,7 +253,7 @@ Examples:
 
 ```
 feat(scripts): add DHCP server automation script
-fix(hyper-v): resolve network adapter configuration issue
+fix(proxmox): resolve network adapter configuration issue
 docs(tutorials): update AD setup guide for Server 2022
 ```
 

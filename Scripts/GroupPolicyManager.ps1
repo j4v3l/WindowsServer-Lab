@@ -1,4 +1,8 @@
 # Group Policy Management Script
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM
+# PREREQUISITES: Domain Administrator rights, Group Policy Management Tools
+
 # This script configures various Group Policy settings for security and standardization
 
 # Import required modules

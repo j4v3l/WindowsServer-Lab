@@ -134,14 +134,14 @@ ipconfig /registerdns
 
 ```powershell
 # [HOST] Production Network
-New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
+# Create production bridge vmbr0 via Proxmox VE web interface
 
 # [HOST] Management Network
-New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal
+# Create management bridge vmbr1 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceAlias "vEthernet (OLYMPUS-Management)"
 
 # [HOST] Client Network
-New-VMSwitch -Name "OLYMPUS-Clients" -SwitchType Internal
+# Create client bridge vmbr2 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceAlias "vEthernet (OLYMPUS-Clients)"
 
 # [HOST] NAT Configuration
@@ -517,47 +517,46 @@ function New-OlympusAzureVPN {
 # Get-AzStorageAccount | Select StorageAccountName, Location, SkuName | Format-Table -AutoSize
 ```
 
-### **Hyper-V Divine Virtualization**
+### **Proxmox VE Divine Virtualization**
 
 ```powershell
-# Divine VM dashboard
+# Divine VM dashboard via Proxmox VE
 Write-Host "🏛️ Divine Virtual Machine Status:" -ForegroundColor Magenta
-Get-VM | Select Name, State, @{n="CPU Divine Power";e={"$($_.CPUUsage)%"}}, @{n="Memory(GB)";e={[math]::Round($_.MemoryAssigned/1GB,2)}}, @{n="Uptime";e={$_.Uptime}}, @{n="Divine Status";e={if($_.State -eq "Running"){"⚡ ACTIVE"}else{"💤 DORMANT"}}} | Format-Table -AutoSize
+Write-Host "Use Proxmox VE web interface for real-time VM monitoring" -ForegroundColor Cyan
+Write-Host "CLI Commands:" -ForegroundColor Yellow
+Write-Host "  qm list                    # List all VMs with status" -ForegroundColor Green
+Write-Host "  qm status <vmid>           # Detailed VM status" -ForegroundColor Green
+Write-Host "  qm monitor <vmid>          # Enter VM monitor mode" -ForegroundColor Green
 
-# Divine VM performance monitoring
+# Divine VM performance monitoring via Proxmox VE
 Write-Host "📊 Divine VM Performance Metrics:" -ForegroundColor Yellow
-Get-VM | Where-Object {$_.State -eq "Running"} | ForEach-Object {
-    $VMName = $_.Name
-    $CPU = Get-VMProcessor -VMName $VMName
-    $Memory = Get-VMMemory -VMName $VMName
-    [PSCustomObject]@{
-        "Divine VM" = $VMName
-        "CPU Usage %" = $CPU.CPUUsage
-        "Memory Assigned (GB)" = [math]::Round($Memory.Assigned/1GB,2)
-        "Memory Demand %" = [math]::Round(($Memory.Assigned/$Memory.Maximum)*100,2)
-        "Divine Power Level" = if($CPU.CPUUsage -gt 80){"🔥 HIGH"}elseif($CPU.CPUUsage -gt 50){"⚡ MEDIUM"}else{"💫 LOW"}
-    }
-} | Format-Table -AutoSize
+Write-Host "Monitor performance via Proxmox VE web interface:" -ForegroundColor Cyan
+Write-Host "  Dashboard → Summary → VM Resource Usage" -ForegroundColor Green
+Write-Host "  VM → Summary → Performance graphs" -ForegroundColor Green
+Write-Host "Host performance: htop (on Proxmox host)" -ForegroundColor Green
 
 # Divine VM mass operations
 Write-Host "🎭 Divine VM Mass Operations:" -ForegroundColor Blue
 
-# Awaken all dormant VMs
-# Get-VM | Where-Object {$_.State -eq "Off"} | Start-VM -Verbose
+# Awaken all dormant VMs via Proxmox VE
+Write-Host "⚡ Starting all stopped VMs:" -ForegroundColor Blue
+Write-Host "  for vm in \$(qm list | grep stopped | awk '{print \$1}'); do qm start \$vm; done" -ForegroundColor Green
 
-# Create divine snapshots
-Get-VM | Where-Object {$_.State -eq "Running"} | ForEach-Object {
-    $SnapshotName = "Divine-Backup-$(Get-Date -Format 'yyyy-MM-dd-HHmm')"
-    Write-Host "📸 Creating divine snapshot for $($_.Name): $SnapshotName" -ForegroundColor Green
-    # Checkpoint-VM -Name $_.Name -SnapshotName $SnapshotName
-}
+# Create divine snapshots via Proxmox VE
+Write-Host "📸 Creating divine snapshots:" -ForegroundColor Green
+Write-Host "Via web interface: VM → Snapshots → Take Snapshot" -ForegroundColor Cyan
+Write-Host "Via CLI: qm snapshot <vmid> Divine-Backup-\$(date +%Y-%m-%d-%H%M)" -ForegroundColor Green
 
-# Divine VM network analysis
+# Divine VM network analysis via Proxmox VE
 Write-Host "🌐 Divine VM Network Configuration:" -ForegroundColor Cyan
-Get-VM | Get-VMNetworkAdapter | Select VMName, SwitchName, MacAddress, @{n="Divine IPs";e={$_.IPAddresses -join ", "}}, @{n="VLAN";e={$_.VlanSetting.AccessVlanId}} | Format-Table -AutoSize
+Write-Host "Check network config via Proxmox web interface:" -ForegroundColor Yellow
+Write-Host "  VM → Hardware → Network Device" -ForegroundColor Green
+Write-Host "  Node → Network → View bridge configuration" -ForegroundColor Green
 
-# Export divine VMs for backup
-# Get-VM | Export-VM -Path "C:\DivineBackups" -Verbose
+# Export divine VMs for backup via Proxmox VE
+Write-Host "💾 Divine VM Backup:" -ForegroundColor Magenta
+Write-Host "  vzdump <vmid> --storage local --compress gzip" -ForegroundColor Green
+Write-Host "  Or use Datacenter → Backup for scheduled backups" -ForegroundColor Cyan
 ```
 
 ### **File System & Divine Storage Management**
@@ -728,7 +727,8 @@ Set-PSReadLineKeyHandler -Key Ctrl+Shift+z -ScriptBlock { Get-ADUser -Filter * |
 # Divine ISE enhancements
 if($psISE) {
     $psISE.CurrentPowerShellTab.AddOnsMenu.Submenus.Add("Divine User Lookup", {Get-ADUser -Filter * | Out-GridView}, "Ctrl+Shift+U")
-    $psISE.CurrentPowerShellTab.AddOnsMenu.Submenus.Add("Divine VM Status", {Get-VM | Out-GridView}, "Ctrl+Shift+V")
+    # Divine VM Status via Proxmox VE web interface
+# Access via: https://proxmox-host:8006 → VM Status Dashboard
 }
 
 # Divine remote session to any realm

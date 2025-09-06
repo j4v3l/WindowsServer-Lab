@@ -50,8 +50,21 @@ jobs:
     - name: Update PowerShell Module Version
       shell: pwsh
       run: |
-        $version = $env:RELEASE_VERSION
         $manifestPath = "Scripts/WindowsServerLab.psd1"
+        $version = "${{ github.ref_name }}"
+        
+        # Remove 'v' prefix if present
+        if ($version.StartsWith("v")) {
+            $version = $version.Substring(1)
+        }
+        
+        # Note: PowerShell module files were removed during Proxmox adaptation
+        Write-Host "PowerShell module files were removed - using VERSION file instead" -ForegroundColor Yellow
+        
+        if (Test-Path "VERSION") {
+            $version = Get-Content "VERSION" -Raw
+            $version = $version.Trim()
+        }
         
         if (Test-Path $manifestPath) {
             $content = Get-Content $manifestPath -Raw
@@ -81,7 +94,7 @@ jobs:
             $notes += "`n- 🔧 **Automated Deployment**: Enhanced deployment scripts with error handling and validation"
             $notes += "`n- 📊 **Clean Project Structure**: Better organization with separation of core tools and demo materials"
         } else {
-            $notes += "`n- Complete Hyper-V lab environment setup"
+            $notes += "`n- Complete Proxmox VE lab environment setup"
             $notes += "`n- Active Directory automation and management"
             $notes += "`n- Security auditing and hardening tools"
             $notes += "`n- Group Policy management automation"
@@ -90,8 +103,8 @@ jobs:
         
         $notes += "`n`n## 🚀 Quick Start"
         $notes += "`n1. Download and extract the release"
-        $notes += "`n2. Run as Administrator: ``Import-Module .\Scripts\WindowsServerLab.psd1``"
-        $notes += "`n3. Create your lab: ``New-LabEnvironment``"
+        $notes += "`n2. Follow the Proxmox setup documentation"
+        $notes += "`n3. Create VMs manually using Proxmox VE web interface"
         if ($version.StartsWith("1.1")) {
             $notes += "`n4. Or deploy the organized demo from the Demo/ directory"
         } else {
@@ -107,10 +120,10 @@ jobs:
       shell: pwsh
       run: |
         $version = $env:RELEASE_VERSION
-        $archiveName = "WindowsServerLab-v$version.zip"
+        $archiveName = "WindowsServerLab-Proxmox-v$version.zip"
         
         # Create release directory
-        $releaseDir = "WindowsServerLab-v$version"
+        $releaseDir = "WindowsServerLab-Proxmox-v$version"
         New-Item -Path $releaseDir -ItemType Directory -Force
         
         # Copy core files

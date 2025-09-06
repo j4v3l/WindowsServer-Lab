@@ -96,8 +96,9 @@ function Test-VersionConsistency {
         Write-ComplianceLog "Expected version: $expectedVersion" "INFO"
         
         # Check module manifest
-        if (Test-Path "Scripts/WindowsServerLab.psd1") {
-            $manifestContent = Get-Content "Scripts/WindowsServerLab.psd1" -Raw
+        # PowerShell module files were removed during Proxmox adaptation
+if ($false) {
+    # Legacy code - module files no longer exist
             if ($manifestContent -match "ModuleVersion\s*=\s*'([^']+)'") {
                 $manifestVersion = $matches[1]
                 if ($manifestVersion -eq $expectedVersion) {
@@ -110,8 +111,9 @@ function Test-VersionConsistency {
         }
         
         # Check module file
-        if (Test-Path "Scripts/WindowsServerLab.psm1") {
-            $moduleContent = Get-Content "Scripts/WindowsServerLab.psm1" -Raw
+        # PowerShell module files were removed during Proxmox adaptation
+if ($false) {
+    # Legacy code - module files no longer exist
             if ($moduleContent -match '\$ModuleVersion\s*=\s*"([^"]+)"') {
                 $moduleVersion = $matches[1]
                 if ($moduleVersion -eq $expectedVersion) {

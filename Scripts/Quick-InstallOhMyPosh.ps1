@@ -1,4 +1,8 @@
 # Quick Install Script for Oh My Posh
+# EXECUTION CONTEXT: Run INSIDE Windows VMs (Any Windows VM - Workstations or Servers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Internet access, PowerShell execution policy set
+
 # This script downloads and runs the Setup-OhMyPosh.ps1 script
 
 # PowerShell 7 compatible web request

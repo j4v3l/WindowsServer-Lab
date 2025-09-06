@@ -27,7 +27,7 @@
 
 ### **Virtual Switch Configuration**
 
-**Important Note:** When creating external VM switches, use `-NetAdapterName` instead of `-SwitchType External`. The `-AllowManagementOS $true` parameter allows the host OS to also use the network adapter.
+**Important Note:** Network bridges in Proxmox VE are configured via the web interface under Node → Network. External connectivity is managed through the physical network interface attached to the bridge.
 
 ### **Windows 11 Divine Client Setup & OOBE Network Bypass**
 
@@ -50,17 +50,17 @@
 
 ```powershell
 # Core Production Network (External Switch)
-New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
+# Create production bridge vmbr0 via Proxmox VE web interface
 
 # Management Network
-New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal
+# Create management bridge vmbr1 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceAlias "vEthernet (OLYMPUS-Management)"
 
 # DMZ Network
-New-VMSwitch -Name "OLYMPUS-DMZ" -SwitchType Private
+# Create DMZ bridge vmbr3 via Proxmox VE web interface
 
 # Client Network
-New-VMSwitch -Name "OLYMPUS-Clients" -SwitchType Internal
+# Create client bridge vmbr2 via Proxmox VE web interface
 New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceAlias "vEthernet (OLYMPUS-Clients)"
 ```
 
@@ -409,9 +409,8 @@ Configuration OlympusBaseConfiguration {
 
     Node $ComputerName {
         # Enable Windows Features
-        WindowsFeature Hyper-V {
-            Ensure = "Present"
-            Name = "Hyper-V"
+        # Proxmox VE environment setup
+# Use Proxmox web interface for VM management
         }
 
         # Configure Services
@@ -574,7 +573,7 @@ foreach ($server in @("ZEUS-DC01", "HERA-DC02", "HERMES-FS01")) {
 
 ```powershell
 # Create new user
-New-ADUser -Name "Icarus Soaring" -SamAccountName "icarus.soaring" -Department "Innovation Forge" -Title "Junior AI Developer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "OlympusP@ss123!" -AsPlainText -Force) -Enabled $true
+New-ADUser -Name "Icarus Soaring" -SamAccountName "icarus.soaring" -Department "Innovation Forge" -Title "Junior AI Developer" -Path "OU=Innovation Forge,OU=Departments,OU=Olympus Systems,DC=olympus,DC=local" -AccountPassword (ConvertTo-SecureString "[ADMIN_MUST_SET_SECURE_PASSWORD]" -AsPlainText -Force) -Enabled $true
 
 # Add to appropriate groups
 Add-ADGroupMember -Identity "GRP-Innovation Forge" -Members "icarus.soaring"
@@ -649,14 +648,10 @@ Minimum Requirements:
 ### **VM Optimization**
 
 ```powershell
-# Enable Dynamic Memory
-Set-VM -Name "ZEUS-DC01" -DynamicMemory -MemoryStartupBytes 4GB -MemoryMinimumBytes 2GB -MemoryMaximumBytes 8GB
-
-# Configure CPU allocation
-Set-VM -Name "APOLLO-WEB01" -ProcessorCount 4 -EnableHostResourceProtection $true
-
-# Enable Enhanced Session Mode
-Set-VMHost -EnableEnhancedSessionMode $true
+# Configure VM resources via Proxmox VE
+# qm set 200 --memory 4096,balloon=2048  # ZEUS-DC01 dynamic memory
+# qm set 203 --cores 4  # APOLLO-WEB01 CPU optimization
+# Enhanced session available via Proxmox VE web console
 ```
 
 ---
@@ -692,11 +687,12 @@ Get-DhcpServerv4Lease -ScopeId "10.0.10.0"
 
 ```powershell
 # Monitor VM performance
-Get-Counter "\Hyper-V Hypervisor Logical Processor(*)\% Total Run Time"
+# Check Proxmox resource utilization via web interface
 Get-Counter "\Memory\Available MBytes"
 
-# Check VM resource usage
-Get-VM | Select-Object Name, CPUUsage, MemoryAssigned, MemoryDemand
+# Check VM resource usage via Proxmox VE
+# Monitor VM performance via Proxmox VE dashboard
+# CLI: qm list, qm status <vmid>
 ```
 
 ---
@@ -706,7 +702,7 @@ Get-VM | Select-Object Name, CPUUsage, MemoryAssigned, MemoryDemand
 ### **Pre-Deployment**
 
 - [ ] Verify hardware requirements
-- [ ] Enable Hyper-V role
+- [ ] Prepare Proxmox VE environment
 - [ ] Download Windows Server ISOs
 - [ ] Plan network addressing
 - [ ] Prepare DNS forwarders
@@ -755,7 +751,7 @@ By completing this lab, you will gain hands-on experience with:
 
 ### **Advanced Features**
 
-- Hyper-V virtualization
+- Proxmox VE virtualization
 - PowerShell automation
 - System monitoring
 - Backup and recovery

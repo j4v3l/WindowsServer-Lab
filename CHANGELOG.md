@@ -209,7 +209,7 @@ Demo/
 - Initial release of Windows Server Lab Environment
 - 16 comprehensive tutorial guides covering Windows Server lab setup
 - 10 PowerShell automation scripts for lab management
-- Complete Hyper-V lab setup and management scripts
+- Complete Proxmox VE lab setup documentation
 - Security hardening and audit scripts
 - Active Directory management automation
 - Group Policy management tools
@@ -225,7 +225,7 @@ Demo/
 
 - **Lab Setup Tutorials**: Step-by-step guides from basic setup to advanced topics
 - **Automation Scripts**: PowerShell scripts for common lab tasks
-- **Hyper-V Integration**: Complete Hyper-V lab environment setup
+- **Proxmox Integration**: Complete Proxmox VE lab environment setup
 - **Security Tools**: Security audit and hardening scripts
 - **Documentation**: Comprehensive guides with clear instructions
 
@@ -239,7 +239,7 @@ Demo/
 
 ### Scripts
 
-- Hyper-V Lab Setup and Management
+- Proxmox VE Lab Setup and Management
 - Active Directory user and group management
 - Group Policy automation
 - Security audit and compliance
@@ -253,9 +253,9 @@ Demo/
 
 - **🔄 Comprehensive Uninstall and Revert System**: Complete lab environment cleanup and restoration
 - **Lab-Uninstall.ps1**: Safe component removal with automatic backup creation
-- **Lab-Restore.ps1**: Backup restoration with integrity validation
+
 - **Selective Component Removal**: Remove individual components (VMs, Switches, Shares, AD, GPOs, Registry, Scheduled Tasks)
-- **PowerShell Module Integration**: Remove-LabEnvironment and Restore-LabEnvironment functions
+**Note**: PowerShell automation module removed during Proxmox VE adaptation
 - **Safety Features**: Automatic backups, confirmation prompts, detailed logging, operation manifests
 - **Demo Environment Support**: Cleanup for Asgard and Olympus demo environments
 - **Tutorial 17**: "Uninstall and Revert Changes" comprehensive documentation
@@ -263,7 +263,8 @@ Demo/
 
 ### Enhanced
 
-- **WindowsServerLab Module**: Added uninstall/restore functions to PowerShell module
+**Note**: PowerShell module removed during Proxmox VE adaptation
+
 - **Module Manifest**: Updated to include new scripts and exported functions
 - **README Documentation**: Added uninstall/revert quick start instructions
 - **Security**: Comprehensive audit trail and recovery planning guidance

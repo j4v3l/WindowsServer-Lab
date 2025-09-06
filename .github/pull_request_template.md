@@ -31,7 +31,7 @@
 <!-- Describe how you tested your changes -->
 - [ ] Tested locally on Windows Server 2022
 - [ ] Tested locally on Windows 11
-- [ ] Tested with Hyper-V
+- [ ] Tested with Proxmox VE
 - [ ] Tested PowerShell scripts
 - [ ] Tested Asgard demo environment
 - [ ] Added/updated unit tests
@@ -42,7 +42,7 @@
 <!-- Describe your test environment -->
 - **OS**:
 - **PowerShell Version**:
-- **Hyper-V Version**:
+- **Proxmox VE Version**:
 - **Hardware**:
 
 ### Test Results
@@ -55,7 +55,7 @@
 <!-- Check all that apply -->
 - [ ] Updated README.md
 - [ ] Updated tutorial guides
-- [ ] Updated PowerShell module documentation
+- [ ] Updated Proxmox setup documentation
 - [ ] Added inline code comments
 - [ ] Updated CHANGELOG.md
 - [ ] No documentation needed

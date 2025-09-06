@@ -1,6 +1,37 @@
-# Windows Server Lab Environment
+# 🏰 Windows Server Lab Environment - Proxmox VE Edition
 
-This repository contains comprehensive documentation and scripts for setting up and managing a Windows Server lab environment. The content is organized into two main sections: Lab Setup Tutorials and Management Scripts.
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
+[![Windows Server](https://img.shields.io/badge/Windows%20Server-2019%2F2022%2F2025-blue.svg)](https://www.microsoft.com/en-us/windows-server)
+[![Proxmox VE](https://img.shields.io/badge/Proxmox%20VE-8.0%2B-orange.svg)](https://www.proxmox.com/en/proxmox-ve)
+
+## 🎯 **EXECUTION CONTEXT - CRITICAL INFORMATION**
+
+This lab environment uses a **two-tier architecture**:
+
+### 🖥️ **Tier 1: Proxmox VE Host (Linux)**
+
+- **VM Lifecycle**: `qm create`, `qm start`, `qm stop`, `qm destroy`
+- **Network Management**: Bridge configuration, VLAN setup
+- **Storage Operations**: `vzdump` backups, storage configuration
+- **Access Method**: SSH to Proxmox host or web interface
+
+### 🪟 **Tier 2: Windows VMs (Running on Proxmox)**
+
+- **PowerShell Scripts**: All `.ps1` scripts in `/Scripts/` directory
+- **Active Directory**: Domain controllers, user management, GPOs
+- **Windows Features**: File shares, DHCP, DNS, web services
+- **Access Method**: RDP, Console, or PowerShell Direct to Windows VMs
+
+**⚠️ IMPORTANT**: Never run PowerShell scripts on the Proxmox host! They are designed for Windows VMs only.
+
+For detailed execution contexts, see: [EXECUTION_CONTEXT_GUIDE.md](EXECUTION_CONTEXT_GUIDE.md)
+
+---
+
+## 🌟 **Overview**
+
+This repository contains comprehensive documentation and guides for setting up and managing a Windows Server lab environment using Proxmox Virtual Environment (Proxmox VE). The content focuses on deploying Windows Server infrastructure on Proxmox with professional-grade virtualization capabilities.
 
 ## 🛠️ **CRITICAL FIXES: v1.3.1 Network Issues Resolved!**
 
@@ -88,29 +119,23 @@ WindowsServer-Lab/
 │           ├── DEMO_SETUP_GUIDE.md        # Complete setup reference
 │           └── HARDWARE_PERFORMANCE_GUIDE.md  # Performance optimization
 │
-├── ⚙️ Scripts/                            # Core PowerShell automation scripts
-│   ├── 📋 WindowsServerLab.psd1          # PowerShell module manifest
-│   ├── 📋 WindowsServerLab.psm1          # PowerShell module functions
-│   ├── 🚀 Lab_Setup.ps1                  # Initial lab environment setup
+├── ⚙️ Scripts/                            # PowerShell utilities for Windows Server
 │   ├── 🚀 Lab-FinishSetup.ps1            # Post-installation configuration
 │   ├── 🚀 Create-LabUsers.ps1            # User account creation
 │   ├── 🚀 DHCP_Setup.ps1                 # DHCP server setup
-│   ├── 🚀 Hyper-V_Lab_Setup.ps1          # Hyper-V environment setup
-│   ├── 🔧 Hyper-V_Management.ps1         # VM lifecycle management
 │   ├── 🛡️ AdvancedGroupPolicyManager.ps1 # 100+ security policies (NEW!)
 │   ├── 🛡️ AdvancedSecurityAudit.ps1      # Security assessment (NEW!)
 │   ├── 🛡️ GroupPolicyManager.ps1         # Basic GPO management
 │   ├── 🛡️ SecurityAudit.ps1              # Basic security assessment
 │   ├── 💾 BackupRestoreManager.ps1       # Backup and restore operations
 │   ├── 📊 SystemHealthMonitor.ps1        # System monitoring
-│   ├── 🧪 Test-ModuleIntegrity.ps1       # Module validation
-│   ├── 🧪 Test-LabEnvironment.ps1        # Environment testing
+
 │   ├── 🗑️ Lab-Uninstall.ps1              # Safe component removal (NEW!)
-│   ├── 🔄 Lab-Restore.ps1                # Backup restoration (NEW!)
+
 │   └── 📁 Modules/                       # Additional PowerShell modules
 │
 ├── 📚 LabSetupTutorials/                  # Step-by-step learning guides
-│   ├── 🚀 00_Hyper-V_Quick_Start.md      # Hyper-V rapid setup guide
+│   ├── 🚀 00_Proxmox_Quick_Start.md      # Proxmox VE rapid setup guide
 │   ├── 🏗️ 01_Setup_Lab_Environment.md    # Lab environment foundation
 │   ├── 👥 02_Manage_Users_Computers_AD.md # Active Directory basics
 │   ├── 👥 03_AD_Groups_Management.md     # Group management
@@ -126,7 +151,7 @@ WindowsServer-Lab/
 │   ├── 🖥️ 13_Additional_Servers_Setup.md # Extended server roles
 │   ├── 💻 14_Additional_Clients_Setup.md # Client deployment
 │   ├── 🌐 15_DHCP_Server_Setup.md        # DHCP configuration
-│   ├── 🏢 16_Hyper-V_Setup_and_Configuration.md # Virtualization setup
+│   ├── 🏢 16_Proxmox_Setup_and_Configuration.md # Proxmox VE setup
 │   └── 🗑️ 17_Uninstall_and_Revert.md     # Safe removal procedures
 │
 ├── 🔄 .github/                           # GitHub automation and templates
@@ -268,10 +293,10 @@ The tutorials are organized in a logical sequence from initial setup to advanced
     - Scope configuration
     - Reservations, exclusions, and best practices
 
-16. [Hyper-V Setup and Configuration](LabSetupTutorials/16_Hyper-V_Setup_and_Configuration.md)
+16. [Proxmox VE Setup and Configuration](LabSetupTutorials/16_Proxmox_Setup_and_Configuration.md)
 
-    - Hyper-V installation and configuration
-    - Virtual switch creation and management
+    - Proxmox VE installation and configuration
+    - Virtual bridge creation and management
     - Advanced networking and security
     - VM creation and optimization
 
@@ -287,18 +312,16 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 
 #### Setup Scripts
 
-- [Lab Setup Script](Scripts/Lab_Setup.ps1) - Initial lab environment setup
 - [Lab Finish Setup Script](Scripts/Lab-FinishSetup.ps1) - Post-installation configuration
 - [Create Lab Users Script](Scripts/Create-LabUsers.ps1) - User account creation
 - [DHCP Setup Script](Scripts/DHCP_Setup.ps1) - DHCP server installation and configuration
-- [Hyper-V Lab Setup Script](Scripts/Hyper-V_Lab_Setup.ps1) - Complete Hyper-V lab environment setup
 
 #### Advanced Security and Policy Management Scripts (NEW!)
 
 - [**Advanced Group Policy Manager**](Scripts/AdvancedGroupPolicyManager.ps1) - Comprehensive GPO management with camera, USB, device controls
 - [**Advanced Security Audit**](Scripts/AdvancedSecurityAudit.ps1) - Complete security assessment with scoring and recommendations
-- [**Advanced Security Demo - Asgard**](Demo/Asgard/Scripts/Deploy-AdvancedSecurityDemo.ps1) - Interactive demonstration of all security features (Asgard)
-  - [**Advanced Security Demo - Olympus**](Demo/Olympus/Scripts/Deploy-AdvancedSecurityDemo.ps1) - Interactive demonstration of all security features (Olympus)
+- [**Advanced Security Documentation - Asgard**](Demo/Asgard/README.md) - Interactive demonstration documentation (Asgard)
+  - [**Advanced Security Documentation - Olympus**](Demo/Olympus/README.md) - Interactive demonstration documentation (Olympus)
 
 #### Traditional Management Scripts
 
@@ -306,14 +329,13 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 - [Security Audit Script](Scripts/SecurityAudit.ps1) - Basic security assessment
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
 - [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
-- [Hyper-V Management Script](Scripts/Hyper-V_Management.ps1) - Hyper-V lab lifecycle management
+
 - [Oh My Posh Setup Script](Scripts/Setup-OhMyPosh.ps1) - PowerShell prompt customization with themes and icons
 - [Quick Oh My Posh Install](Scripts/Quick-InstallOhMyPosh.ps1) - Streamlined installation of Oh My Posh
 
 #### Uninstall and Recovery Scripts (NEW)
 
 - [Lab Uninstall Script](Scripts/Lab-Uninstall.ps1) - Comprehensive component removal with backup
-- [Lab Restore Script](Scripts/Lab-Restore.ps1) - Restore from backups created during uninstall
 
 ## 🛡️ Advanced Security Features (NEW!)
 
@@ -407,7 +429,7 @@ All scripts in this lab environment follow security best practices:
 
 ```powershell
 # When running scripts, you'll be prompted for passwords:
-.\Scripts\Lab_Setup.ps1
+.\Scripts\Lab-FinishSetup.ps1
 # Prompts: "Please enter the default password for new user accounts:"
 
 # For automated scenarios, you can pre-provide SecureString parameters:
@@ -455,30 +477,32 @@ $securePassword = Read-Host -AsSecureString -Prompt "Enter password"
 
    ```powershell
    # Validate module structure and consistency
-   .\Scripts\Test-ModuleIntegrity.ps1
+   # Module validation no longer available - use manual procedures
    ```
 
 3. **Import the PowerShell module:**
 
    ```powershell
    # Import the module
-   Import-Module .\Scripts\WindowsServerLab.psd1 -Force
+   # PowerShell utilities available in Scripts directory
 
-   # Verify module loaded
-   Get-Command -Module WindowsServerLab
+# Run individual scripts as needed for Windows Server configuration
+
+# Verify module loaded
+
+# PowerShell module no longer available - use manual procedures
+
    ```
 
 4. **Create your lab environment:**
 
    ```powershell
    # Test prerequisites first
-   Test-LabEnvironment -Detailed
+   # Manual environment validation - no automated testing available
 
    # Create complete lab environment with separate ISOs (you'll be prompted for passwords)
-   New-LabEnvironment -VMPath "C:\VMs" -ServerISOPath "C:\path\to\WindowsServer2025.iso" -ClientISOPath "C:\path\to\Windows10.iso"
-
-   # Or use legacy single ISO for both (backward compatibility)
-   New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
+   # Create VMs manually using Proxmox VE web interface
+   # Follow the Proxmox setup guides for detailed instructions
 
    # Check lab status
    Get-LabStatus
@@ -488,20 +512,21 @@ $securePassword = Read-Host -AsSecureString -Prompt "Enter password"
 
    ```powershell
    # Safely remove all lab components (creates backup first)
-   Remove-LabEnvironment -Component All
+   # Manual component removal - use Lab-Uninstall.ps1 script
+   .\Scripts\Lab-Uninstall.ps1 -Component All
 
-   # Remove specific components only
-   Remove-LabEnvironment -Component VMs
-   Remove-LabEnvironment -Component AD
+   # Remove specific components  
+   .\Scripts\Lab-Uninstall.ps1 -Component VMs
 
    # Restore from backup if needed
-   Restore-LabEnvironment -BackupPath "C:\LabBackup"
+   # Manual restoration procedures - follow documentation guides
    ```
 
    **🔧 ISO Requirements:**
 
    - **Server ISO**: Windows Server 2019/2022/2025 for domain controllers and servers
-   - **Client ISO**: Windows 10/11 for workstation VMs
+   - **Client ISO**: Windows 10/11 for workstation VMs  
+   - **VirtIO Drivers**: Latest VirtIO ISO for optimal VM performance on Proxmox VE
    - **Legacy Mode**: Single ISO can be used for all VMs (backward compatibility)
 
    **Security Note:** All scripts now use secure password prompts instead of hardcoded passwords. You'll be prompted to enter:
@@ -513,13 +538,14 @@ $securePassword = Read-Host -AsSecureString -Prompt "Enter password"
 
 ### Manual Setup Options
 
-#### For Hyper-V Users (Recommended)
+#### For Proxmox VE Users (Recommended)
 
-1. Start with the [Hyper-V Quick Start Guide](LabSetupTutorials/00_Hyper-V_Quick_Start.md) for rapid setup
-2. Or follow the detailed [Hyper-V Setup and Configuration](LabSetupTutorials/16_Hyper-V_Setup_and_Configuration.md) guide
+1. Start with the [Proxmox VE Quick Start Guide](LabSetupTutorials/00_Proxmox_Quick_Start.md) for rapid setup
+2. Or follow the detailed [Proxmox VE Setup and Configuration](LabSetupTutorials/16_Proxmox_Setup_and_Configuration.md) guide
+3. Use the [Windows Server Optimization Guide](LabSetupTutorials/Windows_Server_on_Proxmox_Optimization.md) for best performance
 3. Then proceed with [Lab Environment Setup](LabSetupTutorials/01_Setup_Lab_Environment.md)
 
-#### For VirtualBox/VMware Users
+#### For Other Virtualization Platforms
 
 1. Begin with the [Lab Environment Setup](LabSetupTutorials/01_Setup_Lab_Environment.md) guide
 2. Follow the tutorials in sequence
@@ -532,10 +558,11 @@ Once the module is imported, you have access to these commands:
 
 | Command                   | Description                     |
 | ------------------------- | ------------------------------- |
-| `New-LabEnvironment`      | Create complete lab environment |
-| `Test-LabEnvironment`     | Validate lab configuration      |
-| `Start-LabVMs`            | Start all or specific lab VMs   |
-| `Stop-LabVMs`             | Stop all or specific lab VMs    |
+| **Manual VM Creation**    | Use Proxmox web interface      |
+| **Manual Validation**     | Follow setup documentation     |
+| **Manual VM Control**     | Use Proxmox VE web interface    |
+| **Proxmox Commands**      | Use `qm start/stop` commands (on Proxmox host) |
+| **Execution Guide**       | See [EXECUTION_CONTEXT_GUIDE.md](EXECUTION_CONTEXT_GUIDE.md) |
 | `Get-LabStatus`           | Get current lab status          |
 | `New-LabUsers`            | Create lab users and OUs        |
 | `Invoke-LabSecurityAudit` | Run security audit              |

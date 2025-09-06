@@ -22,7 +22,7 @@
 - **RAM**: 64GB DDR5
 - **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows 11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ### **💪 Performance Capabilities**
 
@@ -38,22 +38,22 @@ With the above specs, you can run:
 - **32GB RAM** (minimum 16GB, 64GB recommended)
 - **1TB+ NVMe storage**
 - **8+ CPU cores** (12+ recommended)
-- **Windows 10/11 Pro or Enterprise**
+- **Proxmox VE 8.0+**
 - **Dedicated GPU** (recommended for multiple VMs)
 
 ### **Software Requirements**
 
-- **Hyper-V enabled**
+- **Proxmox VE environment ready**
 - **Windows Server 2019/2022 ISO**
 - **Windows 10/11 ISO** (for workstations)
 
 ---
 
-## 🚀 **Step 1: Enable Hyper-V**
+## 🚀 **Step 1: Prepare Proxmox VE**
 
-```powershell
-# Run as Administrator
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All
+```bash
+# Create VMs using Proxmox VE web interface
+# Follow the Proxmox setup documentation
 
 # Restart when prompted
 Restart-Computer
@@ -204,6 +204,10 @@ ATHENA-SEC01:  10.0.10.40  (Security Server)
 ## 🎯 **Divine Demo Scenarios**
 
 ### **⚡ Scenario 1: New Employee Onboarding**
+
+**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ZEUS-DC01 - Primary Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights**
 
 ```powershell
 # Create new user for Innovation Forge department
@@ -415,34 +419,34 @@ Start-OlympusPenTest -Scenario "External Attack"
 
 ```powershell
 # Check VM configuration
-Get-VM -Name "ZEUS-DC01" | Format-List
+# Check VM details via Proxmox VE: qm config <vmid>
 
 # Verify network adapters
-Get-VMNetworkAdapter -VMName "ZEUS-DC01"
+# Check VM network config via Proxmox VE web interface
 
 # Check available resources
-Get-VMHost | Select-Object MemoryCapacity, LogicalProcessorCount
+# Check host resources via Proxmox VE: pvesh get /nodes/<node>/status
 ```
 
 #### **Network Connectivity Issues**
 
 ```powershell
 # Test network switches
-Get-VMSwitch | Test-NetConnection
+# Test network connectivity from Proxmox host
 
 # Verify IP configuration
-Get-VMNetworkAdapter | Get-VMNetworkAdapterIPAddress
+# Check VM IP addresses via Proxmox VE web interface
 ```
 
 #### **Performance Issues**
 
 ```powershell
 # Monitor resource usage
-Get-Counter "\Hyper-V Hypervisor\Logical Processors"
+# Check Proxmox resource utilization via web interface
 Get-Counter "\Memory\Available MBytes"
 
 # Check VM resource allocation
-Get-VM | Select-Object Name, MemoryAssigned, CPUUsage
+# Monitor VM resources via Proxmox VE dashboard
 ```
 
 ---

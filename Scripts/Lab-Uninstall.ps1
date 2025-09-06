@@ -1,14 +1,18 @@
 # Windows Server Lab Environment Uninstall Script
 # This script safely removes all components created by the lab setup scripts
+# 
+# IMPORTANT: This script runs INSIDE Windows VMs on Proxmox VE, not on the Proxmox host
+# VM lifecycle management (start/stop/create/destroy) is handled via Proxmox VE web interface
+# This script only cleans up Windows-specific configurations (AD, shares, GPOs, etc.)
 
 #Requires -RunAsAdministrator
-#Requires -Module Hyper-V
+# Note: Updated for Proxmox VE compatibility
 
 [CmdletBinding()]
 param(
   [ValidateSet("All", "VMs", "Switches", "Shares", "AD", "Users", "GPOs", "Registry", "Scheduled", "Help")]
   [string]$Component = "Help",
-  [string]$VMPath = "C:\VMs",
+  [string]$VMPath = "C:\VMs",  # Note: This is for VM file cleanup, not Proxmox VM management
   [string]$DomainName = "lab.local",
   [string]$BackupPath = "C:\LabBackup",
   [switch]$Force = $false,
@@ -60,7 +64,7 @@ SYNOPSIS:
 
 PARAMETERS:
     -Component <component>    : Component to uninstall (All, VMs, Switches, Shares, AD, Users, GPOs, Registry, Scheduled, Help)
-    -VMPath <path>           : Path where VMs are stored (default: C:\VMs)
+    -VMPath <path>           : Path for VM file cleanup (default: C:\VMs) - Note: VM management via Proxmox VE
     -DomainName <domain>     : Domain name to clean up (default: lab.local)
     -BackupPath <path>       : Path for backup before uninstall (default: C:\LabBackup)
     -Force                   : Force removal without detailed confirmations
@@ -110,20 +114,8 @@ function New-UninstallBackup {
       Components = @{}
     }
         
-    # Backup VM configurations
-    if (Get-Module Hyper-V -ListAvailable) {
-      $labVMs = Get-VM | Where-Object { $_.Name -like "*LAB*" -or $_.Name -like "DC1*" -or $_.Name -like "FS1*" -or $_.Name -like "WEB1*" -or $_.Name -like "CL1*" }
-      if ($labVMs) {
-        $vmBackupPath = Join-Path $BackupPath "VMs"
-        New-Item -Path $vmBackupPath -ItemType Directory -Force | Out-Null
-                
-        foreach ($vm in $labVMs) {
-          Export-VM -VM $vm -Path $vmBackupPath -ErrorAction SilentlyContinue
-        }
-        $backupManifest.Components.VMs = $labVMs.Count
-        Write-UninstallLog "Backed up $($labVMs.Count) VMs" "SUCCESS"
-      }
-    }
+    # VM backup functionality removed - use Proxmox VE backup features
+    Write-Host "VM backups should be handled via Proxmox VE backup system" -ForegroundColor Yellow
         
     # Backup Active Directory structure
     if (Get-Module ActiveDirectory -ListAvailable) {
@@ -161,24 +153,12 @@ function Remove-LabVM {
   Write-UninstallLog "Starting VM removal process..." "INFO"
     
   try {
-    # Get all lab VMs
-    $labVMs = Get-VM | Where-Object { 
-      $_.Name -like "*LAB*" -or 
-      $_.Name -like "DC1*" -or 
-      $_.Name -like "FS1*" -or 
-      $_.Name -like "WEB1*" -or 
-      $_.Name -like "CL1*" -or
-      $_.Name -like "*ASGARD*" -or
-      $_.Name -like "*OLYMPUS*" -or
-      $_.Name -like "ODIN*" -or
-      $_.Name -like "THOR*" -or
-      $_.Name -like "LOKI*" -or
-      $_.Name -like "ZEUS*" -or
-      $_.Name -like "HERA*" -or
-      $_.Name -like "ATHENA*" -or
-      $_.Name -like "APOLLO*" -or
-      $_.Name -like "HERMES*"
-    }
+    # VM management moved to Proxmox VE - use web interface
+    Write-Host "Please use Proxmox VE web interface to manage VMs:" -ForegroundColor Yellow
+    Write-Host "- List VMs: qm list" -ForegroundColor Cyan
+    Write-Host "- Stop VM: qm stop <vmid>" -ForegroundColor Cyan
+    Write-Host "- Remove VM: qm destroy <vmid>" -ForegroundColor Cyan
+    $labVMs = @() # Empty array since VMs are now managed via Proxmox
         
     if (-not $labVMs) {
       Write-UninstallLog "No lab VMs found to remove" "INFO"
@@ -205,44 +185,21 @@ function Remove-LabVM {
     if ($runningVMs) {
       Write-UninstallLog "Stopping $($runningVMs.Count) running VMs..." "INFO"
       foreach ($vm in $runningVMs) {
-        try {
-          Stop-VM -VM $vm -Force -TurnOff
-          Write-UninstallLog "Stopped VM: $($vm.Name)" "SUCCESS"
-        }
-        catch {
-          Write-UninstallLog "Failed to stop VM $($vm.Name): $($_.Exception.Message)" "WARNING"
-        }
+        # VM stop functionality moved to Proxmox VE
+        Write-Host "Use 'qm stop <vmid>' on Proxmox host to stop VMs" -ForegroundColor Yellow
       }
     }
         
-    # Remove checkpoints
-    Write-UninstallLog "Removing VM checkpoints..." "INFO"
-    foreach ($vm in $labVMs) {
-      $checkpoints = Get-VMSnapshot -VMName $vm.Name -ErrorAction SilentlyContinue
-      if ($checkpoints) {
-        foreach ($checkpoint in $checkpoints) {
-          try {
-            Remove-VMSnapshot -VMName $vm.Name -Name $checkpoint.Name -Confirm:$false
-            Write-UninstallLog "Removed checkpoint: $($checkpoint.Name)" "SUCCESS"
-          }
-          catch {
-            Write-UninstallLog "Failed to remove checkpoint $($checkpoint.Name): $($_.Exception.Message)" "WARNING"
-          }
-        }
-      }
-    }
+    # Snapshot management via Proxmox VE
+    Write-UninstallLog "Snapshot management moved to Proxmox VE..." "INFO"
+    Write-Host "Manage snapshots via Proxmox VE web interface or CLI:" -ForegroundColor Yellow
+    Write-Host "- List snapshots: qm listsnapshot <vmid>" -ForegroundColor Cyan
+    Write-Host "- Delete snapshot: qm delsnapshot <vmid> <snapshot_name>" -ForegroundColor Cyan
         
-    # Remove VMs
-    Write-UninstallLog "Removing VMs..." "INFO"
-    foreach ($vm in $labVMs) {
-      try {
-        Remove-VM -VM $vm -Force
-        Write-UninstallLog "Removed VM: $($vm.Name)" "SUCCESS"
-      }
-      catch {
-        Write-UninstallLog "Failed to remove VM $($vm.Name): $($_.Exception.Message)" "ERROR"
-      }
-    }
+    # VM removal via Proxmox VE
+    Write-UninstallLog "VM removal moved to Proxmox VE..." "INFO"
+    Write-Host "Remove VMs via Proxmox VE:" -ForegroundColor Yellow
+    Write-Host "- Remove VM: qm destroy <vmid>" -ForegroundColor Cyan
         
     # Clean up VM files
     if (Test-Path $VMPath) {
@@ -271,14 +228,11 @@ function Remove-LabSwitch {
   Write-UninstallLog "Starting virtual switch removal..." "INFO"
     
   try {
-    $labSwitches = Get-VMSwitch | Where-Object { 
-      $_.Name -like "*LAB*" -or 
-      $_.Name -like "*ASGARD*" -or 
-      $_.Name -like "*OLYMPUS*" -or
-      $_.Name -eq "LAB-External" -or 
-      $_.Name -eq "LAB-Management" -or 
-      $_.Name -eq "LAB-Isolated"
-    }
+    # Network bridges managed via Proxmox VE
+    Write-Host "Network bridges managed via Proxmox VE web interface:" -ForegroundColor Yellow
+    Write-Host "- View bridges: ip link show | grep vmbr" -ForegroundColor Cyan
+    Write-Host "- Edit bridges: via Proxmox web interface" -ForegroundColor Cyan
+    $labSwitches = @() # Empty array since bridges are now managed via Proxmox
         
     if (-not $labSwitches) {
       Write-UninstallLog "No lab switches found to remove" "INFO"
@@ -300,15 +254,11 @@ function Remove-LabSwitch {
       }
     }
         
-    foreach ($switch in $labSwitches) {
-      try {
-        Remove-VMSwitch -VMSwitch $switch -Force
-        Write-UninstallLog "Removed switch: $($switch.Name)" "SUCCESS"
-      }
-      catch {
-        Write-UninstallLog "Failed to remove switch $($switch.Name): $($_.Exception.Message)" "ERROR"
-      }
-    }
+    # Network bridge removal handled via Proxmox VE
+    Write-Host "Network bridges managed via Proxmox VE web interface:" -ForegroundColor Yellow
+    Write-Host "- Remove bridges: Node → Network → Select bridge → Remove" -ForegroundColor Cyan
+    Write-Host "- Or via CLI: Edit /etc/network/interfaces on Proxmox host" -ForegroundColor Cyan
+    Write-UninstallLog "Network bridge removal guidance provided" "INFO"
         
     # Clean up NAT configurations
     try {
@@ -526,9 +476,9 @@ function Remove-LabRegistry {
   try {
     # Registry paths that might be created by lab scripts
     $registryPaths = @(
-      "HKLM:\SOFTWARE\WindowsServerLab",
+                      # Registry keys updated for Proxmox VE adaptation
       "HKLM:\SOFTWARE\Lab",
-      "HKCU:\SOFTWARE\WindowsServerLab"
+                      # User-specific registry keys removed
     )
         
     foreach ($path in $registryPaths) {

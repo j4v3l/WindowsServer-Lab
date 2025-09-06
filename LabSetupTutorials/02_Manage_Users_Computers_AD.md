@@ -147,6 +147,10 @@ Computer accounts are like user accounts for machines. They help:
 
 Here's a PowerShell script to create multiple users (save as `Create-Users.ps1`):
 
+**EXECUTION CONTEXT: Run INSIDE Windows Server VM (Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights, Active Directory module**
+
 ```powershell
 # Create IT Users with secure password prompts
 $SecurePassword = Read-Host -AsSecureString -Prompt "Enter default password for new users"

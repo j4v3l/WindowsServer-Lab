@@ -2,7 +2,7 @@
 
 ## 🎯 **Overview**
 
-This guide addresses common networking issues encountered in Windows Server lab environments, specifically focusing on Hyper-V virtual networking configuration problems that prevent domain joins and network connectivity.
+This guide addresses common networking issues encountered in Windows Server lab environments, specifically focusing on Proxmox VE virtual networking configuration problems that prevent domain joins and network connectivity.
 
 ---
 
@@ -30,7 +30,7 @@ This guide addresses common networking issues encountered in Windows Server lab 
 
 ```powershell
 # Check current switch configuration
-Get-VMSwitch | Select-Object Name, SwitchType, NetAdapterInterfaceDescription
+# Check network bridges via Proxmox VE: ip link show | grep vmbr
 
 # Expected configuration:
 # ASGARD-Production: Internal (NOT External)
@@ -232,10 +232,10 @@ If all else fails, reset and recreate the network:
 
 ```powershell
 # Stop all VMs
-Get-VM | Where-Object {$_.Name -like "*ASGARD*"} | Stop-VM -Force
+# Stop VMs via Proxmox VE: qm stop <vmid>
 
 # Remove existing switches
-Get-VMSwitch | Where-Object {$_.Name -like "*ASGARD*"} | Remove-VMSwitch -Force
+# Remove network bridges via Proxmox VE web interface
 
 # Remove NAT configurations
 Get-NetNat | Where-Object {$_.Name -like "*ASGARD*"} | Remove-NetNat -Confirm:$false
@@ -253,7 +253,7 @@ Get-NetNat | Where-Object {$_.Name -like "*ASGARD*"} | Remove-NetNat -Confirm:$f
 
 ### **Pre-Deployment Checklist**
 
-- [ ] Hyper-V feature fully enabled
+- [ ] Proxmox VE properly configured
 - [ ] Sufficient RAM and disk space
 - [ ] No IP address conflicts with existing networks
 - [ ] Physical network adapter available and functional
@@ -334,20 +334,22 @@ foreach ($adapter in $adapters.Keys) {
 ```powershell
 # Get detailed network configuration
 Get-NetAdapter | Get-NetIPConfiguration
-Get-VMSwitch | Get-VMNetworkAdapter
+# Check VM network adapters via Proxmox VE web interface
 Get-NetRoute | Where-Object {$_.DestinationPrefix -like "10.0.*"}
 
-# Test VM network connectivity
-Get-VM | Get-VMNetworkAdapter | Select-Object VMName, Name, SwitchName, Connected
+# Test VM network connectivity via Proxmox VE
+# Check VM network adapters via Proxmox web interface: VM → Hardware → Network Device
+# Verify bridge connectivity: brctl show (on Proxmox host)
+# Check network interface status: ip link show (on Proxmox host)
 
 # Monitor network traffic
-Get-Counter "\Hyper-V Virtual Network Adapter(*)\Bytes/sec"
+Get-Counter "\Network Interface(*)\Bytes/sec"
 ```
 
 ### **Log Files to Check**
 
 - Event Viewer: System and Application logs
-- Hyper-V logs: `Applications and Services Logs\Microsoft\Windows\Hyper-V-*`
+- Network logs: `Applications and Services Logs\Microsoft\Windows\NetworkProfile`
 - DNS logs: `DNS Server` logs if available
 - Domain join logs: Check domain controller security logs
 

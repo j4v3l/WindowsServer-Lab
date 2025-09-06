@@ -7,6 +7,10 @@
     Asgard and Olympus lab environments. It provides comprehensive Group Policy
     Object (GPO) deployment with proper organizational unit (OU) mappings.
     
+    EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers)
+    ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM
+    PREREQUISITES: Domain Administrator rights, Group Policy Management Tools
+    
 .PARAMETER DemoType
     The demo environment type:
     - "Asgard" - Norse mythology themed environment

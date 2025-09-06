@@ -1,5 +1,9 @@
 # DHCP Server Setup Script
 # This script installs and configures DHCP on Windows Server
+#
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (DHCP Server or Domain Controller)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VM
+# PREREQUISITES: Windows Server VM running, Local Admin rights
 
 # Install DHCP Server Role
 Install-WindowsFeature -Name DHCP -IncludeManagementTools

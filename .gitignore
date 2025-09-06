@@ -158,9 +158,7 @@ TestResults/
 # =============================================================================
 
 # Allow specific project files that might match blocked patterns
-!Scripts/WindowsServerLab.psd1
-!Scripts/WindowsServerLab.psm1
-!Demo/Asgard/Scripts/Deploy-AsgardLab.ps1
+# Removed PowerShell module files and Demo scripts (no longer needed for Proxmox version)
 
 # =============================================================================
 # KEEP EMPTY DIRECTORIES

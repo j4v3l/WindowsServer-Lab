@@ -1,5 +1,9 @@
 # Lab Finish Setup Script
 # This script completes the lab environment setup with users, computers, and groups
+#
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Active Directory Domain Services installed, Domain Admin rights
 
 [CmdletBinding()]
 param(

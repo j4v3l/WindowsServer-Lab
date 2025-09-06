@@ -1,5 +1,16 @@
 # ⚡ **OLYMPUS SYSTEMS DEMO** - Windows Server Lab
 
+# 🚨 **CRITICAL SECURITY WARNING**
+
+**⚠️ IMPORTANT:** This environment contains DEFAULT CONFIGURATIONS that are NOT suitable for production use. Before any deployment:
+
+1. **Change ALL default passwords** - Never use demo passwords in production
+2. **Implement production security policies** - Review SECURITY_HARDENING_GUIDE.md  
+3. **Complete security assessment** - Run SECURITY_VALIDATION_SCRIPT.ps1
+4. **Review all configurations** - Ensure proper network isolation and access controls
+
+**🔒 SECURITY NOTE:** All deployment scripts now require secure password entry - no credentials are hardcoded.
+
 ## 🛠️ **v1.3.1 UPDATE: Network Issues Resolved!**
 
 **✅ FIXED**: Critical networking issues have been resolved in v1.3.1! Olympus now deploys cleanly with:
@@ -63,8 +74,9 @@ cd Olympus/Scripts
 ### **Start Here**
 
 1. **[QUICK_START_OLYMPUS.md](Guides/QUICK_START_OLYMPUS.md)** - 3-step deployment guide
-2. **[DEMO_SETUP_GUIDE.md](Documentation/DEMO_SETUP_GUIDE.md)** - Complete technical reference
-3. **[HARDWARE_PERFORMANCE_GUIDE.md](Documentation/HARDWARE_PERFORMANCE_GUIDE.md)** - Performance optimization
+2. **[NETWORK_TOPOLOGY_OLYMPUS.md](NETWORK_TOPOLOGY_OLYMPUS.md)** - Complete network architecture guide
+3. **[DEMO_SETUP_GUIDE.md](Documentation/DEMO_SETUP_GUIDE.md)** - Complete technical reference
+4. **[HARDWARE_PERFORMANCE_GUIDE.md](Documentation/HARDWARE_PERFORMANCE_GUIDE.md)** - Performance optimization
 
 ### **For Different Audiences**
 
@@ -160,7 +172,7 @@ DMZ:         10.0.50.0/24  (External Services)
 - ✅ Network Segmentation
 - ✅ Monitoring & Auditing
 - ✅ Backup & Recovery
-- ✅ Hyper-V Virtualization
+- ✅ Proxmox VE Virtualization
 - ✅ PowerShell Automation
 
 #### **Advanced Features**
@@ -218,14 +230,14 @@ The demo environment supports any Windows Server scenario:
 - **RAM**: 64GB DDR5
 - **Storage**: 1TB NVMe SSD
 - **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows 11 Pro with Hyper-V
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ### **⚙️ Minimum Requirements**
 
 - **RAM**: 32GB (64GB recommended)
 - **CPU**: 8+ cores (12+ recommended)
 - **Storage**: 1TB+ NVMe SSD
-- **OS**: Windows 10/11 Pro with Hyper-V enabled
+- **OS**: Windows Server 2022 on Proxmox VE
 
 ---
 
@@ -269,24 +281,25 @@ Get-AdvancedSecurityReport -OutputPath "C:\Olympus\Reports"
 ### **VM Management**
 
 ```powershell
-# Start all Olympus VMs
-Get-VM | Where-Object {$_.Name -like "ZEUS-*" -or $_.Name -like "HERA-*" -or $_.Name -like "ATHENA-*" -or $_.Name -like "APOLLO-*" -or $_.Name -like "HERMES-*"} | Start-VM
+# Start all Olympus VMs (Run on Proxmox host)
+ssh root@proxmox-host
+for vm in {200..204} {210..234}; do qm start $vm; done
 
-# Stop all Olympus VMs
-Get-VM | Where-Object {$_.Name -like "*OLYMPUS*"} | Stop-VM
+# Stop all Olympus VMs (Run on Proxmox host)
+for vm in {200..204} {210..234}; do qm stop $vm; done
 
-# Create checkpoint for all VMs
-Get-VM | Where-Object {$_.Name -like "*OLYMPUS*"} | Checkpoint-VM -SnapshotName "Pre-Demo"
+# Create checkpoint for all VMs (Run on Proxmox host)
+for vm in {200..204} {210..234}; do qm snapshot $vm "olympus-checkpoint-$(date +%Y%m%d)"; done
 ```
 
 ### **Network Management**
 
 ```powershell
 # View network configuration
-Get-VMSwitch | Where-Object {$_.Name -like "OLYMPUS-*"}
+# Check network bridges via Proxmox VE web interface
 
 # Monitor network traffic
-Get-VMNetworkAdapter | Where-Object {$_.SwitchName -like "OLYMPUS-*"}
+# Check VM network adapters via Proxmox VE web interface
 ```
 
 ---

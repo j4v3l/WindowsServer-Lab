@@ -1,4 +1,8 @@
 # Security Audit Script
+# EXECUTION CONTEXT: Run INSIDE Windows Server VMs (Domain Controllers or Member Servers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Domain Administrator rights, Active Directory module
+
 # This script performs a comprehensive security audit of Windows Server
 
 # Import required modules

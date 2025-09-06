@@ -46,7 +46,7 @@ For bugs, feature requests, or specific problems:
 If you're having trouble with initial setup:
 
 1. **Check Prerequisites**: Ensure you meet system requirements
-2. **Verify Hyper-V**: Confirm Hyper-V is enabled and working
+2. **Verify Proxmox**: Confirm Proxmox VE is running and accessible
 3. **PowerShell Version**: Use PowerShell 5.1 or later
 4. **Network Configuration**: Verify network adapter settings
 
@@ -59,9 +59,9 @@ If you're having trouble with initial setup:
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-#### Hyper-V Not Available
+#### Proxmox VE Issues
 
-- Verify Windows edition supports Hyper-V
+- Verify Proxmox VE is properly installed and running
 - Check BIOS/UEFI virtualization settings
 - Ensure Windows features are enabled
 
@@ -81,7 +81,7 @@ When asking for help, please provide:
 
    - Operating System (Windows 11, Windows Server 2022, etc.)
    - PowerShell version (`$PSVersionTable`)
-   - Hyper-V version
+   - Proxmox VE version
    - Hardware specifications
 
 2. **Problem Description**:
@@ -107,8 +107,8 @@ Start-Transcript -Path "C:\Support\PowerShell-Log.txt"
 Stop-Transcript
 
 # Event logs
-Get-WinEvent -LogName "Microsoft-Windows-Hyper-V*" -MaxEvents 50 |
-    Export-Csv "C:\Support\Hyper-V-Events.csv"
+# Check Proxmox logs (on Proxmox host)
+journalctl -u pve-daemon --since "1 hour ago" > /tmp/proxmox-events.log
 ```
 
 ## ⏱️ Response Times
@@ -152,7 +152,7 @@ _Contact us for professional support options_
 
 ### 🌐 Social Media
 
-- **Twitter**: [@WindowsServerLab]
+- **GitHub**: [Windows Server Lab Environment](https://github.com/j4v3l/WindowsServer)
 - **LinkedIn**: [Windows Server Lab Community]
 - **YouTube**: [Windows Server Lab Tutorials]
 
@@ -171,7 +171,7 @@ We provide structured issue templates to help you provide the right information:
 Issues are automatically labeled and triaged:
 
 - **Priority**: Critical, High, Medium, Low
-- **Component**: AD, DNS, DHCP, Hyper-V, etc.
+- **Component**: AD, DNS, DHCP, Proxmox VE, etc.
 - **Status**: Triage, In Progress, Needs Info, etc.
 
 ## 📈 Contributing Back
@@ -200,13 +200,13 @@ Active community contributors may receive:
 
 - **Microsoft Learn**: Official Windows Server training
 - **PowerShell Documentation**: Comprehensive PowerShell guides
-- **Hyper-V Documentation**: Virtualization best practices
+- **Proxmox Documentation**: Virtualization best practices
 - **Community Blogs**: Real-world lab scenarios
 
 ### 🛠️ Tools and Utilities
 
 - **PowerShell ISE/VS Code**: Development environments
-- **Hyper-V Manager**: GUI management tool
+- **Proxmox Web UI**: GUI management interface
 - **Windows Admin Center**: Modern management interface
 - **Sysinternals Suite**: Advanced troubleshooting tools
 

@@ -10,9 +10,9 @@
 ## 📋 Prerequisites
 
 - Working Windows Server domain (from [01_Setup_Lab_Environment.md](01_Setup_Lab_Environment.md))
-- Virtualization software (VMware, VirtualBox, or Hyper-V)
+- Proxmox VE virtualization platform configured
 - Windows Server ISO (2019 or 2022)
-- At least 16GB RAM on host machine
+- At least 16GB RAM on Proxmox VE host
 - 200GB free disk space
 
 ## 🔄 Setting Up DC2 (Second Domain Controller)

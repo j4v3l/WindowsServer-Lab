@@ -1,4 +1,8 @@
 # Oh My Posh Setup Script for Windows
+# EXECUTION CONTEXT: Run INSIDE Windows VMs (Any Windows VM - Workstations or Servers)
+# ACCESS METHOD: RDP, Console, or PowerShell Direct to Windows VMs
+# PREREQUISITES: Internet access, Local Administrator rights (optional)
+
 # This script automates the installation and configuration of Oh My Posh
 # https://ohmyposh.dev/docs/installation/windows
 
@@ -8,7 +12,7 @@
 .DESCRIPTION
     This script automates the installation and configuration of Oh My Posh on Windows,
     including installing Oh My Posh, the required fonts, and configuring PowerShell to use it.
-    It can be used as part of the WindowsServerLab module or as a standalone script.
+    It can be used as a standalone script for Proxmox VE environments.
 .PARAMETER Theme
     The Oh My Posh theme to use. If not specified, the default theme 'jandedobbeleer' will be used.
 .PARAMETER FontName
@@ -37,7 +41,7 @@
     .\Setup-OhMyPosh.ps1 -ConfigureWindowsTerminal -ConfigureVSCode
     # Install Oh My Posh and configure both Windows Terminal and VS Code
 .NOTES
-    Author: WindowsServerLab Team
+    Author: Windows Server Lab Environment (Proxmox VE Edition)
     Date: June 12, 2025
     Version: 1.0
 .LINK

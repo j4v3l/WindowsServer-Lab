@@ -130,7 +130,6 @@ We provide structured issue templates to improve issue quality:
 
 1. **Before Committing:**
    - Run `PSScriptAnalyzer` locally on your scripts
-   - Test your PowerShell modules with `Test-ModuleIntegrity.ps1`
    - Validate markdown links in documentation
    - Follow the Code of Conduct and security guidelines
 
@@ -182,9 +181,8 @@ Get-ChildItem -Recurse -Include "*.ps1" | Invoke-ScriptAnalyzer
 ### Module Integrity
 
 ```powershell
-# Test module integrity
-cd Scripts
-.\Test-ModuleIntegrity.ps1
+# Module integrity testing is no longer available
+# Use manual validation procedures instead
 ```
 
 ### Documentation Links

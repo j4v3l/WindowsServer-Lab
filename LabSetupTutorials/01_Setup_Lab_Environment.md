@@ -11,41 +11,90 @@
 
 Before we begin, make sure you have:
 
-1. A computer with at least 8GB RAM and 100GB free disk space
-2. One of these virtualization programs installed:
-   - [VMware Workstation Player](https://www.vmware.com/products/workstation-player.html) (Free)
-   - [VirtualBox](https://www.virtualbox.org/) (Free)
-   - [Hyper-V](https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v) (Free with Windows Pro)
-3. Windows Server ISO file (2019 or 2022 recommended)
+1. **Proxmox VE server** with at least 16GB RAM and 500GB free disk space
+2. **Proxmox VE 8.0+** installed and configured
+   - Access to the Proxmox web interface (<https://your-proxmox-ip:8006>)
+   - Network connectivity configured
+   - Basic storage configuration completed
+3. **Windows Server ISO file** (2019, 2022, or 2025 recommended)
    - You can download a trial version from [Microsoft's website](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2019)
+4. **VirtIO drivers ISO** for optimal Windows performance on Proxmox
 
 ## 🖥️ Step 1: Create Your Virtual Machine
 
-Think of a virtual machine (VM) as a computer within your computer. Here's how to create one:
+Think of a virtual machine (VM) as a computer within your Proxmox server. Here's how to create one:
 
-### For Hyper-V Users (Recommended for Windows Pro/Enterprise)
+### Creating DC1-LAB (Domain Controller) in Proxmox
 
-1. Open **Hyper-V Manager** (search for it in Start Menu)
-2. Click "New" → "Virtual Machine" in the Actions pane
-3. Follow the New Virtual Machine Wizard:
-   - Name: `DC1-LAB`
-   - Generation: **Generation 2** (for better performance)
-   - Memory: 4096 MB (4GB) with Dynamic Memory enabled
-   - Network: Select your lab network switch (see [Hyper-V Setup Guide](16_Hyper-V_Setup_and_Configuration.md))
-   - Hard disk: Create new, 80 GB, Dynamic expanding
-   - Installation: Attach your Windows Server ISO
+1. **Access Proxmox Web Interface**
+   - Open browser and navigate to `https://your-proxmox-ip:8006`
+   - Login with your Proxmox credentials
 
-### For VirtualBox/VMware Users
+2. **Click "Create VM"** in the top-right corner
 
-1. Open your virtualization program
-2. Click "New" or "Create Virtual Machine"
-3. Set these recommended settings:
-   - Name: `DC1` (DC stands for Domain Controller)
-   - Type: Microsoft Windows
-   - Version: Windows Server 2019 (64-bit)
-   - Memory: 4096 MB (4GB)
-   - Hard disk: 60 GB
-   - Processors: 2
+3. **General Settings**:
+
+   ```
+   VM ID: 100
+   Name: DC1-LAB
+   Resource Pool: (leave default)
+   ```
+
+4. **OS Settings**:
+
+   ```
+   Use CD/DVD disc image file (iso): ✓
+   Storage: local
+   ISO image: Select your Windows Server ISO
+   Type: Microsoft Windows
+   Version: 10/2016/2019/2022/2025 (win10)
+   ```
+
+5. **System Settings**:
+
+   ```
+   Graphic card: Default
+   Machine: q35
+   BIOS: OVMF (UEFI) - Recommended for Windows
+   EFI Storage: local-lvm
+   Pre-Enroll keys: ✓
+   SCSI Controller: VirtIO SCSI single
+   Qemu Agent: ✓ (for better integration)
+   ```
+
+6. **Hard Disk**:
+
+   ```
+   Storage: local-lvm
+   Disk size (GB): 80
+   Cache: Write back (for better performance)
+   Discard: ✓
+   SSD emulation: ✓ (if using SSD storage)
+   ```
+
+7. **CPU**:
+
+   ```
+   Sockets: 1
+   Cores: 4
+   Type: host (for best performance)
+   ```
+
+8. **Memory**:
+
+   ```
+   Memory (MB): 4096
+   Ballooning: ✓ (for dynamic memory)
+   ```
+
+9. **Network**:
+
+   ```
+   Bridge: vmbr0 (or your configured bridge)
+   Model: VirtIO (paravirtualized - best performance)
+   ```
+
+10. **Confirm** settings and create the VM
 
 ## 💿 Step 2: Install Windows Server
 
@@ -65,9 +114,9 @@ Think of a virtual machine (VM) as a computer within your computer. Here's how t
 
 ## 🌐 Step 3: Configure Network Settings
 
-### For Hyper-V Labs
+### For Proxmox VE Labs
 
-If you followed the [Hyper-V Setup Guide](16_Hyper-V_Setup_and_Configuration.md), your VM should have two network adapters:
+If you followed the [Proxmox VE Setup Guide](16_Proxmox_Setup_and_Configuration.md), your VM should have two network adapters:
 
 1. **External Adapter** (for internet access):
 
@@ -82,7 +131,7 @@ If you followed the [Hyper-V Setup Guide](16_Hyper-V_Setup_and_Configuration.md)
    - Default Gateway: 192.168.100.1
    - DNS Server: 192.168.100.10 (same as IP address)
 
-### For VirtualBox/VMware Labs
+### For Alternative Virtualization Platforms
 
 1. After installation, press `Windows + X` and select "Network Connections"
 2. Right-click your network adapter and select "Properties"
@@ -171,7 +220,7 @@ For a simple lab setup:
 cd Scripts
 
 # Run the automated lab setup (you'll be prompted for passwords)
-.\Lab_Setup.ps1
+.\Lab-FinishSetup.ps1
 
 # Or run individual components
 .\Create-LabUsers.ps1          # Creates users and groups

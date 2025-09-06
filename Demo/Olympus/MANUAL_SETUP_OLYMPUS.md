@@ -1,5 +1,23 @@
 # ⚡ **OLYMPUS SYSTEMS** - Manual Setup Guide
 
+## 📋 **EXECUTION CONTEXT GUIDE**
+
+**CRITICAL:** This guide contains commands that must be run on different systems. Pay attention to the execution context for each command:
+
+- **[PROXMOX HOST]** - Commands run on the Proxmox VE host via SSH or console
+- **[SERVER VM]** - Commands run inside Windows Server VMs (domain controllers, file servers, etc.)
+- **[CLIENT VM]** - Commands run inside Windows client VMs (workstations)
+
+### **Access Methods:**
+
+- **Proxmox Host:** SSH to Proxmox VE with root privileges
+- **Server VMs:** RDP, Console, or PowerShell Direct with Administrator/Domain Admin privileges
+- **Client VMs:** Local console or RDP with Local Administrator privileges
+
+### **Prerequisites Verification:**
+
+Before running any commands, ensure all prerequisites are met as listed in each section.
+
 ## 📋 **Overview**
 
 This manual setup guide provides step-by-step instructions for deploying the Olympus Systems Windows Server lab environment without using the automated deployment script. This approach gives you complete control over the installation process and allows for customization at each step.
@@ -34,85 +52,97 @@ This manual setup guide provides step-by-step instructions for deploying the Oly
 
 ### **Software Requirements**
 
-- **Windows 10/11 Pro or Enterprise**
-- **Hyper-V Feature Enabled**
+- **Proxmox VE 8.0+ Environment Ready**
 - **Windows Server 2019/2022/2025 ISO**
 - **Windows 10/11 Client ISO**
-- **PowerShell 5.1 or later**
-- **Azure CLI** (optional, for cloud integration)
+- **VirtIO drivers ISO for optimal Windows performance**
+- **SSH access to Proxmox host (optional)**
+- **Azure CLI** (optional, for cloud integration via Windows VMs)
 
 ---
 
 ## 🚀 **Phase 1: Environment Preparation**
 
-### **Step 1.1: Enable Hyper-V**
+### **Step 1.1: Prepare Proxmox VE Environment**
 
-```powershell
-# Run as Administrator
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All
-
-# Restart required
-Restart-Computer
+```bash
+# Create VMs using Proxmox VE web interface
+# Follow the Proxmox setup guides for VM creation
+# Ensure adequate resources are allocated:
+# - Domain Controller: 8GB RAM, 4 vCPU, 80GB disk
+# - File Server: 8GB RAM, 4 vCPU, 120GB disk
+# - Web Server: 6GB RAM, 3 vCPU, 80GB disk
 ```
 
-### **Step 1.2: Create Directory Structure**
+### **Step 1.2: Upload ISO Files to Proxmox**
 
-```powershell
-# Create main VM directory
-New-Item -Path "C:\VMs\Olympus" -ItemType Directory -Force
+```bash
+# Upload ISO files to Proxmox storage
+# Method 1: Via web interface
+# Navigate to: Datacenter > [Node] > local (storage) > ISO Images > Upload
 
-# Create organized subdirectories
-New-Item -Path "C:\VMs\Olympus\Servers" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Olympus\Workstations" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Olympus\ISOs" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Olympus\Scripts" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Olympus\Documentation" -ItemType Directory -Force
-New-Item -Path "C:\VMs\Olympus\AI-ML" -ItemType Directory -Force
+# Method 2: Via command line (on Proxmox host)
+cd /var/lib/vz/template/iso/
+# Upload your ISO files here:
+# - WindowsServer2022.iso (or your version)
+# - Windows11.iso (for client VMs)
+# - virtio-win.iso (VirtIO drivers)
+# - Optional: Ubuntu Server ISO (for AI/ML container host)
 ```
 
 ---
 
 ## 🌐 **Phase 2: Network Infrastructure Setup**
 
-### **Step 2.1: Create Virtual Switches**
+### **Step 2.1: Create Network Bridges in Proxmox VE**
 
 #### **Production Network (External)**
 
-```powershell
-# Create external switch for internet access
-New-VMSwitch -Name "OLYMPUS-Production" -NetAdapterName "Ethernet" -AllowManagementOS $true
+```bash
+# Use Proxmox VE web interface to create network bridges
+# Navigate to: Datacenter > [Node] > System > Network
+# Create bridge vmbr0 for production network with physical interface
+# This provides internet access for VMs
 ```
 
 #### **Management Network (Internal)**
 
-```powershell
-# Create management network
-New-VMSwitch -Name "OLYMPUS-Management" -SwitchType Internal
-$mgmtAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Management)"
-New-NetIPAddress -IPAddress 10.0.100.1 -PrefixLength 24 -InterfaceIndex $mgmtAdapter.ifIndex
+```bash
+# Create bridge vmbr1 for management network
+# Configure as internal bridge without physical interface
+# IP: 10.0.100.1/24 for host management access
 ```
 
 #### **Client Network (Internal)**
 
-```powershell
-# Create client network
-New-VMSwitch -Name "OLYMPUS-Clients" -SwitchType Internal
-$clientAdapter = Get-NetAdapter -Name "vEthernet (OLYMPUS-Clients)"
-New-NetIPAddress -IPAddress 10.0.20.1 -PrefixLength 22 -InterfaceIndex $clientAdapter.ifIndex
+```bash
+# Create bridge vmbr2 for client network
+# Configure as internal bridge
+# IP: 10.0.20.1/22 for client VMs
 ```
 
 #### **DMZ Network (Private)**
 
-```powershell
-# Create DMZ for external services
-New-VMSwitch -Name "OLYMPUS-DMZ" -SwitchType Private
+```bash
+# Create bridge vmbr3 for DMZ
+# Configure as isolated bridge for web servers
 ```
 
-#### **Configure NAT**
+#### **AI/ML Network (Specialized)**
 
-```powershell
-# Create NAT for internal networks
-New-NetNat -Name "OLYMPUS-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8
+```bash
+# Create bridge vmbr4 for AI/ML workloads
+# Configure as high-performance bridge for data science VMs
+# Optional: Configure with dedicated high-speed network interface
+```
+
+### **Step 2.2: Verify Network Configuration**
+
+```bash
+# Check network bridges on Proxmox host
+ip link show | grep vmbr
+# Verify bridge configurations
+brctl show
 ```
 
 ---
@@ -121,46 +151,81 @@ New-NetNat -Name "OLYMPUS-NAT" -InternalIPInterfaceAddressPrefix 10.0.0.0/8
 
 ### **Step 3.1: Create Primary Domain Controller (ZEUS-DC01)**
 
-#### **Create VM**
+#### **Create VM using Proxmox VE Web Interface**
 
-```powershell
-$VMName = "ZEUS-DC01"
-$VMPath = "C:\VMs\Olympus\Servers\$VMName"
-$Memory = 8GB
-$VHDSize = 80GB
-$CPUCount = 4
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **General Tab**:
+   - VM ID: 200
+   - Name: ZEUS-DC01
+   - Resource Pool: (optional)
 
-# Create VM
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+3. **OS Tab**:
+   - Use CD/DVD disc image file (iso)
+   - Storage: local
+   - ISO image: WindowsServer2022.iso
 
-# Create and attach VHD
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+4. **System Tab**:
+   - Machine: q35
+   - BIOS: OVMF (UEFI)
+   - Add EFI Disk: Yes
+   - SCSI Controller: VirtIO SCSI
 
-# Configure network adapters
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Management" -Name "Management"
+5. **Hard Disk Tab**:
+   - Bus/Device: SCSI 0
+   - Storage: local-lvm
+   - Disk size: 80 GB
+   - Cache: Write back
+   - Discard: Yes
 
-# Attach ISO
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
+6. **CPU Tab**:
+   - Cores: 4
+   - Type: host
 
-# Configure boot order
-$VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-$VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
+7. **Memory Tab**:
+   - Memory: 8192 MB
+
+8. **Network Tab**:
+   - Bridge: vmbr0 (Production)
+   - Model: VirtIO (paravirtualized)
+
+9. **Add Second Network Interface**:
+   - Bridge: vmbr1 (Management)
+   - Model: VirtIO
+
+#### **Or via Command Line**
+
+```bash
+# Create Zeus DC01 VM using Proxmox CLI
+qm create 200 \
+  --name "ZEUS-DC01" \
+  --memory 8192 \
+  --cores 4 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr0 \
+  --net1 virtio,bridge=vmbr1 \
+  --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 #### **Promote to Domain Controller**
 
 ```powershell
-# Run on ZEUS-DC01 after Windows installation
+# [SERVER VM] - Run on ZEUS-DC01 after Windows Server installation
+# EXECUTION CONTEXT: PowerShell session with Administrator privileges on ZEUS-DC01
+# PREREQUISITES: Windows Server installed, network configured, system updated
+
 Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 Import-Module ADDSDeployment
 
 $DomainName = "olympus.local"
-$SafeModePassword = ConvertTo-SecureString "YourSecurePassword123!" -AsPlainText -Force
+$SafeModePassword = ConvertTo-SecureString "[ADMIN_MUST_SET_SECURE_PASSWORD]" -AsPlainText -Force
 
 Install-ADDSForest `
     -CreateDnsDelegation:$false `
@@ -179,96 +244,156 @@ Install-ADDSForest `
 
 ### **Step 3.2: Create Secondary Domain Controller (HERA-DC02)**
 
-```powershell
-$VMName = "HERA-DC02"
-$VMPath = "C:\VMs\Olympus\Servers\$VMName"
-$Memory = 6GB
-$VHDSize = 60GB
-$CPUCount = 3
+#### **Create VM using Proxmox VE Web Interface**
 
-# Create VM (same pattern as ZEUS-DC01)
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 201
+   - Name: HERA-DC02
+   - Memory: 6144 MB
+   - CPU Cores: 3
+   - Disk: 60 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management)
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+3. **Or via Command Line**:
 
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
-```
+   ```bash
+   # [PROXMOX HOST] - Create Hera DC02 VM using Proxmox CLI
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+   # PREREQUISITES: ISO files uploaded, storage configured, network bridges created
+   
+   qm create 201 \
+     --name "HERA-DC02" \
+     --memory 6144 \
+     --cores 3 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:60,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 ### **Step 3.3: Create File Server (HERMES-FS01)**
 
-```powershell
-$VMName = "HERMES-FS01"
-$VMPath = "C:\VMs\Olympus\Servers\$VMName"
-$Memory = 8GB
-$VHDSize = 120GB
-$CPUCount = 4
+#### **Create VM using Proxmox VE Web Interface**
 
-# Create VM
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 202
+   - Name: HERMES-FS01
+   - Memory: 8192 MB
+   - CPU Cores: 4
+   - Disk: 120 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management)
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+3. **Or via Command Line**:
 
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
-```
+   ```bash
+   # [PROXMOX HOST] - Create file server VM using Proxmox CLI  
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+   # PREREQUISITES: ISO files uploaded, storage configured, network bridges created
+   
+   qm create 202 \
+     --name "HERMES-FS01" \
+     --memory 8192 \
+     --cores 4 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:120,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 ### **Step 3.4: Create Web Server (APOLLO-WEB01)**
 
-```powershell
-$VMName = "APOLLO-WEB01"
-$VMPath = "C:\VMs\Olympus\Servers\$VMName"
-$Memory = 6GB
-$VHDSize = 80GB
-$CPUCount = 3
+#### **Create VM using Proxmox VE Web Interface**
 
-# Create VM with DMZ access
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 203
+   - Name: APOLLO-WEB01
+   - Memory: 6144 MB
+   - CPU Cores: 3
+   - Disk: 80 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management) + vmbr3 (DMZ)
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+3. **Or via Command Line**:
 
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-DMZ" -Name "DMZ"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
-```
+   ```bash
+   # [PROXMOX HOST] - Create web server VM with DMZ access
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges  
+   # PREREQUISITES: ISO files uploaded, network bridges vmbr0, vmbr1, vmbr3 created
+   
+   qm create 203 \
+     --name "APOLLO-WEB01" \
+     --memory 6144 \
+     --cores 3 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:80,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --net2 virtio,bridge=vmbr3 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 ### **Step 3.5: Create Security Server (ATHENA-SEC01)**
 
-```powershell
-$VMName = "ATHENA-SEC01"
-$VMPath = "C:\VMs\Olympus\Servers\$VMName"
-$Memory = 8GB
-$VHDSize = 100GB
-$CPUCount = 4
+#### **Create VM using Proxmox VE Web Interface**
 
-# Create security server
-New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-Set-VM -Name $VMName -ProcessorCount $CPUCount
+1. **Navigate to**: Datacenter > [Node] > Create VM
+2. **VM Configuration**:
+   - VM ID: 204
+   - Name: ATHENA-SEC01
+   - Memory: 8192 MB
+   - CPU Cores: 4
+   - Disk: 100 GB
+   - Network: vmbr0 (Production) + vmbr1 (Management)
 
-$VHDPath = "$VMPath\$VMName.vhdx"
-New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
+3. **Or via Command Line**:
 
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Production" -Name "Production"
-Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Management" -Name "Management"
-
-Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
-```
+   ```bash
+   # [PROXMOX HOST] - Create security server VM
+   # EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+   # PREREQUISITES: ISO files uploaded, network bridges vmbr0, vmbr1 created
+   
+   qm create 204 \
+     --name "ATHENA-SEC01" \
+     --memory 8192 \
+     --cores 4 \
+     --cpu host \
+     --machine q35 \
+     --bios ovmf \
+     --efidisk0 local-lvm:4 \
+     --scsi0 local-lvm:100,cache=writeback,discard=on \
+     --scsihw virtio-scsi-single \
+     --net0 virtio,bridge=vmbr0 \
+     --net1 virtio,bridge=vmbr1 \
+     --ide2 local:iso/WindowsServer2022.iso,media=cdrom \
+     --ide0 local:iso/virtio-win.iso,media=cdrom \
+     --ostype win10 \
+     --agent 1
+   ```
 
 ---
 
@@ -276,90 +401,491 @@ Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\WindowsServer.iso"
 
 ### **Step 4.1: Create Workstation Template**
 
-```powershell
-function New-OlympusWorkstation {
-    param(
-        [string]$VMName,
-        [int64]$Memory = 4GB,
-        [int64]$VHDSize = 60GB,
-        [int]$CPUCount = 2,
-        [string]$Description = ""
-    )
+#### **Workstation VM Template (via Proxmox VE)**
 
-    $VMPath = "C:\VMs\Olympus\Workstations\$VMName"
+All workstations will follow this template configuration:
 
-    # Create VM
-    New-VM -Name $VMName -Path $VMPath -MemoryStartupBytes $Memory -Generation 2
-    Set-VM -Name $VMName -ProcessorCount $CPUCount -Notes $Description
+```bash
+# [PROXMOX HOST] - Template for creating Olympus workstations  
+# EXECUTION CONTEXT: SSH session to Proxmox VE host with root privileges
+# VM IDs: 210-229 (20 workstations)
+# Standard configuration:
+# - Memory: 4096 MB (adjustable per workstation)
+# - CPU: 2 cores (adjustable per workstation)
+# - Disk: 60 GB (adjustable per workstation)
+# - Network: vmbr2 (Client network) or vmbr4 (AI/ML network for R&D)
+# - OS: Windows 10/11
 
-    # Create and attach VHD
-    $VHDPath = "$VMPath\$VMName.vhdx"
-    New-VHD -Path $VHDPath -SizeBytes $VHDSize -Dynamic
-    Add-VMHardDiskDrive -VMName $VMName -Path $VHDPath
-
-    # Configure network
-    Add-VMNetworkAdapter -VMName $VMName -SwitchName "OLYMPUS-Clients" -Name "Clients"
-
-    # Attach client ISO
-    Set-VMDvdDrive -VMName $VMName -Path "C:\VMs\Olympus\ISOs\Windows10.iso"
-
-    # Configure boot order
-    $VMDvdDrive = Get-VMDvdDrive -VMName $VMName
-    $VMHardDisk = Get-VMHardDiskDrive -VMName $VMName
-    Set-VMFirmware -VMName $VMName -FirstBootDevice $VMDvdDrive
-
-    Write-Host "Created divine workstation: $VMName" -ForegroundColor Cyan
-}
+# Example template command:
+qm create [VMID] \
+  --name "[VM_NAME]" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ### **Step 4.2: Create Divine Council Workstations (IT Operations)**
 
-```powershell
-New-OlympusWorkstation -VMName "ZEUS-WS01" -Memory 6GB -VHDSize 80GB -Description "Zeus Supreme Command Center"
-New-OlympusWorkstation -VMName "POSEIDON-WS01" -Memory 4GB -VHDSize 60GB -Description "Poseidon's Ocean Terminal"
-New-OlympusWorkstation -VMName "HADES-WS01" -Memory 4GB -VHDSize 60GB -Description "Hades' Underworld Station"
-New-OlympusWorkstation -VMName "HERMES-WS01" -Memory 3GB -VHDSize 60GB -Description "Hermes' Swift Messenger"
-New-OlympusWorkstation -VMName "DIONYSUS-WS01" -Memory 3GB -VHDSize 60GB -Description "Dionysus' Creative Studio"
+```bash
+# Create IT Operations workstations via Proxmox VE
+
+# ZEUS-WS01 (Supreme Command Center)
+qm create 210 \
+  --name "ZEUS-WS01" \
+  --memory 6144 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# POSEIDON-WS01 (Ocean Terminal)
+qm create 211 \
+  --name "POSEIDON-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HADES-WS01 (Underworld Station)
+qm create 212 \
+  --name "HADES-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HERMES-WS01 (Swift Messenger)
+qm create 213 \
+  --name "HERMES-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# DIONYSUS-WS01 (Creative Studio)
+qm create 214 \
+  --name "DIONYSUS-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ### **Step 4.3: Create War Strategists Workstations (Cybersecurity)**
 
-```powershell
-New-OlympusWorkstation -VMName "ATHENA-WS01" -Memory 6GB -VHDSize 80GB -Description "Athena's Wisdom Tower"
-New-OlympusWorkstation -VMName "ARES-WS01" -Memory 4GB -VHDSize 60GB -Description "Ares' War Room"
-New-OlympusWorkstation -VMName "NIKE-WS01" -Memory 3GB -VHDSize 60GB -Description "Nike's Victory Terminal"
-New-OlympusWorkstation -VMName "KRATOS-WS01" -Memory 4GB -VHDSize 60GB -Description "Kratos' Strength Station"
-New-OlympusWorkstation -VMName "BIA-WS01" -Memory 3GB -VHDSize 60GB -Description "Bia's Force Platform"
+```bash
+# Create Cybersecurity workstations via Proxmox VE
+
+# ATHENA-WS01 (Wisdom Tower)
+qm create 215 \
+  --name "ATHENA-WS01" \
+  --memory 6144 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# ARES-WS01 (War Room)
+qm create 216 \
+  --name "ARES-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# NIKE-WS01 (Victory Terminal)
+qm create 217 \
+  --name "NIKE-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# KRATOS-WS01 (Strength Station)
+qm create 218 \
+  --name "KRATOS-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# BIA-WS01 (Force Platform)
+qm create 219 \
+  --name "BIA-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ### **Step 4.4: Create Innovation Forge Workstations (R&D)**
 
-```powershell
-New-OlympusWorkstation -VMName "APOLLO-WS01" -Memory 6GB -VHDSize 100GB -Description "Apollo's Light Laboratory"
-New-OlympusWorkstation -VMName "ARTEMIS-WS01" -Memory 4GB -VHDSize 80GB -Description "Artemis' Hunt Station"
-New-OlympusWorkstation -VMName "HEPHAESTUS-WS01" -Memory 4GB -VHDSize 80GB -Description "Hephaestus' Forge"
-New-OlympusWorkstation -VMName "PROMETHEUS-WS01" -Memory 4GB -VHDSize 80GB -Description "Prometheus' Fire Terminal"
-New-OlympusWorkstation -VMName "DAEDALUS-WS01" -Memory 4GB -VHDSize 80GB -Description "Daedalus' Craft Studio"
+```bash
+# Create R&D workstations via Proxmox VE with AI/ML network access
+
+# APOLLO-WS01 (Light Laboratory)
+qm create 220 \
+  --name "APOLLO-WS01" \
+  --memory 6144 \
+  --cores 4 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:100,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr4 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# ARTEMIS-WS01 (Hunt Station)
+qm create 221 \
+  --name "ARTEMIS-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr4 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HEPHAESTUS-WS01 (Forge)
+qm create 222 \
+  --name "HEPHAESTUS-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr4 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+# PROMETHEUS-WS01 (Fire Terminal)
+qm create 223 \
+  --name "PROMETHEUS-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr4 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# DAEDALUS-WS01 (Craft Studio)
+qm create 224 \
+  --name "DAEDALUS-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:80,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr4 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ### **Step 4.5: Create Abundance Treasury Workstations (Finance)**
 
-```powershell
-New-OlympusWorkstation -VMName "HERA-WS01" -Memory 4GB -VHDSize 60GB -Description "Hera's Queen Station"
-New-OlympusWorkstation -VMName "DEMETER-WS01" -Memory 3GB -VHDSize 60GB -Description "Demeter's Harvest Terminal"
-New-OlympusWorkstation -VMName "PLUTUS-WS01" -Memory 3GB -VHDSize 60GB -Description "Plutus' Wealth Engine"
-New-OlympusWorkstation -VMName "TYCHE-WS01" -Memory 3GB -VHDSize 60GB -Description "Tyche's Fortune Analyzer"
-New-OlympusWorkstation -VMName "NEMESIS-WS01" -Memory 3GB -VHDSize 60GB -Description "Nemesis' Balance Scale"
+```bash
+# Create Finance & Administration workstations via Proxmox VE
+
+# HERA-WS01 (Queen Station)
+qm create 225 \
+  --name "HERA-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# DEMETER-WS01 (Harvest Terminal)
+qm create 226 \
+  --name "DEMETER-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# PLUTUS-WS01 (Wealth Engine)
+qm create 227 \
+  --name "PLUTUS-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# TYCHE-WS01 (Fortune Analyzer)
+qm create 228 \
+  --name "TYCHE-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# NEMESIS-WS01 (Balance Scale)
+qm create 229 \
+  --name "NEMESIS-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ### **Step 4.6: Create Harmony Relations Workstations (HR)**
 
-```powershell
-New-OlympusWorkstation -VMName "APHRODITE-WS01" -Memory 4GB -VHDSize 60GB -Description "Aphrodite's Harmony Hub"
-New-OlympusWorkstation -VMName "EROS-WS01" -Memory 3GB -VHDSize 60GB -Description "Eros' Love Portal"
-New-OlympusWorkstation -VMName "PSYCHE-WS01" -Memory 3GB -VHDSize 60GB -Description "Psyche's Soul Station"
-New-OlympusWorkstation -VMName "HARMONIA-WS01" -Memory 3GB -VHDSize 60GB -Description "Harmonia's Peace Terminal"
-New-OlympusWorkstation -VMName "IRIS-WS01" -Memory 3GB -VHDSize 60GB -Description "Iris' Rainbow Bridge"
+```bash
+# Create Human Resources workstations via Proxmox VE
+
+# APHRODITE-WS01 (Harmony Hub)
+qm create 230 \
+  --name "APHRODITE-WS01" \
+  --memory 4096 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# EROS-WS01 (Love Portal)
+qm create 231 \
+  --name "EROS-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# PSYCHE-WS01 (Soul Station)
+qm create 232 \
+  --name "PSYCHE-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# HARMONIA-WS01 (Peace Terminal)
+qm create 233 \
+  --name "HARMONIA-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
+
+# IRIS-WS01 (Rainbow Bridge)
+qm create 234 \
+  --name "IRIS-WS01" \
+  --memory 3072 \
+  --cores 2 \
+  --cpu host \
+  --machine q35 \
+  --bios ovmf \
+  --efidisk0 local-lvm:4 \
+  --scsi0 local-lvm:60,cache=writeback,discard=on \
+  --scsihw virtio-scsi-single \
+  --net0 virtio,bridge=vmbr2 \
+  --ide2 local:iso/Windows11.iso,media=cdrom \
+  --ide0 local:iso/virtio-win.iso,media=cdrom \
+  --ostype win10 \
+  --agent 1
 ```
 
 ---
@@ -434,7 +960,7 @@ New-ADGroup -Name "Security-Auditors" -GroupScope Global -GroupCategory Security
 
 ```powershell
 $DivineCouncilOU = "OU=Divine Council,$OlympusOU"
-$SecurePassword = ConvertTo-SecureString "TempDivinePassword123!" -AsPlainText -Force
+$SecurePassword = ConvertTo-SecureString "[ADMIN_MUST_SET_SECURE_PASSWORD]" -AsPlainText -Force
 
 # Create divine users
 New-ADUser -Name "Zeus Supreme" -SamAccountName "zeus.supreme" -UserPrincipalName "zeus.supreme@olympus.local" -Path $DivineCouncilOU -AccountPassword $SecurePassword -Enabled $true -ChangePasswordAtLogon $true -Title "CEO & Domain Admin" -Department "Divine Council"

@@ -49,7 +49,7 @@ body:
         - DHCP Server Features
         - Group Policy Tools
         - Security & Auditing
-        - Hyper-V Management
+        - Proxmox VE Management
         - PowerShell Module Enhancement
         - Backup & Restore Tools
         - System Monitoring

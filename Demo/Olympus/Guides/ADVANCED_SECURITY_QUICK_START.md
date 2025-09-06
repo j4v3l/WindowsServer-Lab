@@ -1,3 +1,11 @@
+# 🔒 Olympus Systems - Advanced Security Quick Start
+
+**EXECUTION CONTEXT: All PowerShell commands run INSIDE Windows Server VM (ZEUS-DC01 - Primary Domain Controller)**  
+**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
+**PREREQUISITES: Domain Administrator rights, Group Policy Management Tools**
+
+This guide provides comprehensive advanced security configurations specifically for the Olympus Systems lab environment.
+
 # ⚡ Advanced Security Features - Olympus Systems Quick Start Guide
 
 ## 🎯 Overview
@@ -45,18 +53,34 @@ This guide demonstrates how to manually deploy and configure the **100+ advanced
 # Run on ZEUS-DC01 as Domain Administrator
 Import-Module ActiveDirectory
 
-# Set domain password policy
+# SECURE: AI/ML enhanced domain password policy for production
 Set-ADDefaultDomainPasswordPolicy -Identity "olympus.local" `
-    -MinPasswordLength 12 `
-    -PasswordHistoryCount 24 `
-    -MaxPasswordAge (New-TimeSpan -Days 90) `
-    -MinPasswordAge (New-TimeSpan -Days 1) `
+    -MinPasswordLength 15 `
+    -PasswordHistoryCount 50 `
+    -MaxPasswordAge (New-TimeSpan -Days 60) `
+    -MinPasswordAge (New-TimeSpan -Days 7) `
     -ComplexityEnabled $true `
-    -LockoutDuration (New-TimeSpan -Minutes 30) `
-    -LockoutObservationWindow (New-TimeSpan -Minutes 30) `
-    -LockoutThreshold 5
+    -LockoutDuration (New-TimeSpan -Hours 2) `
+    -LockoutObservationWindow (New-TimeSpan -Minutes 15) `
+    -LockoutThreshold 3
 
-Write-Host "✅ Domain password policy configured successfully" -ForegroundColor Green
+# AI/ML administrator policy (ultra-high security for AI/ML systems)
+New-ADFineGrainedPasswordPolicy -Name "OLYMPUS-AI-Admin-PSO" `
+    -MinPasswordLength 25 `
+    -PasswordHistoryCount 100 `
+    -MaxPasswordAge (New-TimeSpan -Days 30) `
+    -MinPasswordAge (New-TimeSpan -Days 1) `
+    -LockoutDuration (New-TimeSpan -Hours 8) `
+    -LockoutThreshold 2 `
+    -Precedence 5
+
+# Apply AI/ML enhanced policy to privileged accounts
+$AIPrivilegedUsers = @("zeus.supreme", "athena.wisdom", "apollo.light")
+foreach ($User in $AIPrivilegedUsers) {
+    Add-ADFineGrainedPasswordPolicySubject -Identity "OLYMPUS-AI-Admin-PSO" -Subjects $User
+}
+
+Write-Host "✅ SECURE: AI/ML enhanced password policies configured for production" -ForegroundColor Green
 ```
 
 #### **Step 1.2: Create Security Organizational Units**
@@ -70,14 +94,31 @@ $SecurityOUs = @(
     "OU=Quarantine,OU=Olympus Systems,DC=olympus,DC=local"
 )
 
+# SECURE: Initialize security audit logging for AI/ML environment
+function Write-SecurityAuditLog {
+    param([string]$Action, [string]$Status, [string]$Details = "")
+    $LogEntry = @{
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Action = $Action; Status = $Status; User = $env:USERNAME; Details = $Details
+        Environment = "OLYMPUS-AI/ML"
+    }
+    $EventId = if ($Status -eq "SUCCESS") { 1000 } else { 1001 }
+    Write-EventLog -LogName "Application" -Source "SecurityAudit" -EventId $EventId -EntryType Information -Message ($LogEntry | ConvertTo-Json) -ErrorAction SilentlyContinue
+    if ($Status -eq "FAILED") { Write-Host "🚨 AI/ML SECURITY ALERT: $Action failed - $Details" -ForegroundColor Red }
+}
+
+Register-EventLog -LogName "Application" -Source "SecurityAudit" -ErrorAction SilentlyContinue
+
 foreach ($OU in $SecurityOUs) {
     try {
         $ouName = ($OU -split ',' | Select-Object -First 1).Replace('OU=','')
         New-ADOrganizationalUnit -Path "OU=Olympus Systems,DC=olympus,DC=local" -Name $ouName -ProtectedFromAccidentalDeletion $true
         Write-Host "✅ Created OU: $OU" -ForegroundColor Green
+        Write-SecurityAuditLog -Action "Create AI/ML Security OU" -Status "SUCCESS" -Details $OU
     }
     catch {
-        Write-Warning "OU may already exist: $OU"
+        Write-SecurityAuditLog -Action "Create AI/ML Security OU" -Status "FAILED" -Details "OU: $OU - Error: $($_.Exception.Message)"
+        Write-Warning "⚠️ Failed to create OU: $OU - Review AI/ML security logs for details"
     }
 }
 ```
@@ -236,13 +277,19 @@ Write-Host "✅ Device control policies configured" -ForegroundColor Green
 $GPOName = "OLYMPUS-App-Control"
 New-GPO -Name $GPOName -Comment "Olympus Systems - Application Control and PowerShell Security"
 
-# PowerShell execution policy
+# SECURE: AI/ML hardened PowerShell execution policy (AllSigned for production security)
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "EnableScripts" -Type DWord -Value 1
-Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "ExecutionPolicy" -Type String -Value "RemoteSigned"
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell" -ValueName "ExecutionPolicy" -Type String -Value "AllSigned"
 
-# PowerShell logging
+# Enhanced AI/ML PowerShell logging and transcription
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging" -ValueName "EnableModuleLogging" -Type DWord -Value 1
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -ValueName "EnableScriptBlockLogging" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -ValueName "EnableScriptBlockInvocationLogging" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" -ValueName "EnableTranscripting" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" -ValueName "OutputDirectory" -Type String -Value "C:\PSTranscripts"
+
+# Disable insecure PowerShell v2 (critical for AI/ML security)
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Microsoft\PowerShell\1\PowerShellEngine" -ValueName "PowerShellVersion" -Type String -Value "5.0"
 
 # Windows Store restrictions
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsStore" -ValueName "DisableStoreApps" -Type DWord -Value 1
@@ -274,8 +321,31 @@ Write-Host "⚠️  AppLocker requires additional XML rule configuration" -Foreg
 $GPOName = "OLYMPUS-Network-Security"
 New-GPO -Name $GPOName -Comment "Olympus Systems - Network Security Controls"
 
-# Windows Firewall settings
+# SECURE: AI/ML Advanced Windows Firewall with enhanced logging and monitoring
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "EnableFirewall" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile" -ValueName "EnableFirewall" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "DefaultInboundAction" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "LogAllowedConnections" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -ValueName "LogDroppedPackets" -Type DWord -Value 1
+
+# Enhanced RDP security for AI/ML workstations  
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" -ValueName "fDenyTSConnections" -Type DWord -Value 0
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -ValueName "UserAuthentication" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -ValueName "SecurityLayer" -Type DWord -Value 2
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -ValueName "MinEncryptionLevel" -Type DWord -Value 3
+
+# Enhanced SMB security with encryption (critical for AI/ML data protection)
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -ValueName "RequireSecuritySignature" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" -ValueName "RequireSecuritySignature" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -ValueName "EncryptSmb3Traffic" -Type DWord -Value 1
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" -ValueName "RejectUnencryptedAccess" -Type DWord -Value 1
+
+# Network access restrictions for AI/ML environment security
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" -ValueName "RestrictAnonymous" -Type DWord -Value 2
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" -ValueName "NoLMHash" -Type DWord -Value 1
+
+# LDAPS enforcement for Active Directory security
+Set-GPRegistryValue -Name $GPOName -Key "HKLM\SYSTEM\CurrentControlSet\Services\NTDS\Parameters" -ValueName "LDAPServerIntegrity" -Type DWord -Value 2
 Set-GPRegistryValue -Name $GPOName -Key "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile" -ValueName "EnableFirewall" -Type DWord -Value 1
 
 # Remote Desktop restrictions

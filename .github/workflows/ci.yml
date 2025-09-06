@@ -66,27 +66,12 @@ jobs:
               Write-Host "All scripts passed analysis!" -ForegroundColor Green
           }
 
-      - name: Test Module Integrity
+      - name: Module Integrity Testing
         shell: pwsh
         run: |
-          if (Test-Path "Scripts/Test-ModuleIntegrity.ps1") {
-              Write-Host "Running module integrity test..."
-              
-              Set-Location Scripts
-              try {
-                  .\Test-ModuleIntegrity.ps1
-                  Write-Host "Module integrity test passed!" -ForegroundColor Green
-              }
-              catch {
-                  Write-Host "Module integrity test failed: $($_.Exception.Message)" -ForegroundColor Red
-                  exit 1
-              }
-              finally {
-                  Set-Location ..
-              }
-          } else {
-              Write-Host "Module integrity test script not found, skipping..."
-          }
+          Write-Host "Checking for module integrity test script..." -ForegroundColor Cyan
+          # Module integrity testing is no longer available - removed during Proxmox adaptation
+          Write-Host "Module integrity validation skipped - use manual procedures" -ForegroundColor Yellow
 
       - name: Validate Documentation
         shell: pwsh
@@ -187,6 +172,13 @@ jobs:
           }
 
           Write-Host "✅ All version references are consistent!" -ForegroundColor Green
+
+      - name: Validate PowerShell Module Structure
+        shell: pwsh
+        run: |
+          Write-Host "Checking for PowerShell module files..." -ForegroundColor Cyan
+          # PowerShell module files were removed during Proxmox adaptation
+          Write-Host "PowerShell module validation skipped - files removed" -ForegroundColor Yellow
 
   security-scan:
     name: Security Scan

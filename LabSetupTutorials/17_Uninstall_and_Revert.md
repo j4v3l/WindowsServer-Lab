@@ -32,20 +32,17 @@
 ### Using PowerShell Module
 
 ```powershell
-# Import the module
-Import-Module .\Scripts\WindowsServerLab.psd1
+# Manual uninstall procedures - no automated module available for Proxmox version
+# Use the direct script approach below
 
 # Remove all lab components (with backup)
-Remove-LabEnvironment -Component All
+.\Scripts\Lab-Uninstall.ps1 -Component All
 
-# Remove only VMs (with backup)
-Remove-LabEnvironment -Component VMs
+# Remove only VMs (manual process for Proxmox)
+# Use Proxmox web interface or command line tools
 
-# Force removal without confirmations
-Remove-LabEnvironment -Component All -Force
-
-# Skip backup creation (not recommended)
-Remove-LabEnvironment -Component All -CreateBackup:$false
+# See available options
+.\Scripts\Lab-Uninstall.ps1 -Component Help
 ```
 
 ### Using Direct Script
@@ -299,7 +296,7 @@ Add-WindowsCapability -Online -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
 
 ```powershell
 # Stop all lab VMs first
-Get-VM | Where-Object { $_.Name -like "*LAB*" } | Stop-VM -Force
+# Use Proxmox VE: qm stop <vmid> for each lab VM
 
 # Then proceed with uninstall
 .\Scripts\Lab-Uninstall.ps1 -Component VMs
@@ -346,8 +343,8 @@ $backupPath = "C:\LabBackup"
 .\Scripts\Lab-Restore.ps1 -BackupPath "C:\LabBackup" -Component Help
 
 # If backup is corrupted, redeploy from scratch
-Import-Module .\Scripts\WindowsServerLab.psd1
-New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
+# Use Proxmox VE interface to recreate VMs manually
+# Follow the setup guides for manual deployment
 ```
 
 ## 🎯 Best Practices
@@ -358,7 +355,7 @@ New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
 
    ```powershell
    # Export current VM list
-   Get-VM | Export-Csv "VM-List-Backup.csv"
+   # Export VM configs via Proxmox VE: vzdump command or web interface
 
    # Export AD structure
    Get-ADOrganizationalUnit -Filter * | Export-Csv "OU-List-Backup.csv"
@@ -368,13 +365,14 @@ New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
 
    ```powershell
    # Stop all lab VMs
-   Get-VM | Where-Object { $_.Name -like "*LAB*" } | Stop-VM
+   # Stop lab VMs via Proxmox VE web interface
 
    # Wait for VMs to fully stop
    Start-Sleep -Seconds 30
    ```
 
 3. **Verify Backup Location**
+
    ```powershell
    # Ensure backup drive has enough space
    $freeSpace = (Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB
@@ -393,6 +391,7 @@ New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
    ```
 
 2. **Monitor Progress**
+
    ```powershell
    # Check logs in real-time
    Get-Content $LogPath -Wait
@@ -404,13 +403,14 @@ New-LabEnvironment -VMPath "C:\VMs" -ISOPath "C:\path\to\WindowsServer.iso"
 
    ```powershell
    # Check for remaining VMs
-   Get-VM | Where-Object { $_.Name -like "*LAB*" }
+   # List VMs via Proxmox VE: qm list
 
    # Check for remaining switches
-   Get-VMSwitch | Where-Object { $_.Name -like "*LAB*" }
+   # List network bridges via Proxmox VE web interface
    ```
 
 2. **Clean Up Logs**
+
    ```powershell
    # Archive logs for future reference
    $archivePath = "C:\LabLogs\Archive"
