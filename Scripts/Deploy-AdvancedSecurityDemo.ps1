@@ -191,7 +191,7 @@ function Deploy-SecurityPolicies {
     
   try {
     # Check if Advanced GPO Manager exists
-    $advancedGPOScript = Join-Path $PSScriptRoot "AdvancedGroupPolicyManager.ps1"
+  $advancedGPOScript = Join-Path $PSScriptRoot "Server/AdvancedGroupPolicyManager.ps1"
     if (-not (Test-Path $advancedGPOScript)) {
       Write-DemoError "Advanced GPO Manager script not found at: $advancedGPOScript"
       return $false
@@ -268,7 +268,7 @@ function Start-SecurityAudit {
     
   try {
     # Check if Advanced Security Audit script exists
-    $advancedAuditScript = Join-Path $PSScriptRoot "AdvancedSecurityAudit.ps1"
+  $advancedAuditScript = Join-Path $PSScriptRoot "Server/AdvancedSecurityAudit.ps1"
     if (-not (Test-Path $advancedAuditScript)) {
       Write-DemoError "Advanced Security Audit script not found at: $advancedAuditScript"
       return $false

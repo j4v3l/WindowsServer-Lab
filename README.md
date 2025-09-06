@@ -122,13 +122,13 @@ WindowsServer-Lab/
 ├── ⚙️ Scripts/                            # PowerShell utilities for Windows Server
 │   ├── 🚀 Lab-FinishSetup.ps1            # Post-installation configuration
 │   ├── 🚀 Create-LabUsers.ps1            # User account creation
-│   ├── 🚀 DHCP_Setup.ps1                 # DHCP server setup
-│   ├── 🛡️ AdvancedGroupPolicyManager.ps1 # 100+ security policies (NEW!)
-│   ├── 🛡️ AdvancedSecurityAudit.ps1      # Security assessment (NEW!)
-│   ├── 🛡️ GroupPolicyManager.ps1         # Basic GPO management
+│   ├── 🚀 Server/DHCP_Setup.ps1                 # DHCP server setup
+│   ├── 🛡️ Server/AdvancedGroupPolicyManager.ps1 # 100+ security policies (NEW!)
+│   ├── 🛡️ Server/AdvancedSecurityAudit.ps1      # Security assessment (NEW!)
+│   ├── 🛡️ Server/GroupPolicyManager.ps1         # Basic GPO management
 │   ├── 🛡️ SecurityAudit.ps1              # Basic security assessment
 │   ├── 💾 BackupRestoreManager.ps1       # Backup and restore operations
-│   ├── 📊 SystemHealthMonitor.ps1        # System monitoring
+│   ├── 📊 Server/SystemHealthMonitor.ps1        # System monitoring
 
 │   ├── 🗑️ Lab-Uninstall.ps1              # Safe component removal (NEW!)
 
@@ -314,21 +314,21 @@ The Scripts directory contains PowerShell scripts that complement the tutorials:
 
 - [Lab Finish Setup Script](Scripts/Lab-FinishSetup.ps1) - Post-installation configuration
 - [Create Lab Users Script](Scripts/Create-LabUsers.ps1) - User account creation
-- [DHCP Setup Script](Scripts/DHCP_Setup.ps1) - DHCP server installation and configuration
+- [DHCP Setup Script](Scripts/Server/DHCP_Setup.ps1) - DHCP server installation and configuration
 
 #### Advanced Security and Policy Management Scripts (NEW!)
 
-- [**Advanced Group Policy Manager**](Scripts/AdvancedGroupPolicyManager.ps1) - Comprehensive GPO management with camera, USB, device controls
-- [**Advanced Security Audit**](Scripts/AdvancedSecurityAudit.ps1) - Complete security assessment with scoring and recommendations
+- [**Advanced Group Policy Manager**](Scripts/Server/AdvancedGroupPolicyManager.ps1) - Comprehensive GPO management with camera, USB, device controls
+- [**Advanced Security Audit**](Scripts/Server/AdvancedSecurityAudit.ps1) - Complete security assessment with scoring and recommendations
 - [**Advanced Security Documentation - Asgard**](Demo/Asgard/README.md) - Interactive demonstration documentation (Asgard)
   - [**Advanced Security Documentation - Olympus**](Demo/Olympus/README.md) - Interactive demonstration documentation (Olympus)
 
 #### Traditional Management Scripts
 
-- [Group Policy Manager](Scripts/GroupPolicyManager.ps1) - Basic GPO management
+- [Group Policy Manager](Scripts/Server/GroupPolicyManager.ps1) - Basic GPO management
 - [Security Audit Script](Scripts/SecurityAudit.ps1) - Basic security assessment
 - [Backup Restore Manager](Scripts/BackupRestoreManager.ps1) - Backup and restore operations
-- [System Health Monitor](Scripts/SystemHealthMonitor.ps1) - System monitoring
+- [System Health Monitor](Scripts/Server/SystemHealthMonitor.ps1) - System monitoring
 
 - [Oh My Posh Setup Script](Scripts/Setup-OhMyPosh.ps1) - PowerShell prompt customization with themes and icons
 - [Quick Oh My Posh Install](Scripts/Quick-InstallOhMyPosh.ps1) - Streamlined installation of Oh My Posh
@@ -406,10 +406,10 @@ This lab now includes **100+ advanced security features** across 8 major categor
 .\Demo\Scripts\Deploy-AdvancedSecurityDemo.ps1
 
 # Deploy all security policies
-.\Scripts\AdvancedGroupPolicyManager.ps1
+.\Scripts\Server\AdvancedGroupPolicyManager.ps1
 
 # Run comprehensive security audit
-.\Scripts\AdvancedSecurityAudit.ps1
+.\Scripts\Server\AdvancedSecurityAudit.ps1
 ```
 
 ## 🔒 Traditional Security Features

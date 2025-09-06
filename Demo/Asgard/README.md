@@ -328,10 +328,10 @@ The demo environment supports any Windows Server scenario:
 .\Deploy-AdvancedSecurityDemo.ps1
 
 # Deploy comprehensive security policies
-.\Scripts\AdvancedGroupPolicyManager.ps1
+.\Scripts\Server\AdvancedGroupPolicyManager.ps1
 
 # Run complete security audit
-.\Scripts\AdvancedSecurityAudit.ps1
+.\Scripts\Server\AdvancedSecurityAudit.ps1
 
 # Quick security assessment
 Start-QuickSecurityCheck
@@ -377,8 +377,8 @@ The demo leverages core project scripts:
 - Manual VM creation using Proxmox VE interface
 - Manual environment validation and testing
 - Manual Windows Server configuration and setup
-- `Scripts/AdvancedGroupPolicyManager.ps1` - 100+ security policies _(NEW!)_
-- `Scripts/AdvancedSecurityAudit.ps1` - Comprehensive security scoring _(NEW!)_
+- `Scripts/Server/AdvancedGroupPolicyManager.ps1` - 100+ security policies _(NEW!)_
+- `Scripts/Server/AdvancedSecurityAudit.ps1` - Comprehensive security scoring _(NEW!)_
 
 ### **Advanced Security Quick Start**
 

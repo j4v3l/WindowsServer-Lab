@@ -266,10 +266,10 @@ The demo environment supports any Windows Server scenario:
 .\Deploy-AdvancedSecurityDemo.ps1 -DemoType "Olympus"
 
 # Deploy comprehensive security policies
-.\Scripts\AdvancedGroupPolicyManager.ps1
+.\Scripts\Server\AdvancedGroupPolicyManager.ps1
 
 # Run complete security audit with cloud integration
-.\Scripts\AdvancedSecurityAudit.ps1
+.\Scripts\Server\AdvancedSecurityAudit.ps1
 
 # Quick security assessment
 Start-QuickSecurityCheck

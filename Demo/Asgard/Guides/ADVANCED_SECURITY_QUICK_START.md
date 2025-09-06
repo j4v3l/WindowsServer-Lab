@@ -748,8 +748,8 @@ Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStora
 
 ### **Key Files & Scripts**
 
-- **Advanced Security Audit**: `Scripts\AdvancedSecurityAudit.ps1`
-- **GPO Management**: `Scripts\AdvancedGroupPolicyManager.ps1`
+- **Advanced Security Audit**: `Scripts\Server\AdvancedSecurityAudit.ps1`
+- **GPO Management**: `Scripts\Server\AdvancedGroupPolicyManager.ps1`
 - **Deployment Script**: `Demo\Asgard\Scripts\Deploy-AdvancedSecurityDemo.ps1`
 
 ### **Documentation References**

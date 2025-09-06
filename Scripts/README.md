@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This directory contains PowerShell scripts for configuring and managing Windows Server environments **running as VMs on Proxmox VE**. These scripts are designed to run **inside the Windows VMs**, not on the Proxmox host.
+This directory contains PowerShell scripts for configuring and managing Windows Server/client VMs **running on Proxmox VE**. Proxmox is Linux; do not run these PowerShell scripts on the Proxmox host. Run them inside the Windows VMs only.
 
 ## 🎯 Execution Context
 
@@ -13,25 +13,45 @@ This directory contains PowerShell scripts for configuring and managing Windows 
 
 ## 📁 Script Categories
 
-### 🏗️ **Environment Setup**
+### 🏗️ **Environment Setup (Server)**
 
 - `Lab-FinishSetup.ps1` - Complete lab environment configuration
 - `Create-LabUsers.ps1` - Create user accounts and organizational units
-- `DHCP_Setup.ps1` - Configure DHCP server role
+- `Server/DHCP_Setup.ps1` - Configure DHCP server role
 
-### 🛡️ **Security & Policy Management**
+### 🛡️ **Security & Policy Management (Server)**
 
 - `Deploy-AdvancedSecurityDemo.ps1` - Deploy comprehensive security policies
-- `AdvancedGroupPolicyManager.ps1` - Advanced GPO configuration (100+ policies)
-- `AdvancedSecurityAudit.ps1` - Comprehensive security assessment
-- `GroupPolicyManager.ps1` - Basic GPO management
+- `Server/AdvancedGroupPolicyManager.ps1` - Advanced GPO configuration (100+ policies)
+- `Server/AdvancedSecurityAudit.ps1` - Comprehensive security assessment
+- `Server/GroupPolicyManager.ps1` - Basic GPO management
 - `SecurityAudit.ps1` - Basic security auditing
 
-### 🔧 **System Management**
+### 🔧 **System Management (Server)**
 
-- `SystemHealthMonitor.ps1` - Monitor server health and generate reports
+- `Server/SystemHealthMonitor.ps1` - Monitor server health and generate reports
 - `BackupRestoreManager.ps1` - Backup and restore operations
 - `Lab-Uninstall.ps1` - Clean up lab components (Windows-side only)
+
+### 🖥️ **Client Onboarding & Baseline (Client)**
+
+- `Client/Client-Onboarding.ps1` - Join domain, optional rename, set DNS, and reboot
+- `Client/Client-Baseline.ps1` - Apply safe baseline: firewall, SMB signing, PS logging, policies
+- `Client/Client-HealthCheck.ps1` - Generate client HTML health report (AV, firewall, disks, updates)
+
+### 🔒 **Server Hardening & Updates (Server)**
+
+### 📂 File Shares & Drives
+
+- `Server/Create-FileShares.ps1` - Create standard SMB shares with proper NTFS/share permissions
+- `Client/Map-NetworkDrives.ps1` - Map T: (Tools) and D: (Departments) from the file server
+
+### 🔧 Common Utilities
+
+- `Common/Lab-ConnectivityTest.ps1` - Quick DNS/DC/LDAP/SMB/time checks from any VM
+
+- `Server/Server-Hardening.ps1` - Enforce NLA for RDP, SMB signing, LSA protection, NTLM, auditpol
+- `Server/WindowsUpdate-Configure.ps1` - Configure AU mode/deferrals and optionally scan/download/install
 
 ### 🎨 **User Experience**
 
@@ -77,6 +97,30 @@ These scripts handle Windows-specific configurations:
 2. **Install Windows Server** on the VMs with VirtIO drivers
 3. **Configure Active Directory** on the primary domain controller
 4. **Run scripts** from within the Windows VMs as needed
+
+Quick use examples (inside the VM PowerShell):
+
+-- Client join domain:
+	$sec = Read-Host 'Password' -AsSecureString
+	.\Client\Client-Onboarding.ps1 -DomainName lab.local -ComputerName PC01 -OUPath "OU=Workstations,DC=lab,DC=local" -DomainJoinUser "LAB\\Administrator" -DomainJoinPassword $sec -DNSServer 192.168.1.10 -Reboot
+
+-- Apply client baseline:
+	.\Client\Client-Baseline.ps1
+
+-- Server hardening:
+	.\Server\Server-Hardening.ps1
+
+-- Configure Windows Update and scan (server):
+	.\Server\WindowsUpdate-Configure.ps1 -Mode AutoInstall -ScanNow -DownloadNow -InstallNow -RestartIfNeeded
+
+- Create standard shares on file server:
+	.\Server\Create-FileShares.ps1 -RootPath D:\Shares -CreateExampleFolders
+
+- Map standard drives on a client:
+	.\Client\Map-NetworkDrives.ps1 -FileServer FILE1
+
+- Test lab connectivity from any VM:
+	.\Common\Lab-ConnectivityTest.ps1 -Domain lab.local -FileServer FILE1
 
 ## 📖 **Related Documentation**
 

@@ -321,7 +321,7 @@ Modern Group Policy Objects go far beyond basic settings and now include:
 cd C:\WindowsServer-Lab\Scripts
 
 # Run the Advanced Group Policy Manager
-.\AdvancedGroupPolicyManager.ps1
+.\Server\AdvancedGroupPolicyManager.ps1
 ```
 
 ### Step 2: Choose Your Policy Categories
@@ -676,7 +676,7 @@ Run comprehensive security audits with the enhanced audit script:
 
 ```powershell
 # Run advanced security audit
-.\AdvancedSecurityAudit.ps1
+.\Server\AdvancedSecurityAudit.ps1
 
 # Quick security check
 Start-QuickSecurityCheck
