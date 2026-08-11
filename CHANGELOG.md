@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-08-08
+
+### Added
+
+- Versioned JSON schemas, canonical Asgard/Olympus inventories, host-sized 6-VM smoke, 7-VM core, and 30-VM full profiles, site capacity/network mappings, and reserved default domains.
+- Dry-run-first Packer template, Proxmox deploy/test/backup/remove tooling with ownership checks, conflict detection, guest-agent waits, and JSON/JUnit evidence.
+- Shared Windows PowerShell module and phased AD DS, domain join, role, GPO, Windows LAPS, WEF, security baseline, backup, and compliance scripts.
+- Pinned Olympus AI/ML artifact manifests, checksum verification, isolated network support, optional GPU proof, and a health endpoint.
+- Pester, PSScriptAnalyzer, PowerShell 5.1 parsing, ShellCheck, schema, documentation-link, secret, Packer, and release-package gates.
+- Schema-backed, group-filtered AD/GPO controls for camera, microphone, removable storage, wallpaper, Control Panel, command prompt, registry tools, Store, OneDrive, and RDP clipboard, with endpoint evidence checks.
+- Verified native background Group Policy refresh and credential-safe enrollment/disenrollment for physical or virtual Windows endpoints outside the canonical VM inventory.
+- AD-published shared printers with trusted Point-and-Print policy, signed/package-aware driver enforcement, delegated print permissions, and group-controlled encrypted SMB shares with matching share/NTFS ACLs.
+- Runtime-only Windows Server and Windows 11 Education fleet activation with secure prompts or named secret-vault references, post-activation registry cleanup, licensing evidence, and a CI product-key leak gate.
+
+### Changed
+
+- Server 2025 is primary; Server 2022 uses a checksum-verified Security Compliance Toolkit path; Server 2019 is no longer claimed.
+- Percentage security scores and simulated network success were replaced by required controls with evidence, remediation, and nonzero failure exits.
+- Legacy duplicated entry points are one-major-version deprecation shims.
+- Historical v1 audit documents are explicitly marked non-current.
+
+### Security
+
+- Removed plaintext password conversion from v2 paths. Secrets are forbidden in definitions and supplied only through runtime secure input or secret references.
+- Windows product keys are excluded from templates, definitions, command arguments, logs, reports, and Git; domain-scoped Kerberos remoting carries only runtime `SecureString` values.
+- Added firewall, SMB, LDAP, Defender, PowerShell logging, audit, event-log, OSConfig/SCT, App Control audit, Windows LAPS, and segmented-network controls.
+
+### Validation status
+
+- Static repository gates are implemented. Proxmox 9.2/8.4 live certification labels remain blocked until the documented external acceptance runs pass.
+
 ## [1.3.1] - 2025-06-12
 
 ### Fixed - Critical Network Configuration Issues

@@ -1,5 +1,7 @@
 # 🏰 **ASGARD TECHNOLOGIES** - Manual Setup Guide
 
+> **Legacy reference:** This hand-built `.local` topology is retained for historical users and is not the v2 production-like deployment path. It contains old bridge and IP examples. New deployments must use the canonical `ad.asgard.test` definition and the guarded [six-VM startup runbook](../../docs/SMOKE_STARTUP.md); never apply this guide's `vmbr0`/`vmbr1` examples to the current host.
+
 ## 📋 **EXECUTION CONTEXT GUIDE**
 
 **CRITICAL:** This guide contains commands that must be run on different systems. Pay attention to the execution context for each command:
@@ -691,9 +693,9 @@ qm create 122 \
   --ostype win10 \
   --agent 1
 
-# JORMUNGANDR-WS01 (Data Lake)
+# JORMUNG-WS01 (Data Lake)
 qm create 123 \
-  --name "JORMUNGANDR-WS01" \
+  --name "JORMUNG-WS01" \
   --memory 4096 \
   --cores 2 \
   --cpu host \

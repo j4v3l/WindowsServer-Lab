@@ -12,13 +12,13 @@ Before reaching out for support, please check these resources:
 - **[Tutorial Guides](../LabSetupTutorials/)**: Step-by-step setup instructions
 - **[Demo Environment](../Demo/)**: Complete Asgard Technologies demo setup
 - **[Contributing Guidelines](../CONTRIBUTING.md)**: How to contribute to the project
-- **[CI/CD Documentation](.github/README.md)**: Workflow and automation information
+- **[CI/CD Documentation](CI/CD_README.md)**: Workflow and automation information
 
 ### 🎯 Common Solutions
 
 - **[Hardware Performance Guide](../Demo/Asgard/Documentation/HARDWARE_PERFORMANCE_GUIDE.md)**: System requirements and optimization
 - **[PowerShell Module Documentation](../Scripts/)**: Module usage and functions
-- **[Security Best Practices](.github/SECURITY.md)**: Security guidelines and checklist
+- **[Security Best Practices](SECURITY.md)**: Security guidelines and checklist
 
 ## 🤝 Community Support
 
@@ -26,10 +26,7 @@ Before reaching out for support, please check these resources:
 
 For general questions, discussions, and community interaction:
 
-- **[General Discussion](https://github.com/j4v3l/WindowsServer-Lab/discussions/categories/general)**
-- **[Q&A](https://github.com/j4v3l/WindowsServer-Lab/discussions/categories/q-a)**
-- **[Show and Tell](https://github.com/j4v3l/WindowsServer-Lab/discussions/categories/show-and-tell)**
-- **[Ideas and Feedback](https://github.com/j4v3l/WindowsServer-Lab/discussions/categories/ideas)**
+- **[Issue tracker](https://github.com/j4v3l/WindowsServer-Lab/issues)** for questions, defects, examples, and feature requests
 
 ### 🐛 Issue Reporting
 
@@ -118,7 +115,7 @@ Support response times vary based on the channel:
 - **Community Discussions**: Community-driven, typically within 24-48 hours
 - **Bug Reports**: Acknowledged within 2-3 business days
 - **Feature Requests**: Reviewed weekly, prioritized based on impact
-- **Security Issues**: See [Security Policy](.github/SECURITY.md) for expedited handling
+- **Security Issues**: See [Security Policy](SECURITY.md) for expedited handling
 
 ## 🌟 Premium Support
 
@@ -152,7 +149,7 @@ _Contact us for professional support options_
 
 ### 🌐 Social Media
 
-- **GitHub**: [Windows Server Lab Environment](https://github.com/j4v3l/WindowsServer)
+- **GitHub**: [Windows Server Lab Environment](https://github.com/j4v3l/WindowsServer-Lab)
 - **LinkedIn**: [Windows Server Lab Community]
 - **YouTube**: [Windows Server Lab Tutorials]
 

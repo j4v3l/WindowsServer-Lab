@@ -2,120 +2,46 @@ name: Documentation
 
 on:
   push:
-    branches: [main, dev]
     paths:
-      - "**.md"
-      - "LabSetupTutorials/**"
-      - "Demo/Asgard/Documentation/**"
-      - "Demo/Olympus/Documentation/**"
+      - '**/*.md'
+      - '.github/markdown-link-check-config.json'
+      - '.github/workflows/docs.yml'
   pull_request:
-    branches: [main, dev]
     paths:
-      - "**.md"
-      - "LabSetupTutorials/**"
-      - "Demo/Asgard/Documentation/**"
-      - "Demo/Olympus/Documentation/**"
+      - '**/*.md'
+      - '.github/markdown-link-check-config.json'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  validate-docs:
-    name: Validate Documentation
+  links:
+    name: Markdown links
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: "18"
-
-      - name: Install markdown-link-check
-        run: npm install -g markdown-link-check
-
-      - name: Validate Markdown Links
+          node-version: '22'
+      - name: Install pinned link checker
+        run: npm install --global markdown-link-check@3.13.7
+      - name: Validate all Markdown links
         run: |
-          echo "Checking markdown files for broken links..."
-          find . -name "*.md" -not -path "./.git/*" | xargs markdown-link-check --config .github/markdown-link-check-config.json
-        continue-on-error: true
-
-      - name: Check Documentation Structure
+          status=0
+          while IFS= read -r -d '' file; do
+            markdown-link-check --quiet --config .github/markdown-link-check-config.json "$file" || status=1
+          done < <(find . -name '*.md' -not -path './.git/*' -print0)
+          exit "$status"
+      - name: Validate required documentation
         run: |
-          echo "Checking documentation structure..."
-
-          # Check for required files
-          required_files=(
-            "README.md"
-            "CHANGELOG.md"
-            "LICENSE"
-            "CONTRIBUTING.md"
-          )
-
-          missing_files=()
-          for file in "${required_files[@]}"; do
-            if [ ! -f "$file" ]; then
-              missing_files+=("$file")
-            fi
-          done
-
-          if [ ${#missing_files[@]} -gt 0 ]; then
-            echo "Missing required files:"
-            printf '%s\n' "${missing_files[@]}"
-            exit 1
-          else
-            echo "All required documentation files found!"
-          fi
-
-          # Count tutorial files
-          tutorial_count=$(find LabSetupTutorials -name "*.md" | wc -l)
-          echo "Found $tutorial_count tutorial files"
-
-          # Count demo documentation
-          demo_docs=$(find Demo -name "*.md" | wc -l)
-          echo "Found $demo_docs demo documentation files"
-
-  generate-toc:
-    name: Generate Table of Contents
-    runs-on: ubuntu-latest
-    needs: validate-docs
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-
-      - name: Install doctoc
-        run: npm install -g doctoc
-
-      - name: Generate TOCs
-        run: |
-          echo "Generating table of contents for documentation..."
-
-          # Generate TOC for main README
-          doctoc README.md --title "## Table of Contents"
-
-          # Generate TOCs for tutorial files
-          find LabSetupTutorials -name "*.md" -exec doctoc {} --title "## Table of Contents" \;
-
-          # Generate TOCs for demo documentation
-          find Demo -name "*.md" -exec doctoc {} --title "## Table of Contents" \;
-
-      - name: Commit changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          if git diff --quiet; then
-            echo "No changes to commit"
-          else
-            git add -A
-            git commit -m "Auto-update documentation TOCs [skip ci]"
-            git push
-          fi
+          test -f README.md
+          test -f CHANGELOG.md
+          test -f CONTRIBUTING.md
+          test -f LICENSE
+          test -f docs/EXECUTION_CONTEXT.md
+          test -f docs/LIVE_CERTIFICATION.md
+          test -f docs/BACKUP_RECOVERY.md

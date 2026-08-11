@@ -1,294 +1,37 @@
-# Contributing to Windows Server Lab Environment
+# Contributing
 
-Thank you for your interest in contributing to this project! This guide will help you get started with contributing to the Windows Server Lab Environment repository.
+Windows Server Lab v2 is a production-like lab framework. Contributions must preserve plan-first behavior, ownership safety, secret hygiene, deterministic inventories, and honest validation claims.
 
-## 🎯 Project Overview
+## Local checks
 
-This repository provides comprehensive documentation and scripts for setting up and managing Windows Server lab environments. It's designed for educational purposes and development testing.
+On Linux or macOS with Bash and `jq`:
 
-## 🚀 Getting Started
+```bash
+Tests/Shell/test-config.sh
+shellcheck Tools/Proxmox/*.sh Tools/Proxmox/lib/*.sh Tests/Shell/*.sh
+```
 
-### Prerequisites
-
-- PowerShell 5.1 or later
-- Proxmox VE 8.0+ for virtualization platform
-- Proxmox VE environment (for virtualization labs)
-- Git for version control
-
-### Local Development Setup
-
-1. **Fork and Clone**
-
-   ```powershell
-   git clone https://github.com/j4v3l/WindowsServer-Lab.git
-   cd WindowsServer-Lab
-   ```
-
-2. **Create a Development Branch**
-
-   ```powershell
-   git checkout -b feature/your-feature-name
-   ```
-
-## 🛠️ Development Guidelines
-
-### Code Style and Standards
-
-#### PowerShell Scripts
-
-- Use approved PowerShell verbs (`Get-Verb` for reference)
-- Follow PowerShell naming conventions (PascalCase for functions, camelCase for variables)
-- Include comprehensive error handling with try-catch blocks
-- Use `Write-Log` function for consistent logging
-- Add parameter validation where appropriate
-- Include help documentation for functions
-
-Example:
+With PowerShell 7, Pester 5.7.1, and PSScriptAnalyzer 1.24.0:
 
 ```powershell
-function New-LabVirtualMachine {
-    <#
-    .SYNOPSIS
-        Creates a new virtual machine for the lab environment
-    .DESCRIPTION
-        This function creates a new Proxmox VM with standardized settings for lab use
-    .PARAMETER VMName
-        Name of the virtual machine to create
-    .EXAMPLE
-        New-LabVirtualMachine -VMName "DC1-LAB"
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
-        [string]$VMName
-    )
-    
-    try {
-        # Function implementation
-    }
-    catch {
-        Write-Log "Failed to create VM: $($_.Exception.Message)" "ERROR"
-        throw
-    }
-}
+Invoke-ScriptAnalyzer -Path Scripts/WindowsServerLab -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+Invoke-Pester Tests/PowerShell
 ```
 
-#### Documentation (Markdown)
+CI also parses every PowerShell file with Windows PowerShell 5.1, validates JSON Schema, checks Packer syntax, scans Markdown links and secrets, and smoke-tests release packaging.
 
-- Use consistent heading structure
-- Include emoji for section headers (🎯, 🚀, 🛠️, etc.)
-- Provide clear step-by-step instructions
-- Include code blocks with appropriate syntax highlighting
-- Add troubleshooting sections where applicable
+## Change rules
 
-### File Structure
+- Treat `LabConfig/demos/*.json` as canonical. If an inventory changes, update schema, resource totals, tests, and generated documentation together.
+- Keep host commands dry-run by default. Mutations require `--apply`; destructive work requires exact target confirmation and ownership checks.
+- Never add passwords, API tokens, private keys, offline-domain-join blobs, retained Cloud-Init secrets, or real recovery data.
+- Guest scripts must use strict mode, terminating errors, structured evidence, useful exit codes, parameter validation, idempotent reads before writes, and `SupportsShouldProcess` for state changes.
+- Do not count a setting as applied until it is read back from the resulting GPO, local policy, or effective configuration.
+- Use Windows PowerShell 5.1-compatible syntax in guest paths. PowerShell 7-only tooling must be clearly isolated.
+- Do not add a Proxmox compatibility label without the matching [live certification gate](docs/LIVE_CERTIFICATION.md).
 
-```
-WindowsServer-Lab/
-├── LabSetupTutorials/          # Step-by-step guides
-├── Scripts/                    # PowerShell automation scripts
-├── Tests/                      # Test files (future)
-├── Examples/                   # Example configurations
-├── CONTRIBUTING.md
-├── LICENSE
-└── README.md
-```
+## Pull requests
 
-## 📝 Types of Contributions
+Describe the affected demo/profile, security impact, plan/apply behavior, tests run, and any live evidence. Link related issues and call out remaining external prerequisites. Keep unrelated cleanup out of the change.
 
-### 1. Documentation Improvements
-
-- Fix typos or grammatical errors
-- Add missing steps or clarifications
-- Update outdated information
-- Create new tutorials for additional scenarios
-
-### 2. Script Enhancements
-
-- Add new automation scripts
-- Improve error handling
-- Add new features to existing scripts
-- Optimize performance
-
-### 3. Bug Fixes
-
-- Fix issues in existing scripts
-- Correct documentation errors
-- Resolve compatibility problems
-
-### 4. New Features
-
-- Add support for new Windows Server versions
-- Create additional lab scenarios
-- Develop new management tools
-
-## 🔄 Pull Request Process
-
-### Before Submitting
-
-1. **Test Your Changes**
-   - Test scripts in a lab environment
-   - Verify documentation steps work as described
-   - Check for breaking changes
-
-2. **Code Quality**
-   - Run PowerShell Script Analyzer (if available)
-   - Ensure consistent formatting
-   - Add logging where appropriate
-
-3. **Documentation**
-   - Update relevant documentation
-   - Add comments to complex code
-   - Update README if needed
-
-### Submitting a Pull Request
-
-1. **Create Descriptive Title**
-
-   ```
-   Add: New DHCP setup automation script
-   Fix: Correct network configuration in Proxmox setup
-   Update: Add Windows Server 2022 compatibility notes
-   ```
-
-2. **Fill Out PR Description**
-
-   ```markdown
-   ## Description
-   Brief description of changes made
-   
-   ## Type of Change
-   - [ ] Bug fix
-   - [ ] New feature
-   - [ ] Documentation update
-   - [ ] Breaking change
-   
-   ## Testing
-   - [ ] Tested in lab environment
-   - [ ] Verified on Windows Server 2019
-   - [ ] Verified on Windows Server 2022
-   
-   ## Checklist
-   - [ ] Code follows project style guidelines
-   - [ ] Added appropriate logging
-   - [ ] Updated documentation
-   - [ ] Tested thoroughly
-   ```
-
-3. **Link Related Issues**
-   Reference any related issues using `Fixes #123` or `Related to #456`
-
-## 🧪 Testing Guidelines
-
-### Manual Testing
-
-- Test all scripts in a clean lab environment
-- Verify tutorials work from start to finish
-- Test on different Windows versions where applicable
-
-### Documentation Testing
-
-- Follow tutorial steps exactly as written
-- Note any missing steps or unclear instructions
-- Verify all commands and paths are correct
-
-## 🐛 Reporting Issues
-
-### Bug Reports
-
-Include the following information:
-
-- Operating system and version
-- PowerShell version
-- Complete error message
-- Steps to reproduce
-- Expected vs actual behavior
-
-### Feature Requests
-
-- Clear description of the feature
-- Use case or business justification
-- Potential implementation approach (if known)
-
-## 📋 Code Review Process
-
-### What We Look For
-
-- Code functionality and correctness
-- Error handling and logging
-- Code readability and documentation
-- Security considerations
-- Performance implications
-
-### Review Timeline
-
-- Initial review within 7 days
-- Follow-up reviews within 3 days
-- Approval after all requirements met
-
-## 🏷️ Commit Message Guidelines
-
-Use conventional commit format:
-
-```
-type(scope): brief description
-
-Longer description if needed
-
-Fixes #123
-```
-
-Types:
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation changes
-- `style:` Code style changes
-- `refactor:` Code refactoring
-- `test:` Adding tests
-- `chore:` Maintenance tasks
-
-Examples:
-
-```
-feat(scripts): add DHCP server automation script
-fix(proxmox): resolve network adapter configuration issue
-docs(tutorials): update AD setup guide for Server 2022
-```
-
-## 🤝 Community Guidelines
-
-### Be Respectful
-
-- Use welcoming and inclusive language
-- Respect different viewpoints and experiences
-- Accept constructive criticism gracefully
-
-### Be Collaborative
-
-- Help others learn and grow
-- Share knowledge and best practices
-- Provide constructive feedback
-
-### Be Patient
-
-- Remember this is an educational project
-- Help newcomers understand concepts
-- Take time to explain complex topics
-
-## 📞 Getting Help
-
-- **GitHub Issues**: For bugs and feature requests
-- **Discussions**: For questions and general help
-- **Documentation**: Check existing tutorials first
-
-## 🎉 Recognition
-
-Contributors will be acknowledged in:
-
-- README.md contributors section
-- Release notes for significant contributions
-- Special recognition for major features
-
-Thank you for contributing to the Windows Server Lab Environment project! Your contributions help make Windows Server education more accessible to everyone.
+By contributing, you agree that your work is licensed under the repository's [MIT License](LICENSE).

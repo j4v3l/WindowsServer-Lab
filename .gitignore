@@ -121,6 +121,8 @@ bld/
 Microsoft.PowerShell_profile.ps1
 PSScriptAnalyzerSettings.psd1
 ModuleAnalysisCache
+__pycache__/
+*.py[cod]
 
 # Block PowerShell test and coverage files
 TestResults/
@@ -152,6 +154,27 @@ TestResults/
 !VERSION
 !CHANGELOG*
 !CONTRIBUTING*
+!PSScriptAnalyzerSettings.psd1
+
+# Operator-local topology mapping. Commit site.example.json, never site.json.
+LabConfig/site.json
+LabConfig/operator.json
+LabConfig/setup-keys.json
+
+# Runtime activation material and other operator-local secret stores. Product keys are
+# supplied interactively or by a secret provider and must never be committed.
+.env
+.env.*
+!.env.example
+.secrets/
+LocalSecrets/
+LabConfig/secrets/
+*.productkey
+*.product-key
+*.activation-key
+activation.local.*
+.artifacts/
+artifacts/certification/
 
 # =============================================================================
 # PROJECT-SPECIFIC EXCEPTIONS

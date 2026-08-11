@@ -14,7 +14,7 @@ $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm"
 $reportPath = "C:\Reports\SystemHealth_$timestamp.html"
 
 # Create reports directory if it doesn't exist
-New-Item -Path "C:\Reports" -ItemType Directory -Force -ErrorAction SilentlyContinue
+New-Item -Path "C:\Reports" -ItemType Directory -Force -ErrorAction Stop
 
 # Function to get disk space information
 function Get-DiskSpaceInfo {
@@ -116,4 +116,5 @@ $html = @"
 # Save the report
 $html | Out-File -FilePath $reportPath -Encoding UTF8
 
-# Using Write-Host for colored user output`n    # Using Write-Host for colored user output`n    Write-Host "System health report generated at: $reportPath" -ForegroundColor Green 
+    # This legacy entry point retains colored console output for interactive operators.
+    Write-Host "System health report generated at: $reportPath" -ForegroundColor Green

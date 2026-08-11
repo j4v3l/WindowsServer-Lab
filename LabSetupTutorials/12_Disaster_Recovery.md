@@ -371,6 +371,6 @@
 
 ## 🔗 Additional Resources
 
-- [Microsoft Disaster Recovery](https://docs.microsoft.com/en-us/windows-server/administration/windows-server-backup/)
+- [wbadmin command reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wbadmin)
 - [High Availability Guide](https://docs.microsoft.com/en-us/windows-server/failover-clustering/failover-clustering-overview)
-- [Business Continuity Planning](https://docs.microsoft.com/en-us/windows-server/administration/windows-server-backup/backup-and-recovery)
+- [Active Directory forest recovery guide](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/ad-forest-recovery-guide)

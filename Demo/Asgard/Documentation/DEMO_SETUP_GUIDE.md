@@ -1,5 +1,7 @@
 # 🏰 **ASGARD TECHNOLOGIES** - Complete Lab Demo Setup Guide
 
+> **Legacy reference:** This manual `.local` guide is historical and includes superseded networks and OOBE workarounds. The supported v2 flow is data-driven and documented in the [six-VM startup runbook](../../../docs/SMOKE_STARTUP.md).
+
 ## 🎯 **Organization Overview**
 
 **Asgard Technologies** is a cutting-edge cybersecurity and AI research company specializing in advanced threat detection and quantum computing solutions. The company operates globally with a Norse mythology-themed organizational structure.

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-server-lab/v2/access-controls.schema.json",
+  "title": "Windows Server Lab group-based access controls",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "controls"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/control" }
+    }
+  },
+  "$defs": {
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "type", "value"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^HK(?:LM|CU)\\\\" },
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["DWord", "String"] },
+        "value": { "oneOf": [{ "type": "integer" }, { "type": "string" }] },
+        "requiresWallpaperPath": { "type": "boolean" }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "scope", "groupName", "gpoName", "settings", "refresh"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]{1,31}$" },
+        "displayName": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string", "enum": ["Computer", "User"] },
+        "groupName": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,20}$" },
+        "gpoName": { "type": "string", "pattern": "^WSLAB-Access-[A-Za-z0-9-]+$" },
+        "settings": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/setting" } },
+        "refresh": { "type": "string", "enum": ["gpupdate", "signout", "restart"] }
+      }
+    }
+  }
+}

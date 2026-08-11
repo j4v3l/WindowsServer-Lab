@@ -1,32 +1,49 @@
-.# Wrapper delegates to top-level script if present; keeping a single implementation here
-.
-Set-Location -Path (Split-Path -Parent $MyInvocation.MyCommand.Path)
-.
-# Implementation moved here for clarity
-# Client Onboarding Script (Join Domain, Rename, DNS)
-[CmdletBinding(SupportsShouldProcess)]
+#Requires -RunAsAdministrator
+#Requires -Version 5.1
+<#
+.SYNOPSIS
+    Deprecated compatibility entry point for workstation domain enrollment.
+#>
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$DomainName,
-    [string]$ComputerName,
+    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$DomainName,
+    [ValidatePattern('^[A-Za-z0-9-]{1,15}$')][string]$ComputerName,
     [string]$OUPath,
-    [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$DomainJoinUser,
-    [Parameter(Mandatory=$true)][System.Security.SecureString]$DomainJoinPassword,
+    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$DomainJoinUser,
+    [Parameter(Mandatory)][Security.SecureString]$DomainJoinPassword,
     [string]$DNSServer,
     [switch]$Reboot
 )
 
-function Test-IsAdmin { $id=[Security.Principal.WindowsIdentity]::GetCurrent(); $p=New-Object Security.Principal.WindowsPrincipal($id); $p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
-if (-not (Test-IsAdmin)) { Write-Error 'Run as Administrator.'; exit 1 }
-
-try {
-    if ($DNSServer) {
-        Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object { Set-DnsClientServerAddress -InterfaceAlias $_.Name -ServerAddresses $DNSServer -ErrorAction Stop }
-    }
-    if ($ComputerName -and ($env:COMPUTERNAME -ne $ComputerName)) { Rename-Computer -NewName $ComputerName -Force -ErrorAction Stop; $renameDone=$true }
-    $cred = New-Object System.Management.Automation.PSCredential($DomainJoinUser, $DomainJoinPassword)
-    $joinParams = @{ DomainName=$DomainName; Credential=$cred; ErrorAction='Stop' }
-    if ($OUPath) { $joinParams.OUPath = $OUPath }
-    Add-Computer @joinParams
-    if ($Reboot -or $renameDone) { Restart-Computer -Force } else { Write-Host 'Domain join complete. Reboot required.' -ForegroundColor Green }
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+$domainLookup = @{
+    'ad.asgard.test' = @{ Demo = 'asgard'; Legacy = $false }
+    'asgard.local' = @{ Demo = 'asgard'; Legacy = $true }
+    'ad.olympus.test' = @{ Demo = 'olympus'; Legacy = $false }
+    'olympus.local' = @{ Demo = 'olympus'; Legacy = $true }
 }
-catch { Write-Error "Client onboarding failed: $_"; exit 2 }
+$selection = $domainLookup[$DomainName.ToLowerInvariant()]
+if (-not $selection) { throw "Domain '$DomainName' is not a WindowsServerLab v2 demo domain." }
+if ($OUPath) { Write-Warning 'The deprecated -OUPath value is ignored; v2 safely selects the canonical Workstations OU.' }
+Write-Warning 'Client-Onboarding.ps1 is deprecated and will be removed in v3. Use Scripts/Set-LabMachineEnrollment.ps1 -Action Enroll.'
+
+$credential = [Management.Automation.PSCredential]::new($DomainJoinUser, $DomainJoinPassword)
+$parameters = @{
+    Action = 'Enroll'
+    Demo = $selection.Demo
+    DeviceType = 'Workstation'
+    DomainCredential = $credential
+    Confirm = $false
+}
+if ($selection.Legacy) { $parameters.LegacyDomain = $true }
+if ($ComputerName) { $parameters.ComputerName = $ComputerName }
+if ($DNSServer) {
+    $parameters.ConfigureDns = $true
+    $parameters.DnsServer = @($DNSServer)
+}
+if ($Reboot) { $parameters.Restart = $true }
+
+if ($PSCmdlet.ShouldProcess($env:COMPUTERNAME, 'Invoke the v2 machine-enrollment workflow')) {
+    & (Join-Path (Split-Path -Parent $PSScriptRoot) 'Set-LabMachineEnrollment.ps1') @parameters
+}

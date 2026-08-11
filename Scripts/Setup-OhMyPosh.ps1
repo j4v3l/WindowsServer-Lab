@@ -69,7 +69,7 @@ $ErrorColor = "Red"
 
 # Create log directory if it doesn't exist
 if (-not (Test-Path -Path $LogPath)) {
-    New-Item -Path $LogPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+    New-Item -Path $LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
 }
 
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm"
@@ -117,13 +117,13 @@ function Test-CommandExists {
 function Test-WindowsTerminalVersion {
     try {
         # Try to get Windows Terminal version
-        $wtApp = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue
+        $wtApp = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction Ignore
         if ($wtApp) {
             return $wtApp.Version
         }
         
         # Try preview version
-        $wtPreviewApp = Get-AppxPackage -Name Microsoft.WindowsTerminalPreview -ErrorAction SilentlyContinue
+        $wtPreviewApp = Get-AppxPackage -Name Microsoft.WindowsTerminalPreview -ErrorAction Ignore
         if ($wtPreviewApp) {
             return $wtPreviewApp.Version
         }
@@ -288,7 +288,7 @@ function Configure-PowerShellProfile {
     }
     
     # Get the content of the profile
-    $profileContent = Get-Content -Path $PROFILE -Raw -ErrorAction SilentlyContinue
+    $profileContent = Get-Content -Path $PROFILE -Raw -ErrorAction Ignore
     
     # Check if Oh My Posh init is already in the profile
     if ($profileContent -and $profileContent -match "oh-my-posh init") {

@@ -1,5 +1,7 @@
 # 🏰 **ASGARD TECHNOLOGIES** - Advanced Administrator Cheatsheet
 
+> **Legacy reference:** The addresses and bridge names below describe the original `.local` prototype, not the v2 Asgard site. Use the canonical inventory and [six-VM startup runbook](../../docs/SMOKE_STARTUP.md) for `ad.asgard.test`, VLAN 90/100, and guarded Proxmox commands.
+
 ## 🌐 **Network Configuration**
 
 ### **IP Address Scheme**

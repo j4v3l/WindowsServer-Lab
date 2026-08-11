@@ -327,4 +327,4 @@ Set-ADDefaultDomainPasswordPolicy -MinPasswordLength 12 `
 
 - [Microsoft Security Baseline](https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/security-policy-settings)
 - [Windows Server Performance Tuning](https://docs.microsoft.com/en-us/windows-server/administration/performance-tuning/)
-- [Active Directory Best Practices](https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices)
+- [Active Directory security best practices](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory)

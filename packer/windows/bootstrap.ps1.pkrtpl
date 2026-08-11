@@ -1,0 +1,182 @@
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+$root = 'C:\ProgramData\WindowsServerLab'
+foreach ($path in @($root, "$root\Scripts", "$root\Modules", "$root\LabConfig", "$root\Logs", "$root\Reports")) {
+    if (-not (Test-Path -LiteralPath $path)) {
+        New-Item -Path $path -ItemType Directory -Force | Out-Null
+    }
+}
+
+$bootstrapComplete = "$root\bootstrap.complete"
+$bootstrapFailed = "$root\bootstrap.failed"
+$bootstrapLog = "$root\Logs\template-bootstrap.log"
+foreach ($sentinel in @($bootstrapComplete, $bootstrapFailed)) {
+    if (Test-Path -LiteralPath $sentinel) { Remove-Item -LiteralPath $sentinel -Force }
+}
+
+function Write-BootstrapLog {
+    param([Parameter(Mandatory)][string]$Level, [Parameter(Mandatory)][string]$Message)
+    $safeMessage = $Message -replace '\b[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}\b', '[REDACTED-PRODUCT-KEY]'
+    $line = '{0} [{1}] {2}' -f (Get-Date).ToUniversalTime().ToString('o'), $Level.ToUpperInvariant(), $safeMessage
+    Add-Content -LiteralPath $bootstrapLog -Value $line -Encoding UTF8
+}
+
+trap {
+    $failureMessage = ($_ | Out-String).Trim() -replace '\b[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}\b', '[REDACTED-PRODUCT-KEY]'
+    Write-BootstrapLog -Level Error -Message $failureMessage
+    [ordered]@{
+        schemaVersion = 1
+        status = 'failed'
+        timestamp = (Get-Date).ToUniversalTime().ToString('o')
+        error = $failureMessage
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $bootstrapFailed -Encoding UTF8
+    exit 1
+}
+
+function Install-VerifiedMsi {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Path,
+        [string[]]$AdditionalArguments = @()
+    )
+    $exitCode = 1618
+    for ($attempt = 1; $attempt -le 12 -and $exitCode -eq 1618; $attempt++) {
+        Write-BootstrapLog -Level Info -Message "Installing $Name (attempt $attempt)."
+        $arguments = @('/i', $Path, '/qn', '/norestart') + $AdditionalArguments
+        $installation = Start-Process msiexec.exe -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+        $exitCode = $installation.ExitCode
+        if ($exitCode -eq 1618) { Start-Sleep -Seconds 10 }
+    }
+    if ($exitCode -notin @(0, 1641, 3010)) { throw "$Name installation failed with exit code $exitCode." }
+}
+
+function Resolve-VerifiedPayload {
+    param(
+        [Parameter(Mandatory)]$Payload,
+        [Parameter(Mandatory)][string]$ExpectedHash,
+        [Parameter(Mandatory)][string]$MediaRoot
+    )
+    $fileName = [string]$Payload.file
+    $manifestHash = [string]$Payload.sha256
+    if ([IO.Path]::GetFileName($fileName) -ne $fileName) { throw "Unsafe payload filename in manifest: $fileName" }
+    if ($manifestHash -cnotmatch '^[A-Fa-f0-9]{64}$') { throw "Invalid SHA-256 in payload manifest for $fileName." }
+    if ($manifestHash -ne $ExpectedHash) { throw "Rendered and manifest SHA-256 values disagree for $fileName." }
+    $payloadPath = Join-Path $MediaRoot $fileName
+    if (-not (Test-Path -LiteralPath $payloadPath -PathType Leaf)) { throw "Required payload is missing: $fileName" }
+    $actualHash = (Get-FileHash -LiteralPath $payloadPath -Algorithm SHA256).Hash
+    if ($actualHash -ne $ExpectedHash) { throw "Payload checksum mismatch for $fileName." }
+    return $payloadPath
+}
+
+Write-BootstrapLog -Level Info -Message 'Starting deterministic template bootstrap.'
+$adapter = Get-NetAdapter | Where-Object Status -eq 'Up' | Sort-Object ifIndex | Select-Object -First 1
+if (-not $adapter) { throw 'No active network adapter was found for the template build.' }
+$buildAddress = '${build_ipv4_address}'
+$buildPrefixLength = ${build_ipv4_prefix_length}
+$buildGateway = '${build_ipv4_gateway}'
+$buildDnsServers = @(${build_dns_servers})
+$matchingAddress = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object IPAddress -eq $buildAddress
+if (-not $matchingAddress) {
+    Set-NetIPInterface -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -Dhcp Disabled -ErrorAction Stop
+    Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
+    Get-NetRoute -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object DestinationPrefix -eq '0.0.0.0/0' |
+        Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue
+    New-NetIPAddress -InterfaceIndex $adapter.ifIndex -IPAddress $buildAddress -PrefixLength $buildPrefixLength -DefaultGateway $buildGateway | Out-Null
+}
+Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $buildDnsServers
+
+$buildPassword = [Security.SecureString]::new()
+foreach ($passwordCharacter in '${windows_password_ps}'.ToCharArray()) { $buildPassword.AppendChar($passwordCharacter) }
+$buildPassword.MakeReadOnly()
+try {
+    $buildUser = Get-LocalUser -Name LabBootstrap -ErrorAction SilentlyContinue
+    if ($buildUser) {
+        # Unattended setup already created this account with the one-use build
+        # password. Changing account flags while it is the only enabled local
+        # administrator is rejected by Windows and is unnecessary here.
+        Enable-LocalUser -Name LabBootstrap
+    }
+    else {
+        New-LocalUser -Name LabBootstrap -Password $buildPassword -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires | Out-Null
+    }
+    $buildUser = Get-LocalUser -Name LabBootstrap -ErrorAction Stop
+    $isAdministrator = Get-LocalGroupMember -Group Administrators -ErrorAction Stop |
+        Where-Object { $_.SID.Value -eq $buildUser.SID.Value }
+    if (-not $isAdministrator) { Add-LocalGroupMember -Group Administrators -Member LabBootstrap }
+}
+finally {
+    $buildPassword.Dispose()
+}
+
+# Establish the encrypted diagnostic channel before installing either agent. If a
+# payload fails, Packer can connect and prepare-template.ps1 can return the sentinel.
+try { Set-NetConnectionProfile -InterfaceIndex $adapter.ifIndex -NetworkCategory Private -ErrorAction Stop } catch { Write-BootstrapLog -Level Warning -Message $_.Exception.Message }
+New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name LocalAccountTokenFilterPolicy -PropertyType DWord -Value 1 -Force | Out-Null
+$winRmServiceRegistry = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service'
+New-ItemProperty -LiteralPath $winRmServiceRegistry -Name auth_basic -PropertyType DWord -Value 1 -Force | Out-Null
+New-ItemProperty -LiteralPath $winRmServiceRegistry -Name allow_unencrypted -PropertyType DWord -Value 0 -Force | Out-Null
+Set-Service WinRM -StartupType Automatic
+Start-Service WinRM
+$buildCertificate = New-SelfSignedCertificate -DnsName WSLAB-BUILD -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddDays(2)
+Get-ChildItem -Path WSMan:\localhost\Listener | Where-Object { $_.Keys -contains 'Transport=HTTPS' } | Remove-Item -Recurse -Force
+New-Item -Path WSMan:\localhost\Listener -Transport HTTPS -Address * -CertificateThumbPrint $buildCertificate.Thumbprint -Force -Confirm:$false | Out-Null
+Set-Content -LiteralPath "$root\build-winrm-cert.thumbprint" -Value $buildCertificate.Thumbprint -Encoding Ascii
+if (-not (Get-NetFirewallRule -Name 'WSLAB-WinRM-HTTPS' -ErrorAction SilentlyContinue)) {
+    New-NetFirewallRule -Name 'WSLAB-WinRM-HTTPS' -DisplayName 'WindowsServerLab temporary WinRM HTTPS' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 5986 | Out-Null
+}
+Write-BootstrapLog -Level Info -Message 'Temporary HTTPS WinRM diagnostic channel is ready.'
+
+$answerVolumes = @(Get-Volume -FileSystemLabel WSLABDATA -ErrorAction Stop)
+if ($answerVolumes.Count -ne 1 -or -not $answerVolumes[0].DriveLetter) { throw 'Exactly one mounted WSLABDATA volume with a drive letter is required.' }
+$answerRoot = "$($answerVolumes[0].DriveLetter):\"
+$manifestPath = Join-Path $answerRoot 'payload-manifest.json'
+if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'The answer-media payload manifest is missing.' }
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+if ($manifest.schemaVersion -ne 1 -or $manifest.os -ne '${os_type}') { throw 'The answer-media payload manifest has the wrong schema or operating system.' }
+
+$qemuAgentPath = Resolve-VerifiedPayload -Payload $manifest.payloads.qemuGuestAgent -ExpectedHash '${qemu_agent_msi_sha256}'.ToUpperInvariant() -MediaRoot $answerRoot
+$cloudbasePath = Resolve-VerifiedPayload -Payload $manifest.payloads.cloudbaseInit -ExpectedHash '${cloudbase_msi_sha256}'.ToUpperInvariant() -MediaRoot $answerRoot
+
+Install-VerifiedMsi -Name 'QEMU Guest Agent' -Path $qemuAgentPath
+$qemuService = Get-Service -Name QEMU-GA -ErrorAction Stop
+Set-Service -Name QEMU-GA -StartupType Automatic
+if ($qemuService.Status -ne 'Running') { Start-Service -Name QEMU-GA }
+$qemuService.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
+
+Install-VerifiedMsi -Name 'Cloudbase-Init' -Path $cloudbasePath -AdditionalArguments @('RUN_SERVICE_AS_LOCAL_SYSTEM=1')
+Get-Service -Name cloudbase-init -ErrorAction Stop | Out-Null
+Set-Service -Name cloudbase-init -StartupType Automatic
+
+# OpenSSH is deliberately not downloaded during image creation. It can be enabled
+# after deployment when the operator has supplied a reachable update source or FoD.
+$openSshState = 'deferred'
+try {
+    $openSshCapability = Get-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0' -ErrorAction Stop
+    if ($openSshCapability.State -eq 'Installed') {
+        Set-Service sshd -StartupType Automatic
+        Start-Service sshd
+        if (-not (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue)) {
+            New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
+        }
+        $openSshState = 'preinstalled'
+    }
+}
+catch {
+    Write-BootstrapLog -Level Warning -Message "OpenSSH inventory could not be read and remains optional: $($_.Exception.Message)"
+}
+
+Copy-Item -LiteralPath $manifestPath -Destination "$root\TemplateBuild.json" -Force
+$completion = [ordered]@{
+    schemaVersion = 1
+    status = 'complete'
+    timestamp = (Get-Date).ToUniversalTime().ToString('o')
+    qemuGuestAgent = 'running'
+    cloudbaseInit = 'installed'
+    openSsh = $openSshState
+}
+$completion | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $bootstrapComplete -Encoding UTF8
+Write-BootstrapLog -Level Info -Message 'Template bootstrap completed successfully.'

@@ -289,5 +289,5 @@ Get-EventLog -LogName System -Newest 100 | Export-Csv -Path "C:\Logs\SystemLogs.
 ## 🔗 Additional Resources
 
 - [Microsoft Performance Monitor Guide](https://docs.microsoft.com/en-us/windows-server/administration/performance-tuning/)
-- [Windows Server Backup Documentation](https://docs.microsoft.com/en-us/windows-server/administration/windows-server-backup/)
-- [WSUS Documentation](https://docs.microsoft.com/en-us/windows-server/administration/windows-server-update-services/)
+- [wbadmin command reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wbadmin)
+- [Windows Server Update Services](https://learn.microsoft.com/en-us/windows-server/administration/windows-server-update-services/get-started/windows-server-update-services-wsus)

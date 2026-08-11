@@ -1,5 +1,7 @@
 # 🔒 **ADVANCED SECURITY AUDIT REPORT**
 
+> Historical v1 audit retained for traceability. It does not describe v2 implementation or current validation status; see [the archive index](HISTORICAL_AUDITS.md).
+
 ## Critical Vulnerabilities & Security Fixes for Asgard & Olympus
 
 **Audit Date:** December 2024  

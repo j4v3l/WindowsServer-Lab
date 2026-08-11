@@ -780,8 +780,8 @@ This comprehensive lab environment provides a realistic enterprise infrastructur
 ## 📚 **Additional Resources**
 
 - **Microsoft Documentation**: [Windows Server 2022](https://docs.microsoft.com/en-us/windows-server/)
-- **PowerShell Gallery**: [Olympus Management Modules](https://powershellgallery.com/packages/OlympusManagement)
-- **Azure Integration**: [Hybrid Cloud Solutions](https://azure.microsoft.com/en-us/services/azure-arc/)
-- **Community Support**: [Olympus Systems GitHub](https://github.com/olympus-systems/windows-server-lab)
+- **Current automation**: [Windows guest scripts](../../../Scripts/README.md)
+- **Azure Integration**: [Azure Arc documentation](https://learn.microsoft.com/en-us/azure/azure-arc/)
+- **Community Support**: [Project issues](https://github.com/j4v3l/WindowsServer-Lab/issues)
 
 **⚡ Ascend to greatness with Olympus Systems! ⚡**

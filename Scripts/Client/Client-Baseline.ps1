@@ -57,7 +57,7 @@ function Ensure-LocalPolicies {
 	Set-ItemProperty -Path $lsa -Name 'restrictanonymoussam' -Type DWord -Value 1
 
 	# Disable legacy SMBv1
-	Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
+	Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction Stop | Out-Null
 
 	Write-Host "Applied local security policy tweaks" -ForegroundColor Green
 }

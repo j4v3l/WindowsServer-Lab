@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-server-lab/v2/site.schema.json",
+  "title": "Windows Server Lab v2 site configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "proxmox", "hostNetworking", "templateBuildNetwork", "templateCertification", "networkMappings", "guestAccess", "paths", "capacity"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 2 },
+    "proxmox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "vmStorage", "isoStorage", "snippetStorage", "backupStorage", "backupRetention", "virtioIso", "virtioIsoSha256", "templates"],
+      "properties": {
+        "node": { "type": "string", "minLength": 1 },
+        "vmStorage": { "type": "string", "minLength": 1 },
+        "isoStorage": { "type": "string", "minLength": 1 },
+        "snippetStorage": { "type": "string", "minLength": 1 },
+        "backupStorage": { "type": "string", "minLength": 1 },
+        "backupRetention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["keepLast", "keepDaily", "keepWeekly", "keepMonthly"],
+          "properties": {
+            "keepLast": { "type": "integer", "minimum": 1 },
+            "keepDaily": { "type": "integer", "minimum": 1 },
+            "keepWeekly": { "type": "integer", "minimum": 1 },
+            "keepMonthly": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "virtioIso": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+:iso/.+\\.iso$" },
+        "virtioIsoSha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+        "templates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["server-2025", "server-2022", "windows-11"],
+          "properties": {
+            "server-2025": { "type": "integer", "minimum": 100 },
+            "server-2022": { "type": "integer", "minimum": 100 },
+            "windows-11": { "type": "integer", "minimum": 100 }
+          }
+        }
+      }
+    },
+    "hostNetworking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bridges"],
+      "properties": {
+        "bridges": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "uplink", "vlanAware", "allowedVlans", "management"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^vmbr[0-9]+$" },
+              "uplink": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+              "vlanAware": { "const": true },
+              "allowedVlans": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "integer", "minimum": 1, "maximum": 4094 }
+              },
+              "management": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    "templateBuildNetwork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bridge", "address", "prefixLength", "gateway", "dnsServers"],
+      "properties": {
+        "bridge": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+        "address": { "type": "string", "format": "ipv4" },
+        "prefixLength": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "gateway": { "type": "string", "format": "ipv4" },
+        "dnsServers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "format": "ipv4" }
+        }
+      }
+    },
+    "templateCertification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vmId", "address", "timeoutSeconds"],
+      "properties": {
+        "vmId": { "type": "integer", "minimum": 100 },
+        "address": { "type": "string", "format": "ipv4" },
+        "timeoutSeconds": { "type": "integer", "minimum": 300, "maximum": 7200 }
+      }
+    },
+    "networkMappings": {
+      "type": "object",
+      "required": ["asgard", "olympus"],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bridge", "vlanTag"],
+          "properties": {
+            "bridge": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+            "vlanTag": { "type": "integer", "minimum": 0, "maximum": 4094 },
+            "configured": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+    "gpuMappings": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_.-]+$" },
+      "additionalProperties": { "type": "string", "pattern": "^(?:[A-Fa-f0-9]{4}:[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}\\.[0-7]|mapping=[A-Za-z0-9_.-]+)$" }
+    },
+    "guestAccess": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user", "sshPublicKeyFile", "sshPrivateKeyFile"],
+      "properties": {
+        "user": { "type": "string", "minLength": 1 },
+        "sshPublicKeyFile": { "type": "string", "minLength": 1 },
+        "sshPrivateKeyFile": { "type": "string", "minLength": 1 }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logDirectory", "reportDirectory"],
+      "properties": {
+        "logDirectory": { "type": "string", "minLength": 1 },
+        "reportDirectory": { "type": "string", "minLength": 1 }
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vcpus", "memoryMB", "storageGB"],
+      "properties": {
+        "vcpus": { "type": "integer", "minimum": 1 },
+        "memoryMB": { "type": "integer", "minimum": 2048 },
+        "storageGB": { "type": "integer", "minimum": 40 },
+        "reserveMemoryMB": { "type": "integer", "minimum": 2048 }
+      }
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secureBoot": { "type": "boolean" },
+        "tpm": { "type": "boolean" },
+        "startAfterDeploy": { "type": "boolean" },
+        "backupBeforeRemove": { "type": "boolean" },
+        "guestAgentTimeoutSeconds": { "type": "integer", "minimum": 60, "maximum": 7200 }
+      }
+    }
+  }
+}

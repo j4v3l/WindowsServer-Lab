@@ -440,7 +440,7 @@ After completing the Asgard network share setup:
 - [Asgard Technologies Demo Overview](../README.md)
 - [Asgard Manual Setup Guide](../MANUAL_SETUP_ASGARD.md)
 - [Asgard Quick Start Guide](QUICK_START_ASGARD.md)
-- [Active Directory Groups Management](../../LabSetupTutorials/03_AD_Groups_Management.md)
+- [Active Directory Groups Management](../../../LabSetupTutorials/03_AD_Groups_Management.md)
 
 ---
 

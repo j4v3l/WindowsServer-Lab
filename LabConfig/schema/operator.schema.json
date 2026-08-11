@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-server-lab/v2/operator.schema.json",
+  "title": "Windows Server Lab operator connection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "proxmoxHost", "proxmoxNode", "sshUser", "sshPrivateKeyPath", "media"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "proxmoxHost": { "type": "string", "minLength": 1 },
+    "proxmoxNode": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+    "sshUser": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$" },
+    "sshPrivateKeyPath": { "type": "string", "minLength": 1 },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server2025", "windows11"],
+      "properties": {
+        "server2025": { "$ref": "#/$defs/media" },
+        "windows11": { "$ref": "#/$defs/media" }
+      }
+    }
+  },
+  "$defs": {
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["volume", "sha256"],
+      "properties": {
+        "volume": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+:iso/.+\\.(?:iso|img)$" },
+        "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      }
+    }
+  }
+}

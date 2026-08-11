@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-server-lab/v2/template-build-manifest.schema.json",
+  "title": "Windows Server Lab template build manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "os", "buildRunId", "automationSha256", "sources", "payloads"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "os": { "enum": ["server-2025", "server-2022", "windows-11"] },
+    "buildRunId": { "type": "string", "pattern": "^[A-Za-z0-9._:-]+$" },
+    "automationSha256": { "$ref": "#/$defs/sha256" },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowsIsoSha256", "virtioIsoSha256"],
+      "properties": {
+        "windowsIsoSha256": { "$ref": "#/$defs/sha256" },
+        "virtioIsoSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "payloads": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cloudbaseInit", "qemuGuestAgent"],
+      "properties": {
+        "cloudbaseInit": { "$ref": "#/$defs/payload" },
+        "qemuGuestAgent": { "$ref": "#/$defs/payload" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

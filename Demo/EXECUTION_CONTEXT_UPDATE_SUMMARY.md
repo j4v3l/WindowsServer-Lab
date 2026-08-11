@@ -1,5 +1,7 @@
 # 📋 **EXECUTION CONTEXT UPDATE SUMMARY**
 
+> Historical v1 summary retained for traceability. It does not describe v2 implementation or current validation status; see [the archive index](HISTORICAL_AUDITS.md).
+
 ## Production Readiness - Command Execution Clarity
 
 **Date:** December 2024  

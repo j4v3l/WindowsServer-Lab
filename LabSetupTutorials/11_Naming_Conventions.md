@@ -320,5 +320,5 @@
 ## 🔗 Additional Resources
 
 - [Microsoft Naming Conventions](https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/plan/selecting-the-forest-root-domain)
-- [Active Directory Best Practices](https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices)
+- [Active Directory security best practices](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory)
 - [Windows Server Documentation](https://docs.microsoft.com/en-us/windows-server/)

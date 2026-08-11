@@ -902,7 +902,7 @@ foreach ($deviceType in $deviceClasses.GetEnumerator()) {
 
 - [Group Policy Administrative Templates](https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/security-policy-settings)
 - [Windows Security Baselines](https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-security-baselines)
-- [AppLocker Technical Reference](https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker/)
+- [AppLocker and App Control guidance](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/applocker/applocker-overview)
 
 ### Compliance Frameworks
 
@@ -913,8 +913,8 @@ foreach ($deviceType in $deviceClasses.GetEnumerator()) {
 
 ### PowerShell Resources
 
-- [PowerShell Gallery - GroupPolicy Module](https://www.powershellgallery.com/packages/GroupPolicy)
-- [Windows PowerShell Security Best Practices](https://docs.microsoft.com/en-us/powershell/scripting/security/)
+- [GroupPolicy module reference](https://learn.microsoft.com/en-us/powershell/module/grouppolicy/)
+- [PowerShell security features](https://learn.microsoft.com/en-us/powershell/scripting/security/security-features)
 
 ---
 

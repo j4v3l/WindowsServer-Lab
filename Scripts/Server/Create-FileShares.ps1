@@ -34,7 +34,7 @@ function Grant-NTFSPerms($path, $readGroup, $changeGroup) {
 foreach ($s in $shares) {
     Ensure-Folder $s.Path
     Grant-NTFSPerms -path $s.Path -readGroup $s.ReadGroup -changeGroup $s.ChangeGroup
-    if (-not (Get-SmbShare -Name $s.Name -ErrorAction SilentlyContinue)) {
+    if (-not (Get-SmbShare -Name $s.Name -ErrorAction Ignore)) {
         $params = @{ Name=$s.Name; Path=$s.Path; FullAccess="${DomainName}\\Domain Admins" }
         if ($s.ChangeGroup) { $params.ChangeAccess = "${DomainName}\\$($s.ChangeGroup)" }
         if ($s.ReadGroup)   { $params.ReadAccess   = "${DomainName}\\$($s.ReadGroup)" }

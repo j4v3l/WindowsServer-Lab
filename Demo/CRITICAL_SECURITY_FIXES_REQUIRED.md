@@ -1,5 +1,7 @@
 # 🚨 **CRITICAL SECURITY FIXES REQUIRED**
 
+> Historical v1 checklist retained for traceability. It does not describe v2 implementation or current validation status; see [the archive index](HISTORICAL_AUDITS.md).
+
 ## Advanced Security Policies - Asgard & Olympus
 
 **SEVERITY:** CRITICAL  

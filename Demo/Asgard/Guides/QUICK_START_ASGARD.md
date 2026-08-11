@@ -1,362 +1,57 @@
-# 🚀 **ASGARD TECHNOLOGIES** - Quick Start Guide
+# Asgard v2 quick start
 
-## ⚡ **Deploy the Most Epic Windows Server Lab in 3 Steps!**
-
-### 🎯 **What You'll Get**
-
-- **25 Virtual Machines** (5 servers + 20 workstations)
-- **Norse mythology-themed company** with realistic org structure
-- **Complete Windows Server environment** with all features
-- **Automated deployment** with professional scripts
-- **Epic demonstrations** showcasing every capability
-
----
-
-## 📋 **Prerequisites**
-
-### **⚡ Tested & Optimized Hardware**
-
-**This lab was designed and tested on:**
-
-- **CPU**: AMD Ryzen 7900X (12 cores, 24 threads)
-- **RAM**: 64GB DDR5
-- **Storage**: 1TB NVMe SSD
-- **GPU**: NVIDIA RTX 5070 (12GB VRAM)
-- **OS**: Windows Server 2022 on Proxmox VE
-
-### **💪 Performance Capabilities**
-
-With the above specs, you can run:
-
-- **35+ VMs simultaneously**
-- **Enhanced VM specifications** (larger RAM allocations)
-- **Parallel operations** without performance impact
-- **30-60 minute deployment** time
-
-### **⚠️ Minimum Requirements for Others**
-
-- **32GB RAM** (minimum 16GB, 64GB recommended)
-- **1TB+ NVMe storage**
-- **8+ CPU cores** (12+ recommended)
-- **Proxmox VE 8.0+**
-- **Dedicated GPU** (recommended for multiple VMs)
-
-### **Software Requirements**
-
-- **Proxmox VE environment ready**
-- **Windows Server 2019/2022 ISO**
-- **Windows 10/11 ISO** (for workstations)
-
----
-
-## 🚀 **Step 1: Prepare Proxmox VE**
+## 1. Preflight on the Proxmox node
 
 ```bash
-# Create VMs using Proxmox VE web interface
-# Follow the Proxmox setup documentation
-
-# Restart when prompted
-Restart-Computer
+cp LabConfig/site.example.json LabConfig/site.json
+# Edit node, storage, VLAN/bridge mappings, SSH key paths, and proven capacity.
+Tools/Proxmox/Validate-LabConfig.sh --demo asgard --profile smoke --site LabConfig/site.json
+Tools/Proxmox/Configure-LabNetwork.sh --site LabConfig/site.json
 ```
 
----
+The default smoke requirement is 6 VMs, 11 vCPU, 17,408 MB maximum RAM (14,336 MB balloon minimum), and 456 GB thin-provisioned storage. Servers use `vmbr1`/VLAN 90 and the client uses `vmbr1`/VLAN 100; `nic1` must have carrier on a tagged trunk. Core and full remain blocked until their management and DMZ mappings are explicitly supplied. Follow the [six-VM startup runbook](../../../docs/SMOKE_STARTUP.md) for host inspection, bridge safeguards, and execution contexts.
 
-## 🏰 **Step 2: Deploy Asgard Technologies**
+## 2. Build templates
+
+Use licensed Server 2025 and current Windows 11 media plus the VirtIO ISO configured in `site.json`. Set the required `PKR_VAR_*` values from a runtime secret provider, then rerun each reviewed command with `--apply`. Server 2022 is needed only for the separate compatibility gate.
+
+```bash
+Tools/Proxmox/Build-WindowsTemplate.sh --os server-2025 --iso /media/server-2025.iso --iso-sha256 SHA256 --site LabConfig/site.json --artifacts LabConfig/build-artifacts.json
+Tools/Proxmox/Build-WindowsTemplate.sh --os windows-11 --iso /media/windows-11.iso --iso-sha256 SHA256 --site LabConfig/site.json --artifacts LabConfig/build-artifacts.json
+```
+
+## 3. Configure the isolated bridge and run the lab
+
+```bash
+Tools/Proxmox/Configure-LabNetwork.sh --site LabConfig/site.json --apply
+Tools/Proxmox/Start-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json --activate
+Tools/Proxmox/Start-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json --activate --apply
+```
+
+The wrapper creates or reconciles owned VMs, configures AD/services/policies in dependency order, prompts without echo for AD and activation credentials, and validates through QEMU Guest Agent. It refuses name/ID conflicts and stale or missing template evidence.
+
+## 4. Operate Windows policy
+
+The startup wrapper has already initialized and read back the domain policies. Later access changes can be made on `ODIN-DC01` with an elevated domain administration identity:
 
 ```powershell
-# Navigate to your WindowsServer project
-cd "C:\path\to\WindowsServer"
-
-# RECOMMENDED: Deploy with separate ISOs (this creates 25 VMs with enhanced specs!)
-# You'll be prompted for secure passwords during deployment
-.\Scripts\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ServerISOPath "C:\ISOs\en-us_windows_server_2025_x64_dvd_b7ec10f3.iso" -ClientISOPath "C:\ISOs\en-us_windows_10_consumer_editions_version_22h2_x64_dvd_8da72ab3.iso"
-
-# Or deploy with custom settings
-.\Scripts\Deploy-AsgardLab.ps1 -DomainName "asgard.local" -VMPath "D:\VMs\Asgard" -ServerISOPath "D:\ISOs\WindowsServer2025.iso" -ClientISOPath "D:\ISOs\Windows10.iso"
-
-# LEGACY: Single ISO mode (backward compatibility)
-.\Scripts\Deploy-AsgardLab.ps1 -VMPath "C:\VMs\Asgard" -ISOPath "C:\ISOs\WindowsServer.iso"
-
-# 💡 Performance Tip: Store VMs on your 1TB NVMe for best performance!
-# Total RAM allocation: ~90GB (well within your 64GB + swap capabilities)
+C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 -Demo asgard -Identity ODIN-WS01 -Control Camera -Access Allow -RefreshPolicy
+C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 -Demo asgard -Identity odin.chief -Control Wallpaper -Access Allow -RefreshPolicy
 ```
 
-### **🔒 Security Password Requirements**
+Use `Set-LabAccessControl.ps1` to grant or revoke camera, microphone, USB storage, wallpaper changes, Control Panel, command prompt, registry tools, Microsoft Store, OneDrive, and RDP clipboard access. See the [access-control runbook](../../../docs/ACCESS_CONTROL.md) for examples and effective-policy checks.
 
-During deployment, you'll be prompted for:
+`Set-LabDomainPolicy.ps1` also enables verified native background Group Policy refresh. Physical computers and non-Proxmox VMs can be joined or removed with `Set-LabMachineEnrollment.ps1`; follow the [machine-enrollment runbook](../../../docs/MACHINE_ENROLLMENT.md).
 
-1. **Safe Mode Password** (DSRM Recovery)
+Shared printers and folders use separate visible-resource and access-policy phases; follow the [resource-sharing runbook](../../../docs/RESOURCE_SHARING.md).
 
-   - Used for domain controller recovery operations
-   - Must meet complexity requirements (8+ chars, mixed case, numbers, symbols)
-   - Keep this password secure and documented
+The same access script handles microphone, USB storage, Control Panel, command prompt, registry tools, Microsoft Store, OneDrive, and RDP clipboard. A hardware printer queue is created only after supplying a real address and a checksum-verified signed package-aware driver; the trusted print server and deny/admin policies are already configured.
 
-2. **Default User Password** (All 25 Norse Users)
-   - Applied to all mythology-themed user accounts
-   - Users will be required to change password on first login
-   - Must meet domain password policy requirements
+## 5. Validate and protect
 
-**Security Benefits:**
-
-- ✅ No hardcoded passwords in any scripts
-- ✅ Secure password entry using PowerShell SecureString
-- ✅ Runtime validation ensures password compliance
-- ✅ Zero critical security vulnerabilities (PSScriptAnalyzer validated)
-
----
-
-## ⚙️ **Step 3: Configure Your Epic Lab**
-
-### **Phase 1: Install Operating Systems**
-
-1. **Start ODIN-DC01** (Primary Domain Controller)
-2. **Install Windows Server 2019/2022**
-3. **Configure as Domain Controller**:
-   - Domain: `asgard.local`
-   - Safe Mode Password: Use the same secure password you entered during deployment
-
-### **Phase 2: Run AD Configuration**
-
-```powershell
-# On ODIN-DC01, run the generated script:
-C:\VMs\Asgard\Configure-AsgardAD.ps1
+```bash
+Tools/Proxmox/Test-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json --phase full
+Tools/Proxmox/Backup-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json
 ```
 
-### **Phase 3: Install Other Systems**
-
-- **FRIGG-DC02**: Secondary Domain Controller
-- **HEIMDALL-FS01**: File Server
-- **BALDER-WEB01**: Web Server
-- **VIDAR-SEC01**: Security Server
-- **All Workstations**: Windows 10/11
-
----
-
-## 🎭 **Meet Your Norse Mythology Team**
-
-### **🏢 Organizational Structure**
-
-#### **IT Operations** (Odin's Realm)
-
-- **odin.allfather** - CTO & Domain Admin
-- **thor.thunderer** - Senior Systems Engineer
-- **loki.trickster** - Junior Developer (Intern)
-- **hermod.messenger** - Network Administrator
-- **tyr.brave** - Security Analyst
-
-#### **Cybersecurity** (Heimdall's Watch)
-
-- **heimdall.guardian** - CISO
-- **mimir.wise** - Threat Intelligence Analyst
-- **huginn.raven** - SOC Analyst I
-- **muninn.memory** - SOC Analyst II
-- **fenrir.wolf** - Penetration Tester
-
-#### **Research & Development** (Freya's Workshop)
-
-- **freya.seidr** - Head of R&D
-- **njord.wind** - AI Research Scientist
-- **frey.prosperity** - Quantum Computing Lead
-- **jormungandr.serpent** - Data Scientist
-- **sleipnir.swift** - DevOps Engineer
-
-#### **Finance & Administration** (Frigg's Treasury)
-
-- **frigg.queen** - CFO
-- **eir.healer** - Financial Analyst
-- **saga.storyteller** - Compliance Officer
-- **var.oath** - Legal Counsel
-- **forseti.justice** - Audit Manager
-
-#### **Human Resources** (Sif's Domain)
-
-- **sif.golden** - HR Director
-- **idun.eternal** - Talent Acquisition
-- **bragi.poet** - Training Coordinator
-- **hel.half** - Benefits Administrator
-- **sigyn.faithful** - Employee Relations
-
----
-
-## 🌐 **Network Architecture**
-
-### **IP Address Scheme**
-
-```
-Production Network:    10.0.10.0/24   (Servers)
-Management Network:    10.0.100.0/24  (Admin access)
-Client Networks:       10.0.20.0/22   (Workstations)
-DMZ Network:          10.0.50.0/24   (External services)
-```
-
-### **Key Server IPs**
-
-```
-ODIN-DC01:     10.0.10.10  (Primary DC)
-FRIGG-DC02:    10.0.10.11  (Secondary DC)
-HEIMDALL-FS01: 10.0.10.20  (File Server)
-BALDER-WEB01:  10.0.10.30  (Web Server)
-VIDAR-SEC01:   10.0.10.40  (Security Server)
-```
-
----
-
-## 🎯 **Epic Demo Scenarios**
-
-### **🔥 Scenario 1: New Employee Onboarding**
-
-**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
-**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
-**PREREQUISITES: Domain Administrator rights**
-
-```powershell
-# Create new user for R&D department
-New-ADUser -Name "Baldr Lightbringer" -SamAccountName "baldr.light" -Department "Research_Development"
-
-# Add to research team
-Add-ADGroupMember -Identity "GRP-Research_Team" -Members "baldr.light"
-
-# Create workstation
-New-AsgardVM -VMName "BALDR-WS01" -Memory 4GB -Networks @("ASGARD-Clients")
-```
-
-### **⚔️ Scenario 2: Security Incident Response**
-
-**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
-**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
-**PREREQUISITES: Domain Administrator rights**
-
-```powershell
-# Simulate security breach
-# Disable compromised account
-Disable-ADAccount -Identity "loki.trickster"
-
-# Generate incident report
-Get-EventLog -LogName Security -EntryType FailureAudit | Export-Csv "SecurityIncident.csv"
-
-# Implement containment policies
-New-GPO -Name "Emergency-Lockdown" | New-GPLink -Target "OU=Departments,OU=Asgard Technologies,DC=asgard,DC=local"
-```
-
-### **🛡️ Scenario 3: Compliance Audit**
-
-**EXECUTION CONTEXT: Run INSIDE Windows Server VM (ODIN-DC01 - Primary Domain Controller)**  
-**ACCESS METHOD: RDP, Console, or PowerShell Direct to Domain Controller VM**  
-**PREREQUISITES: Domain Administrator rights**
-
-```powershell
-# Generate compliance reports
-Get-ADUser -Filter * -Properties * | Export-Csv "UserAudit.csv"
-Get-ADGroup -Filter * | Export-Csv "GroupAudit.csv"
-Get-ADComputer -Filter * | Export-Csv "ComputerAudit.csv"
-```
-
----
-
-## 🎮 **Management Commands**
-
-### **VM Management**
-
-```powershell
-# Start all Asgard VMs
-# Start all Asgard VMs via Proxmox VE: qm start <vmid>
-
-# Stop all VMs
-# Stop all Asgard VMs via Proxmox VE: qm stop <vmid>
-
-# Get VM status
-# Check VM status via Proxmox VE: qm status <vmid>
-```
-
-### **Network Diagnostics**
-
-```powershell
-# Check virtual switches
-# Check network bridges via Proxmox VE web interface
-
-# Test connectivity
-Test-NetConnection -ComputerName "10.0.10.10" -Port 3389
-```
-
----
-
-## 🏆 **Success Metrics**
-
-### **You'll Know It's Working When:**
-
-- ✅ **25 VMs created** and running
-- ✅ **asgard.local domain** is functional
-- ✅ **25 users** can log in to their workstations
-- ✅ **Department file shares** are accessible ([Asgard Setup Guide](ASGARD_NETWORK_SHARE_SETUP.md))
-- ✅ **Group policies** are applied correctly
-- ✅ **DNS/DHCP** services are operational
-- ✅ **All demo scenarios** work perfectly
-
----
-
-## 🆘 **Troubleshooting**
-
-### **Common Issues**
-
-#### **Not Enough Memory**
-
-```powershell
-# Scale down the environment
-.\Scripts\Deploy-AsgardLab.ps1 -SkipVMs  # Networks only
-# Then manually create fewer VMs
-```
-
-#### **Network Issues**
-
-```powershell
-# Check Proxmox network bridges
-# List all network bridges: ip link show | grep vmbr
-Get-NetAdapter | Where-Object {$_.Name -like "*vEthernet*"}
-```
-
-#### **Domain Issues**
-
-```powershell
-# Check domain controller
-Test-ComputerSecureChannel -Verbose
-nltest /dclist:asgard.local
-```
-
----
-
-## 🎊 **Congratulations!**
-
-You've successfully deployed **Asgard Technologies** - the most epic Windows Server lab environment ever created!
-
-### **What You've Accomplished:**
-
-- 🏰 **Built a Norse mythology-themed enterprise**
-- ⚡ **Deployed 25 virtual machines** with enhanced specifications
-- 🔐 **Configured enterprise-grade security**
-- 🌐 **Set up professional networking**
-- 👥 **Created realistic organizational structure**
-- 🎯 **Enabled comprehensive demo scenarios**
-- 💪 **Maximized your Ryzen 7900X + 64GB RAM** performance
-- 🚀 **Achieved 30-60 minute deployment** on high-end hardware
-
-### **Next Steps:**
-
-1. **Explore the lab** with the demo scenarios
-2. **Practice Windows Server skills** with real-world tasks
-3. **Customize the environment** for your specific needs
-4. **Share your epic lab** with the community!
-
----
-
-## 📚 **Documentation**
-
-- **Complete Setup Guide**: `DEMO_SETUP_GUIDE.md`
-- **Lab Tutorials**: `LabSetupTutorials/`
-- **Management Scripts**: `Scripts/`
-- **Troubleshooting**: `LabSetupTutorials/05_Troubleshooting.md`
-
----
-
-**🏰 Welcome to Asgard Technologies - Where IT Meets Legend! ⚡**
-
-_"In the halls of Asgard, every server tells a story, every user has a purpose, and every network connection is a bridge between realms."_
+Only add `--apply` to backup after reviewing the plan. Domain controllers additionally require Windows System State backups and an isolated restore drill. See the [certification](../../../docs/LIVE_CERTIFICATION.md) and [recovery](../../../docs/BACKUP_RECOVERY.md) runbooks.

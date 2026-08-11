@@ -1,0 +1,129 @@
+{
+  "$schema": "../schema/access-controls.schema.json",
+  "schemaVersion": 1,
+  "controls": [
+    {
+      "id": "Camera",
+      "displayName": "Camera",
+      "description": "Deny camera access for the selected workstation.",
+      "scope": "Computer",
+      "groupName": "ACL-Deny-Camera-PC",
+      "gpoName": "WSLAB-Access-Deny-Camera",
+      "refresh": "restart",
+      "settings": [
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Camera", "name": "AllowCamera", "type": "DWord", "value": 0 },
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsAccessCamera", "type": "DWord", "value": 2 }
+      ]
+    },
+    {
+      "id": "Microphone",
+      "displayName": "Microphone",
+      "description": "Deny microphone access for the selected workstation.",
+      "scope": "Computer",
+      "groupName": "ACL-Deny-Mic-PC",
+      "gpoName": "WSLAB-Access-Deny-Microphone",
+      "refresh": "restart",
+      "settings": [
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsAccessMicrophone", "type": "DWord", "value": 2 }
+      ]
+    },
+    {
+      "id": "USBStorage",
+      "displayName": "USB and removable storage",
+      "description": "Deny all removable-storage classes for the selected workstation.",
+      "scope": "Computer",
+      "groupName": "ACL-Deny-USB-PC",
+      "gpoName": "WSLAB-Access-Deny-USBStorage",
+      "refresh": "restart",
+      "settings": [
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\RemovableStorageDevices", "name": "Deny_All", "type": "DWord", "value": 1 }
+      ]
+    },
+    {
+      "id": "Wallpaper",
+      "displayName": "Wallpaper changes",
+      "description": "Prevent the selected user from changing wallpaper and optionally enforce an approved UNC-hosted image.",
+      "scope": "User",
+      "groupName": "ACL-Lock-Wall-User",
+      "gpoName": "WSLAB-Access-Lock-Wallpaper",
+      "refresh": "signout",
+      "settings": [
+        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\ActiveDesktop", "name": "NoChangingWallPaper", "type": "DWord", "value": 1 },
+        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "Wallpaper", "type": "String", "value": "{WALLPAPER_PATH}", "requiresWallpaperPath": true },
+        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "WallpaperStyle", "type": "String", "value": "10", "requiresWallpaperPath": true }
+      ]
+    },
+    {
+      "id": "ControlPanel",
+      "displayName": "Control Panel and Settings",
+      "description": "Deny Control Panel and Settings access for the selected user.",
+      "scope": "User",
+      "groupName": "ACL-Deny-CPanel-U",
+      "gpoName": "WSLAB-Access-Deny-ControlPanel",
+      "refresh": "signout",
+      "settings": [
+        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer", "name": "NoControlPanel", "type": "DWord", "value": 1 }
+      ]
+    },
+    {
+      "id": "CommandPrompt",
+      "displayName": "Command Prompt",
+      "description": "Deny cmd.exe for the selected user.",
+      "scope": "User",
+      "groupName": "ACL-Deny-CMD-U",
+      "gpoName": "WSLAB-Access-Deny-CommandPrompt",
+      "refresh": "signout",
+      "settings": [
+        { "key": "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "DisableCMD", "type": "DWord", "value": 1 }
+      ]
+    },
+    {
+      "id": "RegistryTools",
+      "displayName": "Registry editing tools",
+      "description": "Deny registry editing tools for the selected user.",
+      "scope": "User",
+      "groupName": "ACL-Deny-Regedit-U",
+      "gpoName": "WSLAB-Access-Deny-RegistryTools",
+      "refresh": "signout",
+      "settings": [
+        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "DisableRegistryTools", "type": "DWord", "value": 1 }
+      ]
+    },
+    {
+      "id": "WindowsStore",
+      "displayName": "Microsoft Store",
+      "description": "Deny Microsoft Store for the selected workstation.",
+      "scope": "Computer",
+      "groupName": "ACL-Deny-Store-PC",
+      "gpoName": "WSLAB-Access-Deny-WindowsStore",
+      "refresh": "gpupdate",
+      "settings": [
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\WindowsStore", "name": "RemoveWindowsStore", "type": "DWord", "value": 1 }
+      ]
+    },
+    {
+      "id": "OneDrive",
+      "displayName": "OneDrive synchronization",
+      "description": "Deny OneDrive file synchronization for the selected workstation.",
+      "scope": "Computer",
+      "groupName": "ACL-Deny-OneDrive-PC",
+      "gpoName": "WSLAB-Access-Deny-OneDrive",
+      "refresh": "gpupdate",
+      "settings": [
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\OneDrive", "name": "DisableFileSyncNGSC", "type": "DWord", "value": 1 }
+      ]
+    },
+    {
+      "id": "RdpClipboard",
+      "displayName": "RDP clipboard redirection",
+      "description": "Deny clipboard redirection in Remote Desktop sessions for the selected workstation.",
+      "scope": "Computer",
+      "groupName": "ACL-Deny-RdpClip-PC",
+      "gpoName": "WSLAB-Access-Deny-RdpClipboard",
+      "refresh": "gpupdate",
+      "settings": [
+        { "key": "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services", "name": "fDisableClip", "type": "DWord", "value": 1 }
+      ]
+    }
+  ]
+}

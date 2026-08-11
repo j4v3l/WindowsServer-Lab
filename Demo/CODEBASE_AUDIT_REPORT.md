@@ -1,5 +1,7 @@
 # 🔍 **COMPREHENSIVE CODEBASE AUDIT REPORT**
 
+> Historical v1 audit retained for traceability. It does not describe v2 implementation or current validation status; see [the archive index](HISTORICAL_AUDITS.md).
+
 **Audit Date:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")  
 **Auditor:** AI Coding Assistant  
 **Scope:** Complete Windows Server Lab Demo Environment  

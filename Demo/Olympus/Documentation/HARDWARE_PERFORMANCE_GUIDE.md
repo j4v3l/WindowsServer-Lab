@@ -606,7 +606,7 @@ The **Olympus Systems** lab environment represents a modern, feature-rich Window
 
 - **AMD Ryzen Optimization Guide**: [Processor Performance Tuning](https://www.amd.com/en/support/kb/faq/cpu-optimization)
 - **Proxmox VE Performance Best Practices**: [Proxmox Documentation](https://pve.proxmox.com/wiki/Performance_Tweaks)
-- **NVIDIA AI Development**: [GPU Optimization for AI/ML](https://developer.nvidia.com/deep-learning-performance-engineering-and-optimization)
-- **Storage Performance**: [NVMe SSD Optimization](https://docs.microsoft.com/en-us/windows/win32/fileio/file-system-performance-tuning)
+- **NVIDIA AI Development**: [Deep learning performance guide](https://docs.nvidia.com/deeplearning/performance/index.html)
+- **Storage Performance**: [Windows file-server performance tuning](https://learn.microsoft.com/en-us/windows-server/administration/performance-tuning/role/file-server/)
 
 **⚡ Ascend to digital godhood with optimized performance! ⚡**

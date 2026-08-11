@@ -28,7 +28,7 @@ Norse mythology-themed network share setup for the Asgard Technologies corporate
 
 ### **Olympus Systems Demo**
 
-**🔗 [Olympus Network Share Setup Guide](../Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md)**
+**🔗 [Olympus Network Share Setup Guide](../../Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md)**
 
 Greek mythology-themed network share setup for the Olympus Systems divine corporate environment.
 
@@ -70,7 +70,7 @@ Comprehensive, non-themed network share setup guide for custom environments.
 | Demo Environment        | File Server   | Domain        | Share Theme     | Guide Link                                                        |
 | ----------------------- | ------------- | ------------- | --------------- | ----------------------------------------------------------------- |
 | **Asgard Technologies** | HEIMDALL-FS01 | asgard.local  | Norse Mythology | [Asgard Guide](../Guides/ASGARD_NETWORK_SHARE_SETUP.md)           |
-| **Olympus Systems**     | HERMES-FS01   | olympus.local | Greek Mythology | [Olympus Guide](../Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md) |
+| **Olympus Systems**     | HERMES-FS01   | olympus.local | Greek Mythology | [Olympus Guide](../../Olympus/Guides/OLYMPUS_NETWORK_SHARE_SETUP.md) |
 | **Custom/Generic**      | Your Server   | your.domain   | Generic         | [Generic Guide](NETWORK_SHARE_SETUP_GUIDE.md)                     |
 
 ---
@@ -129,10 +129,10 @@ Before using any guide, ensure you have:
 
 ## 🔗 **Related Resources**
 
-- [Lab Setup Tutorials](../../LabSetupTutorials/)
-- [Active Directory Groups Management](../../LabSetupTutorials/03_AD_Groups_Management.md)
-- [Security Hardening Guide](../../LabSetupTutorials/09_Security_Hardening.md)
-- [Troubleshooting Guide](../../LabSetupTutorials/05_Troubleshooting.md)
+- [Lab Setup Tutorials](../../../LabSetupTutorials/)
+- [Active Directory Groups Management](../../../LabSetupTutorials/03_AD_Groups_Management.md)
+- [Security Hardening Guide](../../../LabSetupTutorials/09_Security_Hardening.md)
+- [Troubleshooting Guide](../../../LabSetupTutorials/05_Troubleshooting.md)
 
 ---
 

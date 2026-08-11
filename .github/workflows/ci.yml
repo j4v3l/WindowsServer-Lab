@@ -1,203 +1,224 @@
-name: CI/CD - PowerShell Lab Validation
+name: CI
 
 on:
   push:
-    branches: [main, dev, development]
   pull_request:
-    branches: [main, dev, development]
   workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
-  validate:
-    name: Validate PowerShell Scripts
+  powershell-51-parser:
+    name: Windows PowerShell 5.1 parser
     runs-on: windows-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Parse every PowerShell file
+        shell: powershell
+        run: |
+          $renderDirectory = Join-Path $env:RUNNER_TEMP 'wslab-answer-render'
+          New-Item -Path $renderDirectory -ItemType Directory -Force | Out-Null
+          $env:PKR_VAR_windows_password = 'CI-Parser-Only-Temporary-Value'
+          $env:PKR_VAR_cloudbase_msi_sha256 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          $env:WSLAB_QEMU_AGENT_MSI_SHA256 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+          $env:WSLAB_BUILD_IPV4_ADDRESS = '192.0.2.249'
+          $env:WSLAB_BUILD_IPV4_PREFIX_LENGTH = '24'
+          $env:WSLAB_BUILD_IPV4_GATEWAY = '192.0.2.1'
+          $env:WSLAB_BUILD_DNS_SERVERS = '192.0.2.1'
+          python Tools/Proxmox/Render-WindowsAnswerMedia.py --os server-2025 --template-directory packer/windows --output-directory $renderDirectory
+          $failed = $false
+          $parseFiles = @(Get-ChildItem -Recurse -File -Include *.ps1,*.psm1,*.psd1) + @(Get-Item (Join-Path $renderDirectory 'bootstrap.ps1'))
+          $parseFiles | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            foreach ($parseError in $errors) {
+              Write-Error "$($_.FullName):$($parseError.Extent.StartLineNumber): $($parseError.Message)"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
 
-      - name: Install PSScriptAnalyzer
+  powershell-7:
+    name: PowerShell 7 analysis and Pester
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install pinned test modules
         shell: pwsh
         run: |
-          Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck -Scope CurrentUser
-
-      - name: Analyze PowerShell Scripts
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
+      - name: Analyze v2 production scripts
         shell: pwsh
         run: |
-          $scripts = Get-ChildItem -Path . -Recurse -Include "*.ps1", "*.psm1", "*.psd1" | Where-Object {
-              $_.FullName -notlike "*\.git\*"
-          }
-
-          Write-Host "Found $($scripts.Count) PowerShell files to analyze"
-
-          $totalIssues = 0
-          foreach ($script in $scripts) {
-              Write-Host "Analyzing: $($script.Name)"
-              $issues = Invoke-ScriptAnalyzer -Path $script.FullName -Severity @('Error', 'Warning')
-              
-              if ($issues) {
-                  $totalIssues += $issues.Count
-                  Write-Host "  Issues found: $($issues.Count)" -ForegroundColor Red
-                  foreach ($issue in $issues) {
-                      Write-Host "    [$($issue.Severity)] Line $($issue.Line): $($issue.Message)"
-                  }
-              } else {
-                  Write-Host "  No issues found" -ForegroundColor Green
-              }
-          }
-
-          if ($totalIssues -gt 0) {
-              Write-Host "Total issues found: $totalIssues"
-              
-              # Count errors vs warnings
-              $errorCount = 0
-              foreach ($script in $scripts) {
-                  $errors = Invoke-ScriptAnalyzer -Path $script.FullName -Severity Error
-                  $errorCount += $errors.Count
-              }
-              
-              if ($errorCount -gt 0) {
-                  Write-Host "Critical errors found: $errorCount" -ForegroundColor Red
-                  exit 1
-              } else {
-                  Write-Host "Only warnings found, continuing..."
-              }
-          } else {
-              Write-Host "All scripts passed analysis!" -ForegroundColor Green
-          }
-
-      - name: Module Integrity Testing
-        shell: pwsh
-        run: |
-          Write-Host "Checking for module integrity test script..." -ForegroundColor Cyan
-          # Module integrity testing is no longer available - removed during Proxmox adaptation
-          Write-Host "Module integrity validation skipped - use manual procedures" -ForegroundColor Yellow
-
-      - name: Validate Documentation
-        shell: pwsh
-        run: |
-          $requiredDocs = @('README.md', 'CHANGELOG.md', 'LICENSE', 'CONTRIBUTING.md')
-          $missingDocs = @()
-
-          foreach ($doc in $requiredDocs) {
-              if (Test-Path $doc) {
-                  Write-Host "Found: $doc" -ForegroundColor Green
-              } else {
-                  $missingDocs += $doc
-                  Write-Host "Missing: $doc" -ForegroundColor Yellow
-              }
-          }
-
-          if ($missingDocs.Count -gt 0) {
-              Write-Host "Missing documentation files: $($missingDocs -join ', ')"
-          } else {
-              Write-Host "All required documentation present!"
-          }
-
-      - name: Validate Demo Directory Structure
-        shell: pwsh
-        run: |
-          Write-Host "Validating Demo directory structure..." -ForegroundColor Cyan
-
-          $demoRequiredFiles = @(
-              'Demo/README.md',
-              'Demo/Asgard/Scripts/Deploy-AsgardLab.ps1',
-                              'Demo/Asgard/Documentation/DEMO_SETUP_GUIDE.md',
-                'Demo/Asgard/Documentation/HARDWARE_PERFORMANCE_GUIDE.md',
-                              'Demo/Asgard/Guides/QUICK_START_ASGARD.md'
+          $renderDirectory = Join-Path $env:RUNNER_TEMP 'wslab-analyzer-render'
+          New-Item -Path $renderDirectory -ItemType Directory -Force | Out-Null
+          $env:PKR_VAR_windows_password = 'CI-Analyzer-Only-Temporary-Value'
+          $env:PKR_VAR_cloudbase_msi_sha256 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          $env:WSLAB_QEMU_AGENT_MSI_SHA256 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+          $env:WSLAB_BUILD_IPV4_ADDRESS = '192.0.2.249'
+          $env:WSLAB_BUILD_IPV4_PREFIX_LENGTH = '24'
+          $env:WSLAB_BUILD_IPV4_GATEWAY = '192.0.2.1'
+          $env:WSLAB_BUILD_DNS_SERVERS = '192.0.2.1'
+          python Tools/Proxmox/Render-WindowsAnswerMedia.py --os server-2025 --template-directory packer/windows --output-directory $renderDirectory
+          $paths = @(
+            'Scripts/WindowsServerLab',
+            'Scripts/Enable-LabEventForwarding.ps1',
+            'Scripts/Enable-LabPowerShellRemoting.ps1',
+            'Scripts/Import-Server2022SecurityBaseline.ps1',
+            'Scripts/Initialize-LabDomain.ps1',
+            'Scripts/Initialize-LabDataDisks.ps1',
+            'Scripts/Install-OlympusAIMLWorkstation.ps1',
+            'Scripts/Invoke-LabWindowsActivation.ps1',
+            'Scripts/Invoke-LabPatchOrchestration.ps1',
+            'Scripts/Invoke-LabBootstrap.ps1',
+            'Scripts/New-LabOfflineDomainJoin.ps1',
+            'Scripts/New-LabAsgardBranding.ps1',
+            'Scripts/Set-LabAccessControl.ps1',
+            'Scripts/Set-LabClientSecurityBaseline.ps1',
+            'Scripts/Set-LabDomainPolicy.ps1',
+            'Scripts/Set-LabGroupPolicyRefresh.ps1',
+            'Scripts/Set-LabMachineEnrollment.ps1',
+            'Scripts/Set-LabManagedServiceAccount.ps1',
+            'Scripts/Set-LabWindowsActivation.ps1',
+            'Scripts/Set-LabPrintPolicy.ps1',
+            'Scripts/Set-LabPrinterConnection.ps1',
+            'Scripts/Set-LabSecurityBaseline.ps1',
+            'Scripts/Set-LabFileSharePolicy.ps1',
+            'Scripts/Set-LabSharedFolder.ps1',
+            'Scripts/Set-LabSharedPrinter.ps1',
+            'Scripts/Start-LabFileBackup.ps1',
+            'Scripts/Start-LabSystemStateBackup.ps1',
+            'Scripts/Test-LabAccessControl.ps1',
+            'Scripts/Test-LabGroupPolicyRefresh.ps1',
+            'Scripts/Test-LabCompliance.ps1',
+            'Scripts/Test-LabFileRestore.ps1',
+            'packer/windows/first-boot-cleanup.ps1',
+            'packer/windows/finalize-template.ps1',
+            'packer/windows/prepare-template.ps1',
+            'packer/windows/seal-template.ps1',
+            (Join-Path $renderDirectory 'bootstrap.ps1')
           )
-
-          $missingFiles = @()
-          $foundFiles = @()
-
-          foreach ($file in $demoRequiredFiles) {
-              if (Test-Path $file) {
-                  $foundFiles += $file
-                  Write-Host "✅ Found: $file" -ForegroundColor Green
-              } else {
-                  $missingFiles += $file
-                  Write-Host "❌ Missing: $file" -ForegroundColor Red
-              }
+          $issues = foreach ($path in $paths) {
+            Invoke-ScriptAnalyzer -Path $path -Settings ./PSScriptAnalyzerSettings.psd1 -Recurse
           }
-
-          Write-Host "`nDemo Structure Validation Summary:" -ForegroundColor Cyan
-          Write-Host "✅ Found files: $($foundFiles.Count)" -ForegroundColor Green
-          Write-Host "❌ Missing files: $($missingFiles.Count)" -ForegroundColor Yellow
-
-          if ($missingFiles.Count -gt 0) {
-              Write-Host "`nMissing Demo files:" -ForegroundColor Yellow
-              $missingFiles | ForEach-Object { Write-Host "  - $_" }
-              Write-Host "`nDemo structure validation failed!" -ForegroundColor Red
-              exit 1
-          } else {
-              Write-Host "✅ Demo directory structure is compliant!" -ForegroundColor Green
-          }
-
-      - name: Validate Version Consistency
+          $issues | Format-Table -AutoSize | Out-String | Write-Host
+          if ($issues) { exit 1 }
+      - name: Run Pester
         shell: pwsh
         run: |
-          Write-Host "Validating version consistency across files..." -ForegroundColor Cyan
-
-          # Get version from VERSION file
-          $versionFile = Get-Content "VERSION" -Raw
-          $expectedVersion = $versionFile.Trim()
-          Write-Host "Expected version from VERSION file: $expectedVersion" -ForegroundColor Cyan
-
-          # Check PowerShell module manifest
-          if (Test-Path "Scripts/WindowsServerLab.psd1") {
-              $manifestContent = Get-Content "Scripts/WindowsServerLab.psd1" -Raw
-              if ($manifestContent -match "ModuleVersion\s*=\s*'([^']+)'") {
-                  $manifestVersion = $matches[1]
-                  if ($manifestVersion -eq $expectedVersion) {
-                      Write-Host "✅ Module manifest version matches: $manifestVersion" -ForegroundColor Green
-                  } else {
-                      Write-Host "❌ Module manifest version mismatch: Expected $expectedVersion, found $manifestVersion" -ForegroundColor Red
-                      exit 1
-                  }
-              }
-          }
-
-          # Check PowerShell module file
-          if (Test-Path "Scripts/WindowsServerLab.psm1") {
-              $moduleContent = Get-Content "Scripts/WindowsServerLab.psm1" -Raw
-              if ($moduleContent -match '\$ModuleVersion\s*=\s*"([^"]+)"') {
-                  $moduleVersion = $matches[1]
-                  if ($moduleVersion -eq $expectedVersion) {
-                      Write-Host "✅ Module file version matches: $moduleVersion" -ForegroundColor Green
-                  } else {
-                      Write-Host "❌ Module file version mismatch: Expected $expectedVersion, found $moduleVersion" -ForegroundColor Red  
-                      exit 1
-                  }
-              }
-          }
-
-          Write-Host "✅ All version references are consistent!" -ForegroundColor Green
-
-      - name: Validate PowerShell Module Structure
-        shell: pwsh
-        run: |
-          Write-Host "Checking for PowerShell module files..." -ForegroundColor Cyan
-          # PowerShell module files were removed during Proxmox adaptation
-          Write-Host "PowerShell module validation skipped - files removed" -ForegroundColor Yellow
-
-  security-scan:
-    name: Security Scan
-    runs-on: windows-latest
-    needs: validate
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Run DevSkim Security Analyzer
-        uses: microsoft/DevSkim-Action@v1
-        with:
-          directory-to-scan: .
-
-      - name: Upload DevSkim Results
-        uses: actions/upload-artifact@v4
+          $configuration = New-PesterConfiguration
+          $configuration.Run.Path = 'Tests/PowerShell'
+          $configuration.Run.Exit = $true
+          $configuration.TestResult.Enabled = $true
+          $configuration.TestResult.OutputPath = 'TestResults/pester.xml'
+          $configuration.TestResult.OutputFormat = 'JUnitXml'
+          Invoke-Pester -Configuration $configuration
+      - name: Upload Pester evidence
         if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: devskim-results
-          path: .gdn/
-          retention-days: 30
+          name: pester-results
+          path: TestResults/pester.xml
+          if-no-files-found: error
+
+  linux-host:
+    name: Linux host scripts and schemas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@ce93c3c08a6c2ff2275bf4b54ff0d9a75f6c9789
+        with:
+          version: '1.16.0'
+      - name: Install host validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes jq shellcheck xorriso
+          npm install --global ajv-cli@5.0.0 ajv-formats@3.0.1 markdown-link-check@3.13.7
+      - name: Validate JSON schemas and inventories
+        run: |
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/lab-definition.schema.json -d 'LabConfig/demos/*.json'
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/site.schema.json -d LabConfig/site.example.json
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/operator.schema.json -d LabConfig/operator.example.json
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/build-artifacts.schema.json -d LabConfig/build-artifacts.json
+          ajv compile --spec=draft2020 -c ajv-formats -s LabConfig/schema/template-certification.schema.json
+          ajv compile --spec=draft2020 -c ajv-formats -s LabConfig/schema/template-build-manifest.schema.json
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/aiml-artifacts.schema.json -d Tests/Fixtures/aiml-artifacts.valid.json
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/access-controls.schema.json -d LabConfig/policies/access-controls.json
+          Tests/Shell/test-config.sh
+          Tests/Shell/test-template-certification.sh
+      - name: Run ShellCheck
+        run: shellcheck Tools/*.sh Tools/Proxmox/*.sh Tools/Proxmox/lib/*.sh Tests/Shell/*.sh
+      - name: Validate Python host helpers
+        run: python3 -m py_compile Tools/Proxmox/Render-WindowsAnswerMedia.py
+      - name: Verify generated inventory documentation
+        run: |
+          Tools/Generate-LabDocumentation.sh > /tmp/inventory.md
+          diff --unified docs/generated/INVENTORY.md /tmp/inventory.md
+      - name: Validate documentation links
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            markdown-link-check --quiet --config .github/markdown-link-check-config.json "$file" || status=1
+          done < <(find . -name '*.md' -not -path './.git/*' -print0)
+          exit "$status"
+      - name: Validate Packer configuration
+        working-directory: packer/windows
+        run: |
+          packer fmt -check .
+          packer init .
+          packer validate \
+            -var 'proxmox_url=https://127.0.0.1:8006/api2/json' \
+            -var 'proxmox_username=root@pam!ci' \
+            -var 'proxmox_token=ci-placeholder' \
+            -var 'windows_password=ci-placeholder' \
+            -var 'cloudbase_msi_url=https://example.invalid/cloudbase-init.msi' \
+            -var 'cloudbase_msi_sha256=0000000000000000000000000000000000000000000000000000000000000000' \
+            -var 'node=pve-ci' \
+            -var 'vm_id=9000' \
+            -var 'storage_pool=local-lvm' \
+            -var 'build_bridge=vmbr0' \
+            -var 'build_ipv4_address=192.0.2.249' \
+            -var 'build_run_id=ci-validation-run' \
+            -var 'iso_file=local:iso/windows.iso' \
+            -var 'iso_sha256=0000000000000000000000000000000000000000000000000000000000000000' \
+            -var 'virtio_iso=local:iso/virtio-win.iso' \
+            -var 'virtio_iso_sha256=0000000000000000000000000000000000000000000000000000000000000000' \
+            -var 'os_type=server-2025' \
+            .
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Reject committed Windows product keys
+        shell: bash
+        run: |
+          if rg --hidden --pcre2 --glob '!.git/**' --quiet '\b[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}\b' .; then
+            echo 'A Windows product-key-shaped value is committed. Remove it and rotate it if it is private.' >&2
+            exit 1
+          fi
+          if git grep -I -P -q '\b[A-Z0-9]{5}(-[A-Z0-9]{5}){4}\b' $(git rev-list --all); then
+            echo 'Git history contains a Windows product-key-shaped value. Purge it and rotate it if it is private.' >&2
+            exit 1
+          fi

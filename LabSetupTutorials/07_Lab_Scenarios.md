@@ -264,6 +264,6 @@ Implement security baseline configurations for your domain.
 
 ## 🔗 Additional Resources
 
-- [Microsoft Lab Exercises](https://docs.microsoft.com/en-us/windows-server/administration/windows-server-labs/)
-- [TechNet Virtual Labs](https://www.microsoft.com/en-us/learning/virtual-labs.aspx)
+- [Windows Server documentation](https://learn.microsoft.com/en-us/windows-server/)
+- [Microsoft Evaluation Center](https://www.microsoft.com/en-us/evalcenter/)
 - [Windows Server Documentation](https://docs.microsoft.com/en-us/windows-server/)

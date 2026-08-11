@@ -5,7 +5,7 @@
 $ts = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $outDir = 'C:\Reports'
 $report = Join-Path $outDir "ClientHealth_$ts.html"
-New-Item -ItemType Directory -Path $outDir -Force -ErrorAction SilentlyContinue | Out-Null
+New-Item -ItemType Directory -Path $outDir -Force -ErrorAction Stop | Out-Null
 
 function Get-AVStatus {
 		try { Get-MpComputerStatus | Select-Object AMServiceEnabled, AntispywareEnabled, AntivirusEnabled, RealTimeProtectionEnabled }

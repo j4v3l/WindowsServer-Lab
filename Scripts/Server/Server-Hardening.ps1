@@ -35,7 +35,7 @@ function Set-SMB-Hardening {
 	Set-ItemProperty -Path $srv -Name 'EnableSecuritySignature' -Type DWord -Value 1
 
 	# Disable SMBv1
-	Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
+	Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction Stop | Out-Null
 }
 
 function Set-LSA-Protection {

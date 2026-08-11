@@ -1,0 +1,73 @@
+{
+  "$schema": "./schema/site.schema.json",
+  "schemaVersion": 2,
+  "proxmox": {
+    "node": "pve01",
+    "vmStorage": "local-lvm",
+    "isoStorage": "local",
+    "snippetStorage": "local",
+    "backupStorage": "backup",
+    "backupRetention": { "keepLast": 3, "keepDaily": 7, "keepWeekly": 4, "keepMonthly": 6 },
+    "virtioIso": "local:iso/virtio-win.iso",
+    "virtioIsoSha256": "e14cf2b94492c3e925f0070ba7fdfedeb2048c91eea9c5a5afb30232a3976331",
+    "templates": {
+      "server-2025": 9000,
+      "server-2022": 9001,
+      "windows-11": 9011
+    }
+  },
+  "hostNetworking": {
+    "bridges": [
+      { "name": "vmbr1", "uplink": "nic1", "vlanAware": true, "allowedVlans": [90, 100], "management": false }
+    ]
+  },
+  "templateBuildNetwork": {
+    "bridge": "vmbr0",
+    "address": "192.0.2.249",
+    "prefixLength": 24,
+    "gateway": "192.0.2.1",
+    "dnsServers": ["192.0.2.1"]
+  },
+  "templateCertification": {
+    "vmId": 9090,
+    "address": "192.0.2.248",
+    "timeoutSeconds": 1800
+  },
+  "networkMappings": {
+    "asgard": {
+      "production": { "bridge": "vmbr1", "vlanTag": 90, "configured": true },
+      "management": { "bridge": "vmbr0", "vlanTag": 199, "configured": false },
+      "client": { "bridge": "vmbr1", "vlanTag": 100, "configured": true },
+      "dmz": { "bridge": "vmbr0", "vlanTag": 150, "configured": false }
+    },
+    "olympus": {
+      "production": { "bridge": "vmbr0", "vlanTag": 210 },
+      "management": { "bridge": "vmbr0", "vlanTag": 299 },
+      "client": { "bridge": "vmbr0", "vlanTag": 220 },
+      "dmz": { "bridge": "vmbr0", "vlanTag": 250 },
+      "aiml": { "bridge": "vmbr0", "vlanTag": 260 }
+    }
+  },
+  "guestAccess": {
+    "user": "LabBootstrap",
+    "sshPublicKeyFile": "/root/.ssh/windows-server-lab.pub",
+    "sshPrivateKeyFile": "/root/.ssh/windows-server-lab"
+  },
+  "paths": {
+    "logDirectory": "/var/log/windows-server-lab",
+    "reportDirectory": "/var/lib/windows-server-lab/reports"
+  },
+  "capacity": {
+    "vcpus": 128,
+    "memoryMB": 262144,
+    "storageGB": 6000,
+    "reserveMemoryMB": 4096
+  },
+  "features": {
+    "secureBoot": true,
+    "tpm": true,
+    "startAfterDeploy": true,
+    "backupBeforeRemove": true,
+    "guestAgentTimeoutSeconds": 900
+  }
+}

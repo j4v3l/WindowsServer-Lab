@@ -314,5 +314,5 @@
 ## 🔗 Additional Resources
 
 - [Microsoft Security Baseline](https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/security-policy-settings)
-- [Windows Server Security Guide](https://docs.microsoft.com/en-us/windows-server/security/)
+- [Windows Server security and assurance](https://learn.microsoft.com/en-us/windows-server/security/security-and-assurance)
 - [Security Compliance Toolkit](https://www.microsoft.com/en-us/download/details.aspx?id=55319)

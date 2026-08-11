@@ -1,0 +1,15 @@
+# Security model and limitations
+
+Lab definitions and site mappings cannot contain fields named like passwords, credentials, tokens, or secrets. Template-build secrets come from sensitive Packer environment variables. Before templating, the media-build account receives a cryptographically generated, unknowable password; deployed access is SSH-key based and SSH password authentication/WinRM startup are disabled. Windows domain operations prompt securely or receive runtime credential objects/offline-join blobs, which must be destroyed after use.
+
+Server 2025 uses Microsoft's role-aware OSConfig baseline, Defender, Secured-core, LAPS for member servers, and optional App Control for Business audit scenarios. Server 2022 uses a pinned, SHA-256-verified Security Compliance Toolkit archive and imports its role backup with `LGPO.exe`. Explicit domain policy mappings are written and read back through Group Policy cmdlets.
+
+Execution policy and AppLocker are not treated as security boundaries. App Control enforcement is not automatic: audit evidence must first be reviewed. Required validation is pass/fail with evidence and remediation, never a percentage score.
+
+Endpoint convenience restrictions use security-filtered GPOs backed by explicit registry mappings. Camera, microphone, removable storage, wallpaper, Settings, command prompt, registry tools, Store, OneDrive, and RDP clipboard access can be assigned or revoked through AD group membership. Domain-side read-back and endpoint effective-policy checks are both required; see the [access-control runbook](ACCESS_CONTROL.md).
+
+Shared printing restricts Point and Print to the canonical package-aware print server, keeps driver installation administrator-only, publishes queues for discovery, and separates ordinary print denial from delegated queue administration. Managed SMB shares require signing policy, per-share encryption, access-based enumeration, and matching share/NTFS read, change, and deny groups. See the [resource-sharing runbook](RESOURCE_SHARING.md).
+
+Windows activation keys are never accepted in lab or site JSON, Packer variables, Cloud-Init snippets, command-line arguments, logs, or retained reports. The Windows 11 template explicitly selects the Education image, while activation is performed only after cloning by using a runtime `SecureString`. The local activation command uses the Software Licensing CIM provider and clears the complete key from the registry after each attempt. The fleet command transports the `SecureString` only through authenticated PowerShell remoting. Each VM still requires valid licensing rights and a key applicable to its installed Windows version and edition.
+
+Organization-specific PKI, MFA, SIEM, off-site backup, Azure tenant configuration, licensing entitlement, secrets infrastructure, and formal compliance certification remain integrations. The example VLANs are not a firewall policy by themselves; enforce inter-VLAN rules on site-controlled networking and prove isolation in the live gate.

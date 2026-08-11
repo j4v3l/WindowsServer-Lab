@@ -1,5 +1,7 @@
 # 🔍 **PRODUCTION READINESS AUDIT REPORT**
 
+> Historical v1 audit retained for traceability. It does not describe v2 implementation or current validation status; see [the archive index](HISTORICAL_AUDITS.md).
+
 ## Windows Server Lab Demo Environment - Proxmox Edition
 
 **Audit Date:** December 2024  

@@ -116,9 +116,9 @@ We regularly review and update our security practices:
 For more information about Windows Server security:
 
 - [Microsoft Security Compliance Toolkit](https://www.microsoft.com/en-us/download/details.aspx?id=55319)
-- [Windows Server Security Documentation](https://docs.microsoft.com/en-us/windows-server/security/security-and-assurance)
-- [PowerShell Security Best Practices](https://docs.microsoft.com/en-us/powershell/scripting/security/overview)
-- [Proxmox VE Security Guide](https://pve.proxmox.com/wiki/Security)
+- [Windows Server security and assurance](https://learn.microsoft.com/en-us/windows-server/security/security-and-assurance)
+- [PowerShell security features](https://learn.microsoft.com/en-us/powershell/scripting/security/security-features)
+- [Proxmox VE user management and access control](https://pve.proxmox.com/pve-docs/chapter-pveum.html)
 
 ---
 

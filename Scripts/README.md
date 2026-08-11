@@ -1,133 +1,47 @@
-# 🛠️ Scripts Directory - Windows Server Lab Environment
+# Windows guest scripts
 
-## 📋 Overview
+Run these scripts inside Windows guests with Windows PowerShell 5.1. Proxmox host automation is under `Tools/Proxmox`.
 
-This directory contains PowerShell scripts for configuring and managing Windows Server/client VMs **running on Proxmox VE**. Proxmox is Linux; do not run these PowerShell scripts on the Proxmox host. Run them inside the Windows VMs only.
+## v2 entry points
 
-## 🎯 Execution Context
+| Script | Purpose |
+|---|---|
+| `Initialize-LabDomain.ps1` | Securely prompt for DSRM/demo-user material and begin the primary forest phase |
+| `Invoke-LabBootstrap.ps1` | Reconcile a canonical VM role, promotion/join state, and optional baseline |
+| `New-LabOfflineDomainJoin.ps1` | Create an ACL-restricted, short-lived domain-join blob |
+| `Set-LabDomainPolicy.ps1` | Apply explicit GPO registry mappings, read them back, link the GPO, and configure Windows LAPS |
+| `Set-LabAccessControl.ps1` | Initialize group-filtered endpoint GPOs and grant/revoke camera, USB, wallpaper, and other access |
+| `Test-LabAccessControl.ps1` | Verify a selected control in the endpoint's effective HKLM/HKCU policy and emit JSON evidence |
+| `Set-LabGroupPolicyRefresh.ps1` | Configure and read back native background user/computer GPO refresh with randomized load spreading |
+| `Test-LabGroupPolicyRefresh.ps1` | Verify effective refresh registry mappings, Group Policy Client health, and resultant policy on an endpoint |
+| `Set-LabMachineEnrollment.ps1` | Enroll, inspect, or safely disenroll a physical or virtual Windows workstation/member server |
+| `Set-LabWindowsActivation.ps1` | Activate or audit one supported machine with runtime-only product-key handling |
+| `Invoke-LabWindowsActivation.ps1` | Activate or audit every server or all machines in a canonical profile over secure remoting |
+| `Enable-LabPowerShellRemoting.ps1` | Enable domain-only, local-subnet, Kerberos-only remoting for fleet operations |
+| `Set-LabPrintPolicy.ps1` | Restrict Point and Print to the canonical server and manage print deny/admin groups |
+| `Set-LabSharedPrinter.ps1` | Install a checksum-verified package-aware driver and publish a secured shared printer in AD |
+| `Set-LabPrinterConnection.ps1` | Add or remove a verified canonical shared-printer connection on any joined endpoint |
+| `Set-LabFileSharePolicy.ps1` | Create per-share read/change/deny groups, harden SMB policy, and manage user access |
+| `Set-LabSharedFolder.ps1` | Create an encrypted, access-based SMB share with matching share and NTFS ACLs |
+| `Set-LabSecurityBaseline.ps1` | Apply Server 2025 OSConfig or pinned Server 2022 SCT plus common hardening |
+| `Test-LabCompliance.ps1` | Emit JSON required-control evidence and fail nonzero on blockers |
+| `Enable-LabEventForwarding.ps1` | Configure a source-initiated WEF collector subscription |
+| `Start-LabSystemStateBackup.ps1` | Start and verify a DC System State backup |
+| `Start-LabFileBackup.ps1` | Start and verify a file-server backup |
+| `Invoke-LabPatchOrchestration.ps1` | Plan or apply local Windows updates with JSON evidence and reboot signaling |
+| `Test-LabFileRestore.ps1` | Restore a file backup to an alternate path and record drill evidence |
+| `Set-LabManagedServiceAccount.ps1` | Create and install the IIS gMSA without retaining a service password |
+| `Import-Server2022SecurityBaseline.ps1` | Import pinned SCT GPO backups at domain scope |
+| `Install-OlympusAIMLWorkstation.ps1` | Install checksum-pinned AI/ML artifacts and expose local health evidence |
 
-- **Where to run**: Inside Windows Server VMs (Domain Controllers, Member Servers)
-- **Requirements**: Windows PowerShell 5.1+ with appropriate modules (ActiveDirectory, GroupPolicy, etc.)
-- **Privileges**: Most scripts require Domain Administrator or local Administrator privileges
-- **Platform**: Windows Server 2019/2022/2025 running on Proxmox VE
+Shared implementation lives in `WindowsServerLab/WindowsServerLab.psm1`. Template builds copy the module and canonical definitions to `C:\ProgramData\WindowsServerLab`.
 
-## 📁 Script Categories
+## Credential rules
 
-### 🏗️ **Environment Setup (Server)**
+No v2 command accepts plaintext passwords. Use interactive `Read-Host -AsSecureString`, `PSCredential`, a runtime secret provider, or a protected offline-domain-join blob. Delete staged blobs and baseline archives after their audited use.
 
-- `Lab-FinishSetup.ps1` - Complete lab environment configuration
-- `Create-LabUsers.ps1` - Create user accounts and organizational units
-- `Server/DHCP_Setup.ps1` - Configure DHCP server role
+## Legacy compatibility
 
-### 🛡️ **Security & Policy Management (Server)**
+Older names such as `Create-LabUsers.ps1`, `Lab-FinishSetup.ps1`, the group-policy managers, demo deployment scripts, and security-audit scripts are one-major-version shims. They identify the v2 replacement and do not retain duplicate or simulated implementations.
 
-- `Deploy-AdvancedSecurityDemo.ps1` - Deploy comprehensive security policies
-- `Server/AdvancedGroupPolicyManager.ps1` - Advanced GPO configuration (100+ policies)
-- `Server/AdvancedSecurityAudit.ps1` - Comprehensive security assessment
-- `Server/GroupPolicyManager.ps1` - Basic GPO management
-- `SecurityAudit.ps1` - Basic security auditing
-
-### 🔧 **System Management (Server)**
-
-- `Server/SystemHealthMonitor.ps1` - Monitor server health and generate reports
-- `BackupRestoreManager.ps1` - Backup and restore operations
-- `Lab-Uninstall.ps1` - Clean up lab components (Windows-side only)
-
-### 🖥️ **Client Onboarding & Baseline (Client)**
-
-- `Client/Client-Onboarding.ps1` - Join domain, optional rename, set DNS, and reboot
-- `Client/Client-Baseline.ps1` - Apply safe baseline: firewall, SMB signing, PS logging, policies
-- `Client/Client-HealthCheck.ps1` - Generate client HTML health report (AV, firewall, disks, updates)
-
-### 🔒 **Server Hardening & Updates (Server)**
-
-### 📂 File Shares & Drives
-
-- `Server/Create-FileShares.ps1` - Create standard SMB shares with proper NTFS/share permissions
-- `Client/Map-NetworkDrives.ps1` - Map T: (Tools) and D: (Departments) from the file server
-
-### 🔧 Common Utilities
-
-- `Common/Lab-ConnectivityTest.ps1` - Quick DNS/DC/LDAP/SMB/time checks from any VM
-
-- `Server/Server-Hardening.ps1` - Enforce NLA for RDP, SMB signing, LSA protection, NTLM, auditpol
-- `Server/WindowsUpdate-Configure.ps1` - Configure AU mode/deferrals and optionally scan/download/install
-
-### 🎨 **User Experience**
-
-- `Setup-OhMyPosh.ps1` - Configure enhanced PowerShell prompt
-- `Quick-InstallOhMyPosh.ps1` - Quick Oh My Posh installation
-
-## ⚠️ **Important Notes**
-
-### **Execution Context - Critical!**
-
-**These scripts run INSIDE Windows VMs, NOT on the Proxmox host!**
-
-- **Access Method**: RDP, Console, or PowerShell Direct to Windows VMs
-- **Prerequisites**: Windows PowerShell 5.1+, appropriate Windows modules
-- **Privileges**: Domain Admin or Local Admin rights within Windows VMs
-
-### **Proxmox VE Integration**
-
-- **VM Management**: Use Proxmox VE web interface or CLI (`qm` commands) for VM lifecycle operations
-- **Network Management**: Configure bridges via Proxmox VE, not Windows PowerShell  
-- **Storage Management**: VM disk operations handled by Proxmox VE
-- **Performance Monitoring**: Use Proxmox VE dashboard for VM resource monitoring
-
-### **Two-Tier Architecture**
-
-1. **Proxmox VE Host**: Creates, starts, stops, configures VMs
-2. **Windows VMs**: Run these PowerShell scripts for Windows-specific configuration
-
-### **Windows-Specific Operations**
-
-These scripts handle Windows-specific configurations:
-
-- Active Directory Domain Services
-- Group Policy Objects (GPOs)
-- Windows file shares and permissions
-- Windows security policies
-- Windows service configuration
-- Windows user and computer management
-
-## 🚀 **Getting Started**
-
-1. **Deploy VMs** using Proxmox VE (see lab setup guides)
-2. **Install Windows Server** on the VMs with VirtIO drivers
-3. **Configure Active Directory** on the primary domain controller
-4. **Run scripts** from within the Windows VMs as needed
-
-Quick use examples (inside the VM PowerShell):
-
--- Client join domain:
-	$sec = Read-Host 'Password' -AsSecureString
-	.\Client\Client-Onboarding.ps1 -DomainName lab.local -ComputerName PC01 -OUPath "OU=Workstations,DC=lab,DC=local" -DomainJoinUser "LAB\\Administrator" -DomainJoinPassword $sec -DNSServer 192.168.1.10 -Reboot
-
--- Apply client baseline:
-	.\Client\Client-Baseline.ps1
-
--- Server hardening:
-	.\Server\Server-Hardening.ps1
-
--- Configure Windows Update and scan (server):
-	.\Server\WindowsUpdate-Configure.ps1 -Mode AutoInstall -ScanNow -DownloadNow -InstallNow -RestartIfNeeded
-
-- Create standard shares on file server:
-	.\Server\Create-FileShares.ps1 -RootPath D:\Shares -CreateExampleFolders
-
-- Map standard drives on a client:
-	.\Client\Map-NetworkDrives.ps1 -FileServer FILE1
-
-- Test lab connectivity from any VM:
-	.\Common\Lab-ConnectivityTest.ps1 -Domain lab.local -FileServer FILE1
-
-## 📖 **Related Documentation**
-
-- [Proxmox VE Setup Guide](../LabSetupTutorials/16_Proxmox_Setup_and_Configuration.md)
-- [Windows Server Optimization](../LabSetupTutorials/Windows_Server_on_Proxmox_Optimization.md)
-- [Lab Environment Setup](../LabSetupTutorials/01_Setup_Lab_Environment.md)
-
----
-
-**Remember**: These scripts configure Windows Server features within VMs, while Proxmox VE manages the virtualization infrastructure. The two layers work together to provide a complete lab environment.
+See [execution contexts](../docs/EXECUTION_CONTEXT.md), [security model](../docs/SECURITY_MODEL.md), and [live certification](../docs/LIVE_CERTIFICATION.md).
