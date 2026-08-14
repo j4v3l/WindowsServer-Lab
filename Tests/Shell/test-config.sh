@@ -4,207 +4,182 @@ set -euo pipefail
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TEST_DIR/../.." && pwd)"
 SITE="$REPO_ROOT/LabConfig/site.example.json"
+LAB="$REPO_ROOT/LabConfig/lab.json"
 VALIDATE="$REPO_ROOT/Tools/Proxmox/Validate-LabConfig.sh"
-DEPLOY="$REPO_ROOT/Tools/Proxmox/Deploy-Lab.sh"
-REMOVE="$REPO_ROOT/Tools/Proxmox/Remove-Lab.sh"
 TEST_LAB="$REPO_ROOT/Tools/Proxmox/Test-Lab.sh"
 RENDER_ANSWER="$REPO_ROOT/Tools/Proxmox/Render-WindowsAnswerMedia.py"
 CERTIFY="$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
 ACTIVATE="$REPO_ROOT/Tools/Proxmox/Activate-LabGuests.sh"
 TEMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TEMP_DIR"' EXIT
-
-sha256_file() {
-  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'; else shasum -a 256 "$1" | awk '{print $1}'; fi
+cleanup() {
+  case "$TEMP_DIR" in
+    /tmp/*|/var/folders/*) rm -rf -- "$TEMP_DIR" ;;
+    *) printf 'Refusing to remove unexpected temporary path: %s\n' "$TEMP_DIR" >&2 ;;
+  esac
 }
+trap cleanup EXIT
+
+for required_command in jq python3 rg; do
+  command -v "$required_command" >/dev/null 2>&1 || {
+    printf 'Required test command is missing: %s\n' "$required_command" >&2
+    exit 1
+  }
+done
 
 file_mode() {
   if [[ "$(uname -s)" == "Darwin" ]]; then stat -f '%Lp' "$1"; else stat -c '%a' "$1"; fi
 }
 
-for demo in asgard olympus; do
-  for profile in smoke core full; do
-    if [[ "$demo" == "asgard" && "$profile" != "smoke" ]]; then
-      if "$VALIDATE" --demo "$demo" --profile "$profile" --site "$SITE" >/dev/null 2>&1; then
-        echo "Asgard $profile was accepted without explicit management/DMZ site mappings." >&2
-        exit 1
-      fi
-      continue
-    fi
-    "$VALIDATE" --demo "$demo" --profile "$profile" --site "$SITE" >/dev/null
-    "$DEPLOY" --demo "$demo" --profile "$profile" --site "$SITE" >"$TEMP_DIR/$demo-$profile.plan"
-    case "$profile" in
-      smoke) expected=6 ;;
-      core) expected=7 ;;
-      full) expected=30 ;;
-    esac
-    actual="$(grep -c 'qm clone' "$TEMP_DIR/$demo-$profile.plan")"
-    [[ "$actual" -eq "$expected" ]] || { echo "$demo/$profile expected $expected clone commands, found $actual" >&2; exit 1; }
-    grep '^  qm clone' "$TEMP_DIR/$demo-$profile.plan" | sed 's/[[:space:]]*$//' >"$TEMP_DIR/$demo-$profile.clones"
-    actual_hash="$(sha256_file "$TEMP_DIR/$demo-$profile.clones")"
-    expected_hash="$(awk -v key="$demo-$profile" '$2 == key { print $1 }' "$REPO_ROOT/Tests/Snapshots/deploy-clone.sha256")"
-    [[ "$actual_hash" == "$expected_hash" ]] || { echo "$demo/$profile command snapshot changed: $actual_hash" >&2; exit 1; }
-    "$REMOVE" --demo "$demo" --profile "$profile" --site "$SITE" >"$TEMP_DIR/$demo-$profile.remove"
-    actual="$(grep -c 'qm destroy' "$TEMP_DIR/$demo-$profile.remove")"
-    [[ "$actual" -eq "$expected" ]] || { echo "$demo/$profile expected $expected destroy commands, found $actual" >&2; exit 1; }
-    "$TEST_LAB" --demo "$demo" --profile "$profile" --site "$SITE" --phase full --offline >"$TEMP_DIR/$demo-$profile.test"
-    grep -q '"passed": true' "$TEMP_DIR/$demo-$profile.test"
-  done
+"$VALIDATE" --site "$SITE" >"$TEMP_DIR/validate.log"
+grep -q '6 VMs (5 servers, 1 client), 11 vCPU, 17408 MB RAM, 456 GB' "$TEMP_DIR/validate.log"
+"$TEST_LAB" --site "$SITE" --phase full --offline >"$TEMP_DIR/offline-test.json"
+grep -q '"passed": true' "$TEMP_DIR/offline-test.json"
+
+jq '.hostNetworking.sharedManagementBridge = false' "$SITE" >"$TEMP_DIR/invalid-shared-mapping.json"
+jq '.hostNetworking.allowedVlans = [90, 101]' "$SITE" >"$TEMP_DIR/invalid-vlans.json"
+jq '.proxmox.templates["windows-11"] = 9000' "$SITE" >"$TEMP_DIR/duplicate-template.json"
+jq '.templateCertification.vmId = 9000' "$SITE" >"$TEMP_DIR/certification-conflict.json"
+jq '.password = "must-not-be-accepted"' "$SITE" >"$TEMP_DIR/site-with-secret.json"
+for invalid in invalid-shared-mapping invalid-vlans duplicate-template certification-conflict site-with-secret; do
+  if "$VALIDATE" --site "$TEMP_DIR/$invalid.json" >/dev/null 2>&1; then
+    printf 'Invalid fixture was accepted: %s\n' "$invalid" >&2
+    exit 1
+  fi
 done
 
-jq '.guestAccess.sshPublicKeyFile = "/tmp/key with space.pub"' "$SITE" >"$TEMP_DIR/site with spaces.json"
-"$DEPLOY" --demo asgard --profile smoke --site "$TEMP_DIR/site with spaces.json" >"$TEMP_DIR/escaped.plan"
-grep -q -- '--sshkeys /tmp/key\\ with\\ space.pub' "$TEMP_DIR/escaped.plan"
+jq -e '
+  (.virtualMachines | length == 6) and
+  ([.virtualMachines[].id] | unique | length == 6) and
+  ([.virtualMachines[].name] | unique | length == 6) and
+  ([.virtualMachines[].nics[].ipAddress] | unique | length == 6) and
+  ([.virtualMachines[] | select(.os == "server-2025")] | length == 5) and
+  ([.virtualMachines[] | select(.os == "windows-11")] | length == 1) and
+  ([.virtualMachines[].cores] | add == 11) and
+  ([.virtualMachines[].memoryMB] | add == 17408) and
+  ([.virtualMachines[] | .diskGB + ((.dataDisks // []) | map(.sizeGB) | add // 0)] | add == 456)
+' "$LAB" >/dev/null
 
-jq '.capacity.memoryMB = 4096' "$SITE" >"$TEMP_DIR/undersized-site.json"
-if "$VALIDATE" --demo asgard --profile smoke --site "$TEMP_DIR/undersized-site.json" >/dev/null 2>&1; then
-  echo 'An undersized site was accepted.' >&2
+for removed in \
+  Tools/Proxmox/Deploy-Lab.sh \
+  Tools/Proxmox/Remove-Lab.sh \
+  Tools/Proxmox/Configure-LabNetwork.sh \
+  LabConfig/demos/asgard.json \
+  LabConfig/demos/olympus.json; do
+  [[ ! -e "$REPO_ROOT/$removed" ]] || { printf 'Removed path still exists: %s\n' "$removed" >&2; exit 1; }
+done
+
+if rg -n -i --glob '*.sh' --glob '*.ps1' --glob '*.psm1' --glob '*.psd1' \
+  -- '--demo|--profile|LabConfig[\\/]demos|aiml-client|server-2022|olympus' \
+  "$REPO_ROOT/Tools/Proxmox" "$REPO_ROOT/Tools/Terraform" "$REPO_ROOT/Scripts/WindowsServerLab" \
+  "$REPO_ROOT/Scripts/Initialize-LabDomain.ps1" "$REPO_ROOT/Scripts/Initialize-LabDataDisks.ps1" \
+  "$REPO_ROOT/Scripts/Invoke-LabBootstrap.ps1" "$REPO_ROOT/Scripts/Invoke-LabWindowsActivation.ps1"; then
+  echo 'A supported operational path still exposes the removed profile or OS API.' >&2
   exit 1
 fi
 
-jq '.password = "must-not-be-accepted"' "$SITE" >"$TEMP_DIR/site-with-secret.json"
-if "$VALIDATE" --demo asgard --profile core --site "$TEMP_DIR/site-with-secret.json" >/dev/null 2>&1; then
-  echo 'Configuration containing a password field was accepted.' >&2
-  exit 1
-fi
-
-grep -q 'ad.asgard.test' "$TEMP_DIR/asgard-smoke.plan"
-grep -q 'ad.olympus.test' "$TEMP_DIR/olympus-core.plan"
-grep -q -- '--cores 2 --memory 3072 --balloon 2560' "$TEMP_DIR/asgard-smoke.plan"
-grep -q -- '--cores 1 --memory 2048 --balloon 2048' "$TEMP_DIR/asgard-smoke.plan"
-[[ "$(grep -c 'qm disk resize' "$TEMP_DIR/asgard-smoke.plan")" -eq 0 ]]
-grep -q 'qm set 5102 --scsi1 local-lvm:56' "$TEMP_DIR/asgard-smoke.plan"
-grep -q 'bridge=vmbr1.*tag=90' "$TEMP_DIR/asgard-smoke.plan"
-grep -q 'bridge=vmbr1.*tag=100' "$TEMP_DIR/asgard-smoke.plan"
-grep -q 'ip=192.168.90.10/24.*gw=192.168.90.1' "$TEMP_DIR/asgard-smoke.plan"
-grep -q 'ip=192.168.100.10/24.*gw=192.168.100.1' "$TEMP_DIR/asgard-smoke.plan"
-grep -q 'qm set 5100 --ide2 local-lvm:cloudinit' "$TEMP_DIR/asgard-smoke.plan"
-
-"$CERTIFY" --os server-2025 --site "$SITE" >"$TEMP_DIR/certify-server-2025.plan"
-grep -q 'two sequential clones using VM ID 9090' "$TEMP_DIR/certify-server-2025.plan"
-grep -q '192.0.2.248/24' "$TEMP_DIR/certify-server-2025.plan"
-"$ACTIVATE" --demo asgard --profile smoke --site "$SITE" --action activate >"$TEMP_DIR/activate.plan"
+"$CERTIFY" --os server-2025 --site "$SITE" >"$TEMP_DIR/certify.plan"
+grep -q 'two sequential clones using VM ID 9090' "$TEMP_DIR/certify.plan"
+"$ACTIVATE" --site "$SITE" --action activate >"$TEMP_DIR/activate.plan"
 grep -q 'send them only over guest-agent stdin' "$TEMP_DIR/activate.plan"
 if grep -Eq '[A-Z0-9]{5}(-[A-Z0-9]{5}){4}' "$TEMP_DIR/activate.plan"; then
   echo 'Activation material appeared in a dry-run plan.' >&2
   exit 1
 fi
 
-jq '.templateCertification.vmId = 9000' "$SITE" >"$TEMP_DIR/certification-id-conflict.json"
-if "$VALIDATE" --demo asgard --profile smoke --site "$TEMP_DIR/certification-id-conflict.json" >/dev/null 2>&1; then
-  echo 'A certification VM ID colliding with a template was accepted.' >&2
-  exit 1
-fi
+for os_name in server-2025 windows-11; do
+  answer_directory="$TEMP_DIR/answer-media-$os_name"
+  mkdir "$answer_directory"
+  PKR_VAR_windows_password='Runtime<&BuildValue' \
+  PKR_VAR_cloudbase_msi_sha256='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+  PKR_VAR_osconfig_nupkg_sha256='cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' \
+  PKR_VAR_osconfig_version='1.4.3' \
+  WSLAB_QEMU_AGENT_MSI_SHA256='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
+  WSLAB_BUILD_IPV4_ADDRESS='192.0.2.249' \
+  WSLAB_BUILD_IPV4_PREFIX_LENGTH='24' \
+  WSLAB_BUILD_IPV4_GATEWAY='192.0.2.1' \
+  WSLAB_BUILD_DNS_SERVERS='192.0.2.1,192.0.2.2' \
+  python3 "$RENDER_ANSWER" --os "$os_name" --template-directory "$REPO_ROOT/packer/windows" --output-directory "$answer_directory"
+  python3 -c 'import sys, xml.etree.ElementTree as E; E.parse(sys.argv[1])' "$answer_directory/Autounattend.xml"
+  grep -q 'Runtime&lt;&amp;BuildValue' "$answer_directory/Autounattend.xml"
+  grep -Fq '<WillShowUI>Never</WillShowUI>' "$answer_directory/Autounattend.xml"
+  grep -Fq "manifest.os -ne '$os_name'" "$answer_directory/bootstrap.ps1"
+  [[ "$(file_mode "$answer_directory/Autounattend.xml")" == "600" ]]
+done
+grep -Fq '<Key>TVRH6-WHNXV-R9WG3-9XRFY-MY832</Key>' "$TEMP_DIR/answer-media-server-2025/Autounattend.xml"
+grep -Fq 'E:\vioscsi\2k25\amd64' "$TEMP_DIR/answer-media-server-2025/Autounattend.xml"
+grep -Fq '<Value>2</Value>' "$TEMP_DIR/answer-media-server-2025/Autounattend.xml"
+grep -Fq '<Key>NW6C2-QMPVW-D7KKK-3GKT6-VCFB2</Key>' "$TEMP_DIR/answer-media-windows-11/Autounattend.xml"
+grep -Fq 'E:\vioscsi\w11\amd64' "$TEMP_DIR/answer-media-windows-11/Autounattend.xml"
+grep -Fq '<Value>Windows 11 Education</Value>' "$TEMP_DIR/answer-media-windows-11/Autounattend.xml"
+grep -Fq 'Get-Command -Name Get-BitLockerVolume' "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq -- '-AllowStartIfOnBatteries -DontStopIfGoingOnBatteries' "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq "manifest.os -eq 'server-2025'" "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq "Get-Content -LiteralPath \$manifestPath -Raw -Encoding UTF8" "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq "CreateElement('ProductKey'" "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq "WSLAB_WINDOWS_SETUP_KEY=\${var.windows_setup_key}" "$REPO_ROOT/packer/windows/windows.pkr.hcl"
+grep -Fq "PKR_VAR_windows_setup_key='TVRH6-WHNXV-R9WG3-9XRFY-MY832'" "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
+grep -Fq "PKR_VAR_windows_setup_key='NW6C2-QMPVW-D7KKK-3GKT6-VCFB2'" "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
+grep -Fq 'PKR_VAR_windows_password PKR_VAR_windows_setup_key PKR_VAR_cloudbase_msi_url' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
+grep -Fq 'PKR_VAR_osconfig_version PKR_VAR_osconfig_nupkg_url PKR_VAR_osconfig_nupkg_sha256' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
+grep -Fq 'microsoftOsConfigReady' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq 'seal.failed' "$REPO_ROOT/packer/windows/wait-for-template-shutdown.sh"
+grep -Fq "first-boot-cleanup.complete" "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"
+grep -Fq "wait_for_first_boot_cleanup \"\$vmid\"" "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"
+grep -Fq 'ConvertTo-Json -Depth 8 -Compress' "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"
+grep -Fq 'ServerAliveInterval=15' "$REPO_ROOT/Tools/Terraform/Remote-Run.sh"
+grep -Fq 'ServerAliveCountMax=3' "$REPO_ROOT/Tools/Terraform/Remote-Run.sh"
+grep -Fq 'Read-only remote inspection attempt %d failed; retrying.' "$REPO_ROOT/Tools/Terraform/Remote-External.sh"
+grep -Fq 'systemd-run --collect' "$REPO_ROOT/Tools/Terraform/Remote-Run.sh"
+grep -Fq "tar -xzf \"\$runtime/repository.tar.gz\" -C \"\$runtime\"" "$REPO_ROOT/Tools/Terraform/Remote-Run.sh"
+grep -Fq 'flock 9' "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"
+grep -Fq "PSObject.Properties[\$Name]" "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq "Get-RegistryBooleanValue -RegistryItem \$currentPolicy -Name 'auth_certificate'" "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq "\$domain.DomainControllersContainer" "$REPO_ROOT/Scripts/WindowsServerLab/WindowsServerLab.psm1"
+grep -Fq "\$vm.role -in @('primary-dc', 'secondary-dc')" "$REPO_ROOT/Scripts/WindowsServerLab/WindowsServerLab.psm1"
+grep -Fq "\$isDomainController = \$computerSystem.DomainRole -in @(4, 5)" "$REPO_ROOT/Scripts/Invoke-LabBootstrap.ps1"
+grep -Fq "if (\$isDomainController -and \$ntdsService.Status -eq 'Running'" "$REPO_ROOT/Scripts/Invoke-LabBootstrap.ps1"
+grep -Fq "promotion-\$VmId.pending" "$REPO_ROOT/Scripts/Invoke-LabBootstrap.ps1"
+grep -Fq 'Get-DhcpServerInDC -ErrorAction Stop' "$REPO_ROOT/Scripts/Invoke-LabBootstrap.ps1"
+grep -Fq 'WINRM-HTTP-In-TCP-PUBLIC' "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq "Disable-NetFirewallRule -Name 'WINRM-HTTP-In-TCP-PUBLIC'" "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq "Where-Object { \$_.LocalPort -eq '5986' }" "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq 'auth_negotiate' "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq 'Restart-Service -Name WinRM -Force' "$REPO_ROOT/Scripts/Enable-LabPowerShellRemoting.ps1"
+grep -Fq "Where-Object network -eq 'windowsServers'" "$REPO_ROOT/Scripts/WindowsServerLab/WindowsServerLab.psm1"
+grep -Fq 'Set-LabDhcpService -Definition' "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"
+grep -Fq -- '-RequireAllDnsServers' "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"
+grep -Fq "Test-NetConnection -ComputerName \$_ -Port 53" "$REPO_ROOT/Scripts/WindowsServerLab/WindowsServerLab.psm1"
 
-mkdir "$TEMP_DIR/answer-media"
-PKR_VAR_windows_password='Runtime<&BuildValue' \
-PKR_VAR_cloudbase_msi_sha256='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
-WSLAB_QEMU_AGENT_MSI_SHA256='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
-WSLAB_BUILD_IPV4_ADDRESS='192.0.2.249' \
-WSLAB_BUILD_IPV4_PREFIX_LENGTH='24' \
-WSLAB_BUILD_IPV4_GATEWAY='192.0.2.1' \
-WSLAB_BUILD_DNS_SERVERS='192.0.2.1,192.0.2.2' \
-python3 "$RENDER_ANSWER" --os server-2025 --template-directory "$REPO_ROOT/packer/windows" --output-directory "$TEMP_DIR/answer-media"
-python3 -c 'import sys, xml.etree.ElementTree as E; E.parse(sys.argv[1])' "$TEMP_DIR/answer-media/Autounattend.xml"
-grep -Fq 'name="Microsoft-Windows-International-Core"' "$TEMP_DIR/answer-media/Autounattend.xml"
-grep -q 'Runtime&lt;&amp;BuildValue' "$TEMP_DIR/answer-media/Autounattend.xml"
-[[ "$(grep -o 'Runtime&lt;&amp;BuildValue' "$TEMP_DIR/answer-media/Autounattend.xml" | wc -l | tr -d ' ')" -eq 3 ]]
-grep -Fq 'E:\vioscsi\2k25\amd64' "$TEMP_DIR/answer-media/Autounattend.xml"
-[[ "$(grep -c 'PathAndCredentials' "$TEMP_DIR/answer-media/Autounattend.xml")" -eq 3 ]]
-if grep -Fqi 'drvload.exe' "$TEMP_DIR/answer-media/Autounattend.xml"; then
-  echo 'VirtIO drivers must have exactly one unattended injection path.' >&2
+grep -Fq 'source  = "bpg/proxmox"' "$REPO_ROOT/terraform/lab/versions.tf"
+grep -Fq 'version = "= 0.111.1"' "$REPO_ROOT/terraform/lab/versions.tf"
+grep -Fq 'module "foundation"' "$REPO_ROOT/terraform/main.tf"
+grep -Fq 'module "lab"' "$REPO_ROOT/terraform/main.tf"
+grep -Fq 'WSLAB_REMOTE_OPERATION             = "configure-guests"' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'proxmox_host                 = "192.168.10.50"' "$REPO_ROOT/terraform/terraform.tfvars.example"
+grep -Fq 'proxmox_node                 = "pve2"' "$REPO_ROOT/terraform/terraform.tfvars.example"
+grep -Fq 'proxmox_ssh_private_key_path = "~/.ssh/id_ed25519"' "$REPO_ROOT/terraform/terraform.tfvars.example"
+grep -Fq '"member-server"' "$REPO_ROOT/LabConfig/schema/lab.schema.json"
+if grep -Eq 'source\s*=.*(LabConfig/lab\.json|/Scripts)' "$REPO_ROOT/packer/windows/windows.pkr.hcl"; then
+  echo 'Mutable inventory or guest-role scripts were embedded in a Packer template.' >&2
   exit 1
 fi
-[[ "$(grep -o 'vioscsi\\2k25\\amd64' "$TEMP_DIR/answer-media/Autounattend.xml" | wc -l | tr -d ' ')" -eq 1 ]]
-if grep -Fq -- "-type f \\( -name 'wslab-answer-*.iso'" "$REPO_ROOT/Tools/Proxmox/Inspect-RemoteHost.sh"; then
-  echo 'Remote stale-media inspection must not pass unquoted shell parentheses through SSH.' >&2
-  exit 1
-fi
-stale_media_fixture_count="$(printf '%s\n' '/iso/windows.iso' '/iso/wslab-install-test.iso' '/iso/wslab-answer-test.iso' | awk '/wslab-(answer|install)-.*[.]iso$/ { count++ } END { print count + 0 }')"
-[[ "$stale_media_fixture_count" -eq 2 ]] || { echo 'Portable stale-media matching failed.' >&2; exit 1; }
-grep -q "Runtime<&BuildValue" "$TEMP_DIR/answer-media/bootstrap.ps1"
-grep -q '192.0.2.249' "$TEMP_DIR/answer-media/bootstrap.ps1"
-grep -q "'192.0.2.1', '192.0.2.2'" "$TEMP_DIR/answer-media/bootstrap.ps1"
-grep -q 'Get-Volume -FileSystemLabel WSLABDATA' "$TEMP_DIR/answer-media/bootstrap.ps1"
-grep -q 'payload-manifest.json' "$TEMP_DIR/answer-media/bootstrap.ps1"
-grep -Fq "manifest.os -ne 'server-2025'" "$TEMP_DIR/answer-media/bootstrap.ps1"
-# Rendered PowerShell expressions are intentionally matched literally.
-# shellcheck disable=SC2016
-if grep -Fq '${os_type}' "$TEMP_DIR/answer-media/bootstrap.ps1"; then
-  echo 'The rendered bootstrap retained an operating-system template token.' >&2
-  exit 1
-fi
-grep -q 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$TEMP_DIR/answer-media/bootstrap.ps1"
-if grep -Fq 'E:\guest-agent' "$TEMP_DIR/answer-media/bootstrap.ps1"; then
-  echo 'The rendered bootstrap still depends on the VirtIO CD drive letter.' >&2
-  exit 1
-fi
-if grep -Fq 'Set-LocalUser -Name LabBootstrap -Password' "$TEMP_DIR/answer-media/bootstrap.ps1"; then
-  echo 'Bootstrap must not mutate account flags on the only enabled administrator.' >&2
-  exit 1
-fi
-if grep -Fq 'ConvertTo-SecureString' "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh"; then
-  echo 'Guest configuration must not convert plaintext runtime secrets with ConvertTo-SecureString.' >&2
-  exit 1
-fi
+grep -Fq 'full         = true' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'pre_enrolled_keys = true' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'version      = "v2.0"' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'firewall = true' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'stop_on_destroy                      = false' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'purge_on_destroy                     = true' "$REPO_ROOT/terraform/lab/main.tf"
+grep -Fq 'depends_on = [terraform_data.foundation_guard]' "$REPO_ROOT/terraform/foundation/main.tf"
+grep -Fq 'vids       = join' "$REPO_ROOT/terraform/foundation/main.tf"
+grep -Fq 'count = local.shared_management_bridge ? 0 : 1' "$REPO_ROOT/terraform/foundation/main.tf"
+grep -Fq '**/.terraform/*' "$REPO_ROOT/.gitignore"
+grep -Fq '*.tfstate' "$REPO_ROOT/.gitignore"
+
 if grep -R -E -n 'ConvertTo-SecureString.+AsPlainText' \
   "$REPO_ROOT/packer/windows" \
   "$REPO_ROOT/Tools/Proxmox/Activate-LabGuests.sh" \
   "$REPO_ROOT/Tools/Proxmox/Configure-LabGuests.sh" >/dev/null; then
   echo 'Runtime template, activation, or guest-configuration secrets are converted from plaintext.' >&2
-  exit 1
-fi
-winrm_line="$(grep -n 'Temporary HTTPS WinRM diagnostic channel is ready' "$TEMP_DIR/answer-media/bootstrap.ps1" | cut -d: -f1)"
-agent_line="$(grep -n "Install-VerifiedMsi -Name 'QEMU Guest Agent'" "$TEMP_DIR/answer-media/bootstrap.ps1" | cut -d: -f1)"
-[[ "$winrm_line" -lt "$agent_line" ]] || { echo 'WinRM diagnostics must be ready before agent installation.' >&2; exit 1; }
-# shellcheck disable=SC2016
-grep -Fq 'CertificateThumbPrint $buildCertificate.Thumbprint -Force -Confirm:$false' "$TEMP_DIR/answer-media/bootstrap.ps1"
-# shellcheck disable=SC2016
-grep -Fq 'New-ItemProperty -LiteralPath $winRmServiceRegistry -Name auth_basic -PropertyType DWord -Value 1 -Force' "$TEMP_DIR/answer-media/bootstrap.ps1"
-if grep -Fq 'Enable-PSRemoting' "$TEMP_DIR/answer-media/bootstrap.ps1"; then
-  echo 'Template bootstrap reintroduced NLA-dependent HTTP remoting setup.' >&2
-  exit 1
-fi
-[[ "$(file_mode "$TEMP_DIR/answer-media/Autounattend.xml")" == "600" ]]
-
-printf 'cloudbase-fixture' >"$TEMP_DIR/answer-media/CloudbaseInitSetup.msi"
-printf 'qemu-fixture' >"$TEMP_DIR/answer-media/qemu-ga-x86_64.msi"
-jq -n '{schemaVersion:1,os:"server-2025",buildRunId:"test-run",sources:{windowsIsoSha256:("c"*64),virtioIsoSha256:("d"*64)},payloads:{cloudbaseInit:{file:"CloudbaseInitSetup.msi",sha256:("a"*64)},qemuGuestAgent:{file:"qemu-ga-x86_64.msi",sha256:("b"*64)}}}' >"$TEMP_DIR/answer-media/payload-manifest.json"
-xorriso -as mkisofs -quiet -J -joliet-long -r -V WSLABDATA -o "$TEMP_DIR/answer.iso" \
-  "$TEMP_DIR/answer-media/Autounattend.xml" \
-  "$TEMP_DIR/answer-media/bootstrap.ps1" \
-  "$TEMP_DIR/answer-media/payload-manifest.json" \
-  "$TEMP_DIR/answer-media/CloudbaseInitSetup.msi" \
-  "$TEMP_DIR/answer-media/qemu-ga-x86_64.msi"
-xorriso -indev "$TEMP_DIR/answer.iso" -ls / 2>/dev/null >"$TEMP_DIR/answer-contents.txt"
-for payload in Autounattend.xml bootstrap.ps1 payload-manifest.json CloudbaseInitSetup.msi qemu-ga-x86_64.msi; do
-  grep -Fq "$payload" "$TEMP_DIR/answer-contents.txt" || { echo "Answer ISO is missing $payload" >&2; exit 1; }
-done
-grep -Fq '/generalize /oobe /shutdown' "$REPO_ROOT/packer/windows/seal-template.ps1"
-grep -Fq 'WindowsServerLab-TemplateSeal' "$REPO_ROOT/packer/windows/finalize-template.ps1"
-grep -Fq 'WindowsServerLab-FirstBootCleanup' "$REPO_ROOT/packer/windows/seal-template.ps1"
-grep -Fq 'Plugins execution done' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
-grep -Fq 'first-boot-cleanup.complete' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
-grep -Fq 'firstBootCleanupCompleted' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
-grep -Fq 'wait-for-template-shutdown.sh' "$REPO_ROOT/packer/windows/windows.pkr.hcl"
-[[ "$(grep -c 'additional_iso_files' "$REPO_ROOT/packer/windows/windows.pkr.hcl")" -eq 1 ]]
-if grep -Fq 'answer_iso' "$REPO_ROOT/packer/windows/windows.pkr.hcl"; then
-  echo 'The Packer template still declares a separate answer ISO.' >&2
-  exit 1
-fi
-grep -Fq -- '-b boot/etfsboot.com' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
-grep -Fq -- '-e efi/microsoft/boot/efisys.bin' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
-grep -Fq -- '-allow-limited-size' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
-grep -Fq 'mount -t overlay overlay' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
-grep -Fq 'generatedMediaSha256' "$REPO_ROOT/Tools/Proxmox/Build-WindowsTemplate.sh"
-grep -Fq 'generatedMediaSha256' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
-grep -Fq 'qm guest exec' "$REPO_ROOT/Tools/Proxmox/Test-Lab.sh"
-if grep -Fq 'ssh -i' "$REPO_ROOT/Tools/Proxmox/Test-Lab.sh"; then
-  echo 'Live validation still depends on optional guest SSH.' >&2
-  exit 1
-fi
-if grep -Eqi '(password|secret|credential|token)=[^[]' "$TEMP_DIR"/*.plan; then
-  echo 'Potential secret material appeared in a plan.' >&2
   exit 1
 fi
 

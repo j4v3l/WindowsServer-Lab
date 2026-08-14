@@ -29,7 +29,7 @@
 
 ## 🧪 Testing
 <!-- Describe how you tested your changes -->
-- [ ] Tested locally on Windows Server 2022
+- [ ] Tested with Windows Server 2025 and Windows 11 where guest behavior changed
 - [ ] Tested locally on Windows 11
 - [ ] Tested with Proxmox VE
 - [ ] Tested PowerShell scripts

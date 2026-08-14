@@ -2,7 +2,6 @@
 #Requires -Version 5.1
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [Parameter(Mandatory)][ValidateSet('CreateDirectoryObjects', 'InstallWebService')][string]$Mode,
     [switch]$LabImmediateKdsRoot
 )
@@ -11,12 +10,12 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
 Import-Module "$root\Modules\WindowsServerLab\WindowsServerLab.psd1" -Force -ErrorAction Stop
-$definition = Import-LabDefinition -Path "$root\LabConfig\demos\$Demo.json"
+$definition = Import-LabDefinition -Path "$root\LabConfig\lab.json"
 
 if ($Mode -eq 'CreateDirectoryObjects') {
     Import-Module ActiveDirectory -ErrorAction Stop
     $domain = Get-ADDomain -ErrorAction Stop
-    if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'Current domain does not match the selected demo.' }
+    if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'Current domain does not match the lab definition.' }
     if (-not $PSCmdlet.ShouldProcess($domain.DNSRoot, 'Create the web-host authorization group and gMSA')) { return }
 
     if (-not (Get-KdsRootKey -ErrorAction Stop)) {

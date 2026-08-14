@@ -10,7 +10,6 @@ $logPath = "$root\Logs\first-boot-cleanup.log"
 $completionPath = "$root\first-boot-cleanup.complete"
 $cloudbaseLog = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\log\cloudbase-init.log'
 $cloudbaseUnattend = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
-$autologonArmedMarker = "$root\oobe-autologon.armed"
 $taskName = 'WindowsServerLab-FirstBootCleanup'
 
 function Write-CleanupLog {
@@ -18,99 +17,78 @@ function Write-CleanupLog {
     Add-Content -LiteralPath $logPath -Value ('{0} {1}' -f (Get-Date).ToUniversalTime().ToString('o'), $Message) -Encoding UTF8
 }
 
+function Get-ConfigDriveHostname {
+    $configDriveVolumes = @(Get-Volume -FileSystemLabel 'config-2' -ErrorAction SilentlyContinue | Where-Object DriveLetter)
+    if ($configDriveVolumes.Count -ne 1) {
+        throw "Expected exactly one config-2 volume, found $($configDriveVolumes.Count)."
+    }
+
+    $userDataPath = '{0}:\openstack\latest\user_data' -f $configDriveVolumes[0].DriveLetter
+    if (-not (Test-Path -LiteralPath $userDataPath -PathType Leaf)) {
+        throw "ConfigDrive user data is missing at $userDataPath."
+    }
+
+    $userData = Get-Content -LiteralPath $userDataPath -Raw -Encoding UTF8 -ErrorAction Stop
+    $hostnameMatch = [Regex]::Match($userData, '(?m)^\s*hostname:\s*["'']?([A-Za-z0-9][A-Za-z0-9-]{0,14})["'']?\s*$')
+    if (-not $hostnameMatch.Success) {
+        throw 'ConfigDrive user data does not contain a valid hostname setting.'
+    }
+
+    $hostname = $hostnameMatch.Groups[1].Value.ToUpperInvariant()
+    if ($hostname -notmatch '^(?!-)(?![0-9]+$)[A-Z0-9](?:[A-Z0-9-]{0,13}[A-Z0-9])?$') {
+        throw "ConfigDrive hostname '$hostname' is not a valid Windows computer name."
+    }
+    return $hostname
+}
+
 try {
     Write-CleanupLog 'Waiting for Cloudbase-Init specialization to complete.'
     $deadline = (Get-Date).AddMinutes(20)
-    $isWindowsClient = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption -like 'Microsoft Windows 11*'
     $specialized = $false
-
-    # Windows 11 25H2 may show the lock screen before it consumes the
-    # oobeSystem AutoLogon node from Cloudbase-Init's answer file. Arm the
-    # same one-use credential directly in Winlogon and reboot once. The marker
-    # prevents a reboot loop if an operator intentionally retains a failed
-    # canary for diagnosis.
-    if ($isWindowsClient -and -not (Test-Path -LiteralPath $autologonArmedMarker -PathType Leaf) -and (Test-Path -LiteralPath $cloudbaseUnattend -PathType Leaf)) {
-        $unattendXml = [xml](Get-Content -LiteralPath $cloudbaseUnattend -Raw -Encoding UTF8)
-        $unattendNamespace = New-Object System.Xml.XmlNamespaceManager($unattendXml.NameTable)
-        $unattendNamespace.AddNamespace('u', 'urn:schemas-microsoft-com:unattend')
-        $autoLogon = $unattendXml.SelectSingleNode("//u:settings[@pass='oobeSystem']/u:component[@name='Microsoft-Windows-Shell-Setup']/u:AutoLogon", $unattendNamespace)
-        $autoPassword = if ($autoLogon) { $autoLogon.SelectSingleNode('u:Password/u:Value', $unattendNamespace) } else { $null }
-        $autoUser = if ($autoLogon) { $autoLogon.SelectSingleNode('u:Username', $unattendNamespace) } else { $null }
-        if ($autoPassword -and $autoUser -and -not [string]::IsNullOrWhiteSpace($autoPassword.InnerText)) {
-            # Windows 11 can reach the lock screen before it materializes the
-            # oobeSystem LocalAccount node.  Use the pre-existing built-in
-            # administrator for the one OOBE sign-in, then disable it again
-            # during cleanup below.  This avoids depending on OOBE having
-            # created LabBootstrap before Winlogon evaluates AutoLogon.
-            $builtInAdministrator = Get-LocalUser | Where-Object { $_.SID.Value -match '-500$' } | Select-Object -First 1
-            if (-not $builtInAdministrator) { throw 'The built-in administrator account was not found while arming OOBE autologon.' }
-            $transientPassword = [Security.SecureString]::new()
-            try {
-                foreach ($passwordCharacter in $autoPassword.InnerText.ToCharArray()) {
-                    $transientPassword.AppendChar($passwordCharacter)
-                }
-                $transientPassword.MakeReadOnly()
-                Enable-LocalUser -Name $builtInAdministrator.Name
-                Set-LocalUser -Name $builtInAdministrator.Name -Password $transientPassword
-            }
-            finally {
-                $transientPassword.Dispose()
-            }
-            $winlogonPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
-            New-ItemProperty -LiteralPath $winlogonPath -Name AutoAdminLogon -PropertyType String -Value '1' -Force | Out-Null
-            New-ItemProperty -LiteralPath $winlogonPath -Name DefaultUserName -PropertyType String -Value $builtInAdministrator.Name -Force | Out-Null
-            New-ItemProperty -LiteralPath $winlogonPath -Name DefaultPassword -PropertyType String -Value $autoPassword.InnerText -Force | Out-Null
-            New-ItemProperty -LiteralPath $winlogonPath -Name DefaultDomainName -PropertyType String -Value '.' -Force | Out-Null
-            New-ItemProperty -LiteralPath $winlogonPath -Name AutoLogonCount -PropertyType DWord -Value 1 -Force | Out-Null
-            Set-Content -LiteralPath $autologonArmedMarker -Value 'armed' -Encoding Ascii
-            Write-CleanupLog 'Armed one-use built-in administrator OOBE autologon; restarting once to leave the lock screen.'
-            Restart-Computer -Force
-            exit 0
-        }
-    }
+    $specializedStableSince = $null
 
     do {
         $imageState = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State' -Name ImageState -ErrorAction Stop).ImageState
+        $setupState = Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\Setup' -ErrorAction Stop
+        $oobeComplete =
+            [int]$setupState.OOBEInProgress -eq 0 -and
+            [int]$setupState.SystemSetupInProgress -eq 0 -and
+            [int]$setupState.SetupType -eq 0 -and
+            [string]::IsNullOrWhiteSpace([string]$setupState.CmdLine)
         $lastBootUtc = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime.ToUniversalTime()
         $cloudbaseService = Get-CimInstance Win32_Service -Filter "Name='cloudbase-init'" -ErrorAction Stop
         $cloudbaseComplete = (Test-Path -LiteralPath $cloudbaseLog -PathType Leaf) -and (Get-Item -LiteralPath $cloudbaseLog -ErrorAction Stop).LastWriteTimeUtc -ge $lastBootUtc -and [bool](Select-String -LiteralPath $cloudbaseLog -SimpleMatch 'Plugins execution done' -Quiet)
 
-        # Windows 11 25H2 can complete the visible OOBE desktop while leaving
-        # SysprepStatus\GeneralizationState at 4 and ChildCompletion\setup.exe
-        # at 0. Cloudbase-Init intentionally waits for state 7 in that case.
-        # Once a real user session exists and OOBE is no longer running, record
-        # the documented completion state and let Cloudbase-Init continue.
-        if ($isWindowsClient -and $imageState -eq 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') {
-            $sysprepStatusPath = 'HKLM:\SYSTEM\Setup\Status\SysprepStatus'
-            $generalizationState = [int](Get-ItemProperty -LiteralPath $sysprepStatusPath -Name GeneralizationState -ErrorAction Stop).GeneralizationState
-            $loggedOnUser = [string](Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).UserName
-            $oobeProcess = Get-Process -Name msoobe -ErrorAction SilentlyContinue
-            if ($generalizationState -eq 4 -and -not [string]::IsNullOrWhiteSpace($loggedOnUser) -and -not $oobeProcess) {
-                Set-ItemProperty -LiteralPath $sysprepStatusPath -Name GeneralizationState -Type DWord -Value 7 -Force
-                Write-CleanupLog 'Windows 11 OOBE desktop is active; marked Sysprep generalization complete for Cloudbase-Init.'
+        $specializationCandidate = $env:COMPUTERNAME -ne 'WSLAB-BUILD' -and $imageState -eq 'IMAGE_STATE_COMPLETE' -and $oobeComplete -and $cloudbaseService.State -eq 'Stopped' -and $cloudbaseComplete
+        if ($specializationCandidate) {
+            if ($null -eq $specializedStableSince) {
+                $specializedStableSince = Get-Date
+                Write-CleanupLog 'OOBE and Cloudbase-Init reached completed state; waiting two minutes for late OOBE finalizers.'
             }
+            $specialized = ((Get-Date) - $specializedStableSince).TotalSeconds -ge 120
         }
-
-        # Cloudbase-Init records GeneralizationState 7 after its Sysprep pass,
-        # but Windows 11 25H2 can leave ImageState at the intermediate reseal
-        # value even after the OOBE desktop and Cloudbase plugins completed.
-        # Promote the state only after Cloudbase is stopped and its completion
-        # marker is present; this keeps the certification gate evidence-based.
-        if ($isWindowsClient -and $imageState -eq 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE' -and $cloudbaseService.State -eq 'Stopped' -and $cloudbaseComplete) {
-            $sysprepStatusPath = 'HKLM:\SYSTEM\Setup\Status\SysprepStatus'
-            $generalizationState = [int](Get-ItemProperty -LiteralPath $sysprepStatusPath -Name GeneralizationState -ErrorAction Stop).GeneralizationState
-            if ($generalizationState -eq 7) {
-                Set-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State' -Name ImageState -Type String -Value 'IMAGE_STATE_COMPLETE' -Force
-                $imageState = 'IMAGE_STATE_COMPLETE'
-                Write-CleanupLog 'Cloudbase-Init completed on Windows 11; promoted ImageState to IMAGE_STATE_COMPLETE.'
-            }
+        else {
+            $specializedStableSince = $null
+            $specialized = $false
         }
-
-        $specialized = $env:COMPUTERNAME -ne 'WSLAB-BUILD' -and $imageState -eq 'IMAGE_STATE_COMPLETE' -and $cloudbaseService.State -eq 'Stopped' -and $cloudbaseComplete
         if (-not $specialized) { Start-Sleep -Seconds 5 }
     } while (-not $specialized -and (Get-Date) -lt $deadline)
 
 if (-not $specialized) { throw 'Cloudbase-Init specialization did not reach a completed, stopped state within 20 minutes.' }
+
+# On current Windows 11 builds the final OOBE Computer Name plugin can run
+# after Cloudbase-Init and replace its ConfigDrive hostname with DESKTOP-*.
+# Apply the declared identity only after OOBE is genuinely complete, then let
+# this startup task resume hardening after the required rename reboot. Server
+# builds that already retained the declared name take the no-op path.
+$desiredHostname = Get-ConfigDriveHostname
+if ($env:COMPUTERNAME -ne $desiredHostname) {
+    Write-CleanupLog "Applying post-OOBE ConfigDrive hostname '$desiredHostname' over '$env:COMPUTERNAME'."
+    Rename-Computer -NewName $desiredHostname -Force -ErrorAction Stop
+    Write-CleanupLog 'Restarting to commit the post-OOBE computer name.'
+    Restart-Computer -Force -ErrorAction Stop
+    return
+}
 
 Write-CleanupLog 'Cloudbase-Init completed; removing first-boot WinRM and answer-file artifacts.'
 $winRm = Get-Service -Name WinRM -ErrorAction Stop
@@ -213,8 +191,6 @@ foreach ($cachedAnswerFile in @(
 )) {
     if (Test-Path -LiteralPath $cachedAnswerFile) { Remove-Item -LiteralPath $cachedAnswerFile -Force }
 }
-if (Test-Path -LiteralPath $autologonArmedMarker) { Remove-Item -LiteralPath $autologonArmedMarker -Force }
-
 $winRmService = Get-CimInstance Win32_Service -Filter "Name='WinRM'" -ErrorAction Stop
 $cachedAnswersRemain = @(@(
     "$env:SystemRoot\Panther\Unattend.xml",

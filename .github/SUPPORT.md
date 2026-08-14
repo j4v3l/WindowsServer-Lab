@@ -10,13 +10,13 @@ Before reaching out for support, please check these resources:
 
 - **[README.md](../README.md)**: Project overview and quick start guide
 - **[Tutorial Guides](../LabSetupTutorials/)**: Step-by-step setup instructions
-- **[Demo Environment](../Demo/)**: Complete Asgard Technologies demo setup
+- **[Terraform startup](../docs/SMOKE_STARTUP.md)**: Supported six-machine Proxmox workflow
 - **[Contributing Guidelines](../CONTRIBUTING.md)**: How to contribute to the project
 - **[CI/CD Documentation](CI/CD_README.md)**: Workflow and automation information
 
 ### 🎯 Common Solutions
 
-- **[Hardware Performance Guide](../Demo/Asgard/Documentation/HARDWARE_PERFORMANCE_GUIDE.md)**: System requirements and optimization
+- **[Compatibility](../docs/COMPATIBILITY.md)**: Supported versions and capacity
 - **[PowerShell Module Documentation](../Scripts/)**: Module usage and functions
 - **[Security Best Practices](SECURITY.md)**: Security guidelines and checklist
 
@@ -76,7 +76,7 @@ When asking for help, please provide:
 
 1. **Environment Details**:
 
-   - Operating System (Windows 11, Windows Server 2022, etc.)
+   - Operating System (Windows Server 2025 or Windows 11)
    - PowerShell version (`$PSVersionTable`)
    - Proxmox VE version
    - Hardware specifications

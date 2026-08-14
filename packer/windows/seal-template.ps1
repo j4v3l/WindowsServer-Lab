@@ -1,6 +1,10 @@
 #Requires -RunAsAdministrator
 [CmdletBinding()]
-param()
+param(
+    [Parameter(Mandatory)]
+    [ValidatePattern('^[A-Za-z0-9]{5}(?:-[A-Za-z0-9]{5}){4}$')]
+    [string]$WindowsSetupKey
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -25,6 +29,12 @@ trap {
 if (-not (Test-Path -LiteralPath $readySentinel -PathType Leaf)) { throw 'The template was not marked ready to seal.' }
 $ready = Get-Content -LiteralPath $readySentinel -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
 if ($ready.status -ne 'ready-to-seal') { throw 'The finalization sentinel is invalid.' }
+$manifestPath = "$root\TemplateBuild.json"
+if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'TemplateBuild.json is missing.' }
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+if ($manifest.schemaVersion -ne 1 -or $manifest.os -notin @('server-2025', 'windows-11')) {
+    throw 'TemplateBuild.json is invalid.'
+}
 
 function Write-SealLog {
     param([Parameter(Mandatory)][string]$Message)
@@ -91,7 +101,7 @@ $firstBootCleanupTaskName = 'WindowsServerLab-FirstBootCleanup'
 Unregister-ScheduledTask -TaskName $firstBootCleanupTaskName -Confirm:$false -ErrorAction SilentlyContinue
 $firstBootCleanupAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ProgramData\WindowsServerLab\first-boot-cleanup.ps1'
 $firstBootCleanupTrigger = New-ScheduledTaskTrigger -AtStartup
-$firstBootCleanupSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -StartWhenAvailable
+$firstBootCleanupSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName $firstBootCleanupTaskName -Action $firstBootCleanupAction -Trigger $firstBootCleanupTrigger -Settings $firstBootCleanupSettings -User SYSTEM -RunLevel Highest -Force | Out-Null
 foreach ($cachedAnswerFile in @(
     "$env:SystemRoot\Panther\Unattend.xml",
@@ -144,6 +154,39 @@ $unattendNamespace.AddNamespace('u', 'urn:schemas-microsoft-com:unattend')
 $unattendNamespace.AddNamespace('wcm', 'http://schemas.microsoft.com/WMIConfig/2002/State')
 $shellSetup = $unattendXml.SelectSingleNode("//u:settings[@pass='oobeSystem']/u:component[@name='Microsoft-Windows-Shell-Setup']", $unattendNamespace)
 if (-not $shellSetup) { throw 'Cloudbase-Init answer file is missing the oobeSystem Shell-Setup component.' }
+$oobe = $shellSetup.SelectSingleNode('u:OOBE', $unattendNamespace)
+if (-not $oobe) { throw 'Cloudbase-Init answer file is missing the oobeSystem OOBE settings.' }
+if ($manifest.os -eq 'server-2025') {
+    $hideLocalAccountScreen = $oobe.SelectSingleNode('u:HideLocalAccountScreen', $unattendNamespace)
+    if (-not $hideLocalAccountScreen) {
+        $hideLocalAccountScreen = $unattendXml.CreateElement('HideLocalAccountScreen', 'urn:schemas-microsoft-com:unattend')
+        $oobe.AppendChild($hideLocalAccountScreen) | Out-Null
+    }
+    $hideLocalAccountScreen.InnerText = 'true'
+}
+
+# The initial Windows Setup answer file selects the intended edition, but
+# Sysprep runs a separate specialize/OOBE answer file. Carry the same public
+# setup key into that pass so neither Server 2025 nor Windows 11 can stop at a
+# licensing-method screen after a template clone is generalized.
+$specializeSettings = $unattendXml.SelectSingleNode("//u:settings[@pass='specialize']", $unattendNamespace)
+if (-not $specializeSettings) { throw 'Cloudbase-Init answer file is missing the specialize settings pass.' }
+$specializeShellSetup = $specializeSettings.SelectSingleNode("u:component[@name='Microsoft-Windows-Shell-Setup']", $unattendNamespace)
+if (-not $specializeShellSetup) {
+    $specializeShellSetup = $unattendXml.CreateElement('component', 'urn:schemas-microsoft-com:unattend')
+    $specializeShellSetup.SetAttribute('name', 'Microsoft-Windows-Shell-Setup')
+    $specializeShellSetup.SetAttribute('processorArchitecture', 'amd64')
+    $specializeShellSetup.SetAttribute('publicKeyToken', '31bf3856ad364e35')
+    $specializeShellSetup.SetAttribute('language', 'neutral')
+    $specializeShellSetup.SetAttribute('versionScope', 'nonSxS')
+    $specializeSettings.AppendChild($specializeShellSetup) | Out-Null
+}
+$specializeProductKey = $specializeShellSetup.SelectSingleNode('u:ProductKey', $unattendNamespace)
+if (-not $specializeProductKey) {
+    $specializeProductKey = $unattendXml.CreateElement('ProductKey', 'urn:schemas-microsoft-com:unattend')
+    $specializeShellSetup.AppendChild($specializeProductKey) | Out-Null
+}
+$specializeProductKey.InnerText = $WindowsSetupKey
 $userAccounts = $shellSetup.SelectSingleNode('u:UserAccounts', $unattendNamespace)
 if (-not $userAccounts) {
     $userAccounts = $unattendXml.CreateElement('UserAccounts', 'urn:schemas-microsoft-com:unattend')
@@ -233,16 +276,25 @@ $randomPasswordPlain.Clear() | Out-Null
 $randomPasswordPlain = $null
 Write-SealLog 'Build-only access removed; invoking Sysprep shutdown.'
 Remove-Item -LiteralPath $PSCommandPath -Force
-$osVolume = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction SilentlyContinue
-if ($osVolume -and [string]$osVolume.VolumeStatus -ne 'FullyDecrypted') {
-    Write-SealLog ('Disabling BitLocker on {0} before Sysprep (current state: {1}).' -f $env:SystemDrive, $osVolume.VolumeStatus)
-    Disable-BitLocker -MountPoint $env:SystemDrive
-    $decryptDeadline = (Get-Date).AddMinutes(45)
-    do {
-        Start-Sleep -Seconds 10
-        $osVolume = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction Stop
-    } while ([string]$osVolume.VolumeStatus -ne 'FullyDecrypted' -and (Get-Date) -lt $decryptDeadline)
-    if ([string]$osVolume.VolumeStatus -ne 'FullyDecrypted') { throw 'BitLocker did not finish decrypting the OS volume before the Sysprep deadline.' }
+$bitLockerCommand = Get-Command -Name Get-BitLockerVolume -ErrorAction SilentlyContinue
+if ($bitLockerCommand) {
+    $osVolume = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction Stop
+    if ([string]$osVolume.VolumeStatus -ne 'FullyDecrypted') {
+        Write-SealLog ('Disabling BitLocker on {0} before Sysprep (current state: {1}).' -f $env:SystemDrive, $osVolume.VolumeStatus)
+        Disable-BitLocker -MountPoint $env:SystemDrive
+        $decryptDeadline = (Get-Date).AddMinutes(45)
+        do {
+            Start-Sleep -Seconds 10
+            $osVolume = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction Stop
+        } while ([string]$osVolume.VolumeStatus -ne 'FullyDecrypted' -and (Get-Date) -lt $decryptDeadline)
+        if ([string]$osVolume.VolumeStatus -ne 'FullyDecrypted') { throw 'BitLocker did not finish decrypting the OS volume before the Sysprep deadline.' }
+    }
+}
+else {
+    # Windows Server Standard does not install the BitLocker PowerShell
+    # feature by default. An absent cmdlet means there is no feature-managed
+    # encrypted OS volume to decrypt; Windows 11 retains the stronger check.
+    Write-SealLog 'BitLocker PowerShell cmdlets are not installed; continuing with the unencrypted Server OS volume.'
 }
 $LASTEXITCODE = 0
 & $sysprep /generalize /oobe /shutdown "/unattend:$unattend"

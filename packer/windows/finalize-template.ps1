@@ -9,10 +9,6 @@ $root = 'C:\ProgramData\WindowsServerLab'
 $sealStartedSentinel = "$root\seal.started"
 $sealFailedSentinel = "$root\seal.failed"
 foreach ($requiredPath in @(
-    "$root\Scripts\Invoke-LabBootstrap.ps1",
-    "$root\Modules\WindowsServerLab\WindowsServerLab.psd1",
-    "$root\LabConfig\demos\asgard.json",
-    "$root\LabConfig\demos\olympus.json",
     "$root\TemplateBuild.json",
     "$root\seal-template.ps1",
     "$root\first-boot-cleanup.ps1"
@@ -21,7 +17,7 @@ foreach ($requiredPath in @(
 }
 
 $manifest = Get-Content -LiteralPath "$root\TemplateBuild.json" -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
-if ($manifest.schemaVersion -ne 1 -or $manifest.os -notin @('server-2025', 'server-2022', 'windows-11')) {
+if ($manifest.schemaVersion -ne 1 -or $manifest.os -notin @('server-2025', 'windows-11')) {
     throw 'TemplateBuild.json is invalid.'
 }
 if (Test-Path -LiteralPath "$root\bootstrap.failed") {
@@ -41,6 +37,10 @@ if (-not (Test-Path -LiteralPath $cloudbaseConfig -PathType Leaf) -or -not (Test
 if ((Get-Content -LiteralPath $cloudbaseConfig -Raw) -notmatch 'ConfigDriveService') {
     throw 'Cloudbase-Init is not pinned to the ConfigDrive metadata service.'
 }
+$windowsSetupKey = [string]$env:WSLAB_WINDOWS_SETUP_KEY
+if ($windowsSetupKey -notmatch '^[A-Za-z0-9]{5}(?:-[A-Za-z0-9]{5}){4}$') {
+    throw 'The runtime Windows setup key is missing or invalid.'
+}
 
 [ordered]@{
     schemaVersion = 1
@@ -53,7 +53,7 @@ Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Silent
 $sealStartedSentinel, $sealFailedSentinel | ForEach-Object {
     if (Test-Path -LiteralPath $_) { Remove-Item -LiteralPath $_ -Force }
 }
-$taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ProgramData\WindowsServerLab\seal-template.ps1'
+$taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ProgramData\WindowsServerLab\seal-template.ps1 -WindowsSetupKey $windowsSetupKey"
 $taskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(15)
 $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 45) -StartWhenAvailable
 Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -User SYSTEM -RunLevel Highest -Force | Out-Null

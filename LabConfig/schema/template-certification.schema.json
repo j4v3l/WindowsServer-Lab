@@ -16,7 +16,7 @@
       "required": ["id", "os", "node", "pveVersion", "configSha256", "buildRunId", "sources", "payloads"],
       "properties": {
         "id": { "type": "integer", "minimum": 100 },
-        "os": { "enum": ["server-2025", "server-2022", "windows-11"] },
+        "os": { "enum": ["server-2025", "windows-11"] },
         "node": { "type": "string", "minLength": 1 },
         "pveVersion": { "type": "string", "minLength": 1 },
         "configSha256": { "$ref": "#/$defs/sha256" },
@@ -35,9 +35,10 @@
         "payloads": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["cloudbaseInitSha256", "qemuGuestAgentSha256"],
+          "required": ["cloudbaseInitSha256", "microsoftOsConfigSha256", "qemuGuestAgentSha256"],
           "properties": {
             "cloudbaseInitSha256": { "$ref": "#/$defs/sha256" },
+            "microsoftOsConfigSha256": { "$ref": "#/$defs/sha256" },
             "qemuGuestAgentSha256": { "$ref": "#/$defs/sha256" }
           }
         }

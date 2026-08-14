@@ -7,7 +7,6 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory)][ValidateSet('Add', 'Remove')][string]$Action,
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]{0,30}[A-Za-z0-9]$')][string]$ShareName,
     [string]$DefinitionPath,
     [string]$OutputPath
@@ -16,12 +15,12 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $labRoot = Split-Path -Parent $PSScriptRoot
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $labRoot "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $labRoot 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $labRoot "Reports\printer-connection-$ShareName.json" }
 $definition = Get-Content -LiteralPath $DefinitionPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-if ($definition.schemaVersion -ne 2 -or $definition.demo -ne $Demo) { throw 'Invalid or mismatched lab definition.' }
+if ($definition.schemaVersion -ne 3 -or $definition.name -ne 'asgard') { throw 'Invalid or mismatched lab definition.' }
 $computerSystem = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
-if (-not $computerSystem.PartOfDomain -or $computerSystem.Domain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'This endpoint is not joined to the selected demo domain.' }
+if (-not $computerSystem.PartOfDomain -or $computerSystem.Domain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'This endpoint is not joined to the lab domain.' }
 $printServer = @($definition.virtualMachines | Where-Object role -eq 'file-server')
 if ($printServer.Count -ne 1) { throw 'The definition must contain exactly one file/print server.' }
 $printServerFqdn = "$($printServer[0].name).$($computerSystem.Domain)"
@@ -31,7 +30,7 @@ $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
     action = $Action
-    demo = $Demo
+    lab = $definition.name
     computer = $env:COMPUTERNAME
     connectionName = $connectionName
     status = 'planned'

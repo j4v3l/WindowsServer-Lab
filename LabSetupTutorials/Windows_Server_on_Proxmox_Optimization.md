@@ -1,5 +1,7 @@
 # 🚀 Windows Server on Proxmox VE - Performance Optimization Guide
 
+> The supported lab is declarative. Treat the settings below as background information only: make durable VM changes in `LabConfig/lab.json` or `terraform/lab/main.tf`, and template changes in `packer/windows/windows.pkr.hcl`. Do not run `qm create`, `qm clone`, or `qm set` against Terraform-owned lab VMs.
+
 ## 🎯 Overview
 
 This guide provides comprehensive instructions for deploying and optimizing Windows Server virtual machines on Proxmox VE. Follow these best practices to achieve maximum performance, stability, and compatibility in your Windows Server lab environment.

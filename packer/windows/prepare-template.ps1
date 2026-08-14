@@ -26,12 +26,6 @@ while (-not (Test-Path -LiteralPath $bootstrapComplete)) {
 $bootstrapResult = Get-Content -LiteralPath $bootstrapComplete -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
 if ($bootstrapResult.status -ne 'complete') { throw 'The template bootstrap completion sentinel is invalid.' }
 
-$moduleSource = "$root\Scripts\WindowsServerLab"
-$moduleTarget = "$root\Modules\WindowsServerLab"
-if (-not (Test-Path -LiteralPath $moduleSource)) { throw "Module payload is missing: $moduleSource" }
-if (Test-Path -LiteralPath $moduleTarget) { Remove-Item -LiteralPath $moduleTarget -Recurse -Force }
-Copy-Item -LiteralPath $moduleSource -Destination $moduleTarget -Recurse -Force
-
 $cloudbaseConfig = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init.conf'
 if (-not (Test-Path -LiteralPath $cloudbaseConfig)) {
     throw 'Cloudbase-Init was not installed by bootstrap.ps1.'
@@ -106,6 +100,25 @@ if (-not $existingAdministratorCommand) {
 $oobeComponent = $unattendXml.SelectSingleNode("//u:settings[@pass='oobeSystem']/u:component[@name='Microsoft-Windows-Shell-Setup']", $namespace)
 if (-not $oobeComponent) {
     throw 'Cloudbase-Init Sysprep answer file is missing the oobeSystem Shell-Setup component.'
+}
+$oobeSettings = $oobeComponent.ParentNode
+$internationalCore = $oobeSettings.SelectSingleNode("u:component[@name='Microsoft-Windows-International-Core']", $namespace)
+if (-not $internationalCore) {
+    $internationalCore = $unattendXml.CreateElement('component', 'urn:schemas-microsoft-com:unattend')
+    $internationalCore.SetAttribute('name', 'Microsoft-Windows-International-Core')
+    $internationalCore.SetAttribute('processorArchitecture', 'amd64')
+    $internationalCore.SetAttribute('publicKeyToken', '31bf3856ad364e35')
+    $internationalCore.SetAttribute('language', 'neutral')
+    $internationalCore.SetAttribute('versionScope', 'nonSxS')
+    $oobeSettings.InsertBefore($internationalCore, $oobeComponent) | Out-Null
+}
+foreach ($localeSetting in @('InputLocale', 'SystemLocale', 'UILanguage', 'UILanguageFallback', 'UserLocale')) {
+    $localeNode = $internationalCore.SelectSingleNode("u:$localeSetting", $namespace)
+    if (-not $localeNode) {
+        $localeNode = $unattendXml.CreateElement($localeSetting, 'urn:schemas-microsoft-com:unattend')
+        $internationalCore.AppendChild($localeNode) | Out-Null
+    }
+    $localeNode.InnerText = 'en-US'
 }
 $oobe = $oobeComponent.SelectSingleNode('u:OOBE', $namespace)
 if (-not $oobe) {

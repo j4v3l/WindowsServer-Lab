@@ -1,0 +1,175 @@
+{
+  "$schema": "./schema/lab.schema.json",
+  "schemaVersion": 3,
+  "name": "asgard",
+  "displayName": "Asgard Technologies",
+  "domain": {
+    "dnsName": "ad.asgard.test",
+    "legacyDnsName": "asgard.local",
+    "netbiosName": "ASGARD",
+    "baseOrganizationalUnit": "Asgard Technologies"
+  },
+  "networks": {
+    "windowsServers": {
+      "cidr": "192.168.90.0/24",
+      "gateway": "192.168.90.1",
+      "vlanId": 90,
+      "dnsServers": ["192.168.90.10", "192.168.90.11"],
+      "description": "Windows domain controllers and member servers"
+    },
+    "windowsClients": {
+      "cidr": "192.168.100.0/24",
+      "gateway": "192.168.100.1",
+      "vlanId": 100,
+      "dnsServers": ["192.168.90.10", "192.168.90.11"],
+      "description": "Windows client workstations"
+    }
+  },
+  "departments": [
+    "IT Operations",
+    "Cybersecurity",
+    "Research and Development",
+    "Finance and Administration",
+    "Human Resources"
+  ],
+  "features": {
+    "windowsLaps": true,
+    "eventForwarding": true,
+    "dhcp": true,
+    "fileServices": true,
+    "webServices": true,
+    "aiml": false,
+    "cloudIntegration": false
+  },
+  "virtualMachines": [
+    {
+      "id": 5100,
+      "name": "ODIN-DC01",
+      "role": "primary-dc",
+      "os": "server-2025",
+      "bootOrder": 10,
+      "cores": 2,
+      "memoryMB": 3072,
+      "balloonMinimumMB": 2560,
+      "diskGB": 64,
+      "nics": [
+        {
+          "network": "windowsServers",
+          "ipAddress": "192.168.90.10",
+          "prefixLength": 24,
+          "defaultGateway": true
+        }
+      ]
+    },
+    {
+      "id": 5101,
+      "name": "FRIGG-DC02",
+      "role": "secondary-dc",
+      "os": "server-2025",
+      "bootOrder": 20,
+      "cores": 2,
+      "memoryMB": 3072,
+      "balloonMinimumMB": 2560,
+      "diskGB": 64,
+      "nics": [
+        {
+          "network": "windowsServers",
+          "ipAddress": "192.168.90.11",
+          "prefixLength": 24,
+          "defaultGateway": true
+        }
+      ]
+    },
+    {
+      "id": 5102,
+      "name": "HEIMDALL-FS01",
+      "role": "file-server",
+      "os": "server-2025",
+      "bootOrder": 30,
+      "cores": 2,
+      "memoryMB": 2560,
+      "balloonMinimumMB": 2048,
+      "diskGB": 64,
+      "dataDisks": [
+        {
+          "slot": "scsi1",
+          "sizeGB": 56,
+          "driveLetter": "D",
+          "label": "AsgardData"
+        }
+      ],
+      "nics": [
+        {
+          "network": "windowsServers",
+          "ipAddress": "192.168.90.20",
+          "prefixLength": 24,
+          "defaultGateway": true
+        }
+      ]
+    },
+    {
+      "id": 5103,
+      "name": "BALDER-WEB01",
+      "role": "web-server",
+      "os": "server-2025",
+      "bootOrder": 40,
+      "cores": 1,
+      "memoryMB": 2048,
+      "balloonMinimumMB": 2048,
+      "diskGB": 64,
+      "nics": [
+        {
+          "network": "windowsServers",
+          "ipAddress": "192.168.90.30",
+          "prefixLength": 24,
+          "defaultGateway": true
+        }
+      ]
+    },
+    {
+      "id": 5104,
+      "name": "VIDAR-SEC01",
+      "role": "management-server",
+      "os": "server-2025",
+      "bootOrder": 40,
+      "cores": 2,
+      "memoryMB": 2560,
+      "balloonMinimumMB": 2048,
+      "diskGB": 64,
+      "nics": [
+        {
+          "network": "windowsServers",
+          "ipAddress": "192.168.90.40",
+          "prefixLength": 24,
+          "defaultGateway": true
+        }
+      ]
+    },
+    {
+      "id": 5110,
+      "name": "ODIN-WS01",
+      "role": "client",
+      "os": "windows-11",
+      "bootOrder": 50,
+      "cores": 2,
+      "memoryMB": 4096,
+      "balloonMinimumMB": 3072,
+      "diskGB": 80,
+      "department": "IT Operations",
+      "user": {
+        "samAccountName": "odin.chief",
+        "displayName": "Odin Chief",
+        "title": "Chief Technology Officer",
+        "privileged": true
+      },
+      "nics": [
+        {
+          "network": "windowsClients",
+          "ipAddress": "192.168.100.10",
+          "prefixLength": 24,
+          "defaultGateway": true
+        }
+      ]
+    }
+  ]
+}

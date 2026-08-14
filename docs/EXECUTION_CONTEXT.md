@@ -1,15 +1,27 @@
-# Execution contexts
+# Execution context
 
-| Context | Commands | Required privilege |
-|---|---|---|
-| Proxmox node (Bash) | `Tools/Proxmox/*.sh`, Packer | Normal user for plans; root for `--apply` |
-| Windows guest (Windows PowerShell 5.1) | `Scripts/*.ps1`, shared module | Elevated local/domain administrator as documented |
-| CI runner | schemas, ShellCheck, Pester, PSScriptAnalyzer, Packer syntax, links, secrets | Ephemeral runner only |
+The operator runs the single `terraform` root from a workstation. The Proxmox provider uses verified HTTPS, while Terraform-internal helpers use strict host-key-checked root SSH to run Packer, bridge/capacity inspection, template certification, backup, and QEMU Guest Agent operations on the selected node.
 
-Do not run Proxmox `qm`, `pvesm`, `vzdump`, or `pvesh` commands inside a guest. Do not run AD DS/GPO cmdlets on the Proxmox host.
+Windows configuration scripts run inside each guest. Terraform automatically stages the schema-validated inventory, module, and approved scripts through QEMU Guest Agent. Domain, DSRM, and initial-user passwords come from ignored `LabConfig/secrets.json`; only its path enters Terraform configuration. The temporary remote copy is mode 0600 and is deleted when the remote operation ends. Activation keys remain an explicit interactive flow and never enter Terraform.
 
-All host commands plan by default. `Deploy-Lab.sh`, `Backup-Lab.sh`, and template building mutate state only with `--apply`. `Remove-Lab.sh` additionally needs the exact confirmation string and validates ownership before destruction.
+Provider authentication is environment-only. Prefer `PROXMOX_VE_API_TOKEN`; username/password authentication may use `PROXMOX_VE_USERNAME` and `PROXMOX_VE_PASSWORD`. Do not add API credentials or private-key content to JSON, HCL, variable files, plans, or state. TLS verification and SSH host-key verification are enabled. A private Proxmox CA must be installed in the workstation operating system's trust store; an environment-only CA override is not assumed to work in every provider runtime.
 
-Credential-requiring guest phases are intentionally interactive or accept `SecureString`, `PSCredential`, or short-lived offline-domain-join files. They do not accept a plaintext password parameter.
+## State and a remote backend
 
-`Set-LabMachineEnrollment.ps1` can run on a physical or virtual Windows endpoint from an extracted release/repository or from the installed `C:\ProgramData\WindowsServerLab` layout. Enrollment requires elevated local administration plus a delegated domain-join credential. Disenrollment additionally requires confirmed local-administrator access; AD object disable/delete operations require the ActiveDirectory RSAT module.
+The default local state belongs to the workstation operator. Use `umask 077`, protect state backups, and never commit state or plan files. When multiple operators manage the lab, use one encrypted backend with locking for the single root. Add an empty backend declaration and keep backend credentials in its supported environment/workload identity. For example:
+
+```hcl
+terraform {
+  backend "s3" {}
+}
+```
+
+Then migrate the one state deliberately:
+
+```bash
+umask 077
+terraform -chdir=terraform init -migrate-state \
+  -backend-config=/protected/path/windows-server-lab.hcl
+```
+
+Confirm the destination is empty before migration, inspect `terraform state list`, and retain a protected backend snapshot. `terraform plan` performs provider/API and remote read-only inspection. `terraform apply` owns all lab creation and convergence. `terraform destroy` invokes the backup gate before VMs; Packer-created templates and the externally managed shared bridge are retained.

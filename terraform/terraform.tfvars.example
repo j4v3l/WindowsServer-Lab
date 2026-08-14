@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars and edit the host values before a full apply.
+
+proxmox_host                 = "192.168.10.50"
+proxmox_node                 = "pve2"
+proxmox_ssh_private_key_path = "~/.ssh/id_ed25519"

@@ -22,7 +22,10 @@ jobs:
           $renderDirectory = Join-Path $env:RUNNER_TEMP 'wslab-answer-render'
           New-Item -Path $renderDirectory -ItemType Directory -Force | Out-Null
           $env:PKR_VAR_windows_password = 'CI-Parser-Only-Temporary-Value'
+          $env:PKR_VAR_windows_setup_key = 'TVRH6-WHNXV-R9WG3-9XRFY-MY832'
           $env:PKR_VAR_cloudbase_msi_sha256 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          $env:PKR_VAR_osconfig_nupkg_sha256 = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
+          $env:PKR_VAR_osconfig_version = '1.4.3'
           $env:WSLAB_QEMU_AGENT_MSI_SHA256 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
           $env:WSLAB_BUILD_IPV4_ADDRESS = '192.0.2.249'
           $env:WSLAB_BUILD_IPV4_PREFIX_LENGTH = '24'
@@ -54,13 +57,16 @@ jobs:
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
-      - name: Analyze v2 production scripts
+      - name: Analyze supported production scripts
         shell: pwsh
         run: |
           $renderDirectory = Join-Path $env:RUNNER_TEMP 'wslab-analyzer-render'
           New-Item -Path $renderDirectory -ItemType Directory -Force | Out-Null
           $env:PKR_VAR_windows_password = 'CI-Analyzer-Only-Temporary-Value'
+          $env:PKR_VAR_windows_setup_key = 'TVRH6-WHNXV-R9WG3-9XRFY-MY832'
           $env:PKR_VAR_cloudbase_msi_sha256 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          $env:PKR_VAR_osconfig_nupkg_sha256 = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
+          $env:PKR_VAR_osconfig_version = '1.4.3'
           $env:WSLAB_QEMU_AGENT_MSI_SHA256 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
           $env:WSLAB_BUILD_IPV4_ADDRESS = '192.0.2.249'
           $env:WSLAB_BUILD_IPV4_PREFIX_LENGTH = '24'
@@ -71,10 +77,8 @@ jobs:
             'Scripts/WindowsServerLab',
             'Scripts/Enable-LabEventForwarding.ps1',
             'Scripts/Enable-LabPowerShellRemoting.ps1',
-            'Scripts/Import-Server2022SecurityBaseline.ps1',
             'Scripts/Initialize-LabDomain.ps1',
             'Scripts/Initialize-LabDataDisks.ps1',
-            'Scripts/Install-OlympusAIMLWorkstation.ps1',
             'Scripts/Invoke-LabWindowsActivation.ps1',
             'Scripts/Invoke-LabPatchOrchestration.ps1',
             'Scripts/Invoke-LabBootstrap.ps1',
@@ -142,6 +146,10 @@ jobs:
         uses: hashicorp/setup-packer@ce93c3c08a6c2ff2275bf4b54ff0d9a75f6c9789
         with:
           version: '1.16.0'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: '1.15.5'
       - name: Install host validation tools
         run: |
           sudo apt-get update
@@ -149,18 +157,33 @@ jobs:
           npm install --global ajv-cli@5.0.0 ajv-formats@3.0.1 markdown-link-check@3.13.7
       - name: Validate JSON schemas and inventories
         run: |
-          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/lab-definition.schema.json -d 'LabConfig/demos/*.json'
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/lab.schema.json -d LabConfig/lab.json
           ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/site.schema.json -d LabConfig/site.example.json
-          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/operator.schema.json -d LabConfig/operator.example.json
+          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/guest-secrets.schema.json -d LabConfig/secrets.example.json
           ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/build-artifacts.schema.json -d LabConfig/build-artifacts.json
           ajv compile --spec=draft2020 -c ajv-formats -s LabConfig/schema/template-certification.schema.json
           ajv compile --spec=draft2020 -c ajv-formats -s LabConfig/schema/template-build-manifest.schema.json
-          ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/aiml-artifacts.schema.json -d Tests/Fixtures/aiml-artifacts.valid.json
           ajv validate --spec=draft2020 -c ajv-formats -s LabConfig/schema/access-controls.schema.json -d LabConfig/policies/access-controls.json
           Tests/Shell/test-config.sh
           Tests/Shell/test-template-certification.sh
+      - name: Validate Terraform roots and provider locks
+        run: |
+          terraform fmt -check -recursive terraform
+          terraform -chdir=terraform init -backend=false -lockfile=readonly
+          terraform -chdir=terraform validate
+          terraform -chdir=terraform test
+          terraform -chdir=terraform/foundation init -backend=false -lockfile=readonly
+          terraform -chdir=terraform/foundation validate
+          terraform -chdir=terraform/foundation test
+          terraform -chdir=terraform/lab init -backend=false -lockfile=readonly
+          terraform -chdir=terraform/lab validate
+          terraform -chdir=terraform/lab test
+          terraform -chdir=terraform providers lock -platform=darwin_arm64 -platform=linux_amd64
+          terraform -chdir=terraform/foundation providers lock -platform=darwin_arm64 -platform=linux_amd64
+          terraform -chdir=terraform/lab providers lock -platform=darwin_arm64 -platform=linux_amd64
+          git diff --exit-code -- terraform/.terraform.lock.hcl terraform/foundation/.terraform.lock.hcl terraform/lab/.terraform.lock.hcl
       - name: Run ShellCheck
-        run: shellcheck Tools/*.sh Tools/Proxmox/*.sh Tools/Proxmox/lib/*.sh Tests/Shell/*.sh
+        run: shellcheck Tools/*.sh Tools/Proxmox/*.sh Tools/Proxmox/lib/*.sh Tools/Terraform/*.sh Tests/Shell/*.sh
       - name: Validate Python host helpers
         run: python3 -m py_compile Tools/Proxmox/Render-WindowsAnswerMedia.py
       - name: Verify generated inventory documentation
@@ -184,6 +207,7 @@ jobs:
             -var 'proxmox_username=root@pam!ci' \
             -var 'proxmox_token=ci-placeholder' \
             -var 'windows_password=ci-placeholder' \
+            -var 'windows_setup_key=TVRH6-WHNXV-R9WG3-9XRFY-MY832' \
             -var 'cloudbase_msi_url=https://example.invalid/cloudbase-init.msi' \
             -var 'cloudbase_msi_sha256=0000000000000000000000000000000000000000000000000000000000000000' \
             -var 'node=pve-ci' \

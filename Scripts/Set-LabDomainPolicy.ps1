@@ -2,7 +2,6 @@
 #Requires -Version 5.1
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [string]$DefinitionPath,
     [switch]$ConfigureLaps,
     [switch]$ConfigureAccessControls,
@@ -15,13 +14,13 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = "$root\LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = "$root\LabConfig\lab.json" }
 Import-Module "$root\Modules\WindowsServerLab\WindowsServerLab.psd1" -Force
 Import-Module ActiveDirectory -ErrorAction Stop
 Import-Module GroupPolicy -ErrorAction Stop
 $definition = Import-LabDefinition -Path $DefinitionPath
 $domain = Get-ADDomain -ErrorAction Stop
-if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'Current domain does not match the selected demo.' }
+if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'Current domain does not match the lab definition.' }
 $domainDn = ConvertTo-LabDistinguishedName -DomainName $domain.DNSRoot
 $baseOu = "OU=$($definition.domain.baseOrganizationalUnit),$domainDn"
 $management = $definition.virtualMachines | Where-Object role -eq 'management-server'
@@ -86,12 +85,11 @@ if ($ConfigureLaps -and $PSCmdlet.ShouldProcess($domain.DNSRoot, 'Prepare Window
 }
 
 if ($PSCmdlet.ShouldProcess($baseOu, 'Configure native background Group Policy refresh')) {
-    & (Join-Path $root 'Scripts\Set-LabGroupPolicyRefresh.ps1') -Demo $Demo -DefinitionPath $DefinitionPath -ComputerIntervalMinutes $GroupPolicyRefreshMinutes -ComputerRandomOffsetMinutes $GroupPolicyRandomOffsetMinutes -UserIntervalMinutes $GroupPolicyRefreshMinutes -UserRandomOffsetMinutes $GroupPolicyRandomOffsetMinutes -Confirm:$false
+    & (Join-Path $root 'Scripts\Set-LabGroupPolicyRefresh.ps1') -DefinitionPath $DefinitionPath -ComputerIntervalMinutes $GroupPolicyRefreshMinutes -ComputerRandomOffsetMinutes $GroupPolicyRandomOffsetMinutes -UserIntervalMinutes $GroupPolicyRefreshMinutes -UserRandomOffsetMinutes $GroupPolicyRandomOffsetMinutes -Confirm:$false
 }
 
 if ($ConfigureAccessControls -and $PSCmdlet.ShouldProcess($domain.DNSRoot, 'Initialize group-filtered endpoint access controls')) {
     $accessParameters = @{
-        Demo = $Demo
         Initialize = $true
         DefinitionPath = $DefinitionPath
         Confirm = $false
@@ -101,7 +99,7 @@ if ($ConfigureAccessControls -and $PSCmdlet.ShouldProcess($domain.DNSRoot, 'Init
 }
 
 if ($ConfigurePrintPolicy -and $PSCmdlet.ShouldProcess($domain.DNSRoot, 'Initialize trusted print-server policy and access groups')) {
-    & (Join-Path $root 'Scripts\Set-LabPrintPolicy.ps1') -Demo $Demo -Initialize -DefinitionPath $DefinitionPath -Confirm:$false
+    & (Join-Path $root 'Scripts\Set-LabPrintPolicy.ps1') -Initialize -DefinitionPath $DefinitionPath -Confirm:$false
 }
 
-Write-LabLog -Level Info -Message "Verified domain policy $gpoName" -Data @{ Demo = $Demo; Target = $baseOu; SettingCount = $settings.Count }
+Write-LabLog -Level Info -Message "Verified domain policy $gpoName" -Data @{ Lab = $definition.name; Target = $baseOu; SettingCount = $settings.Count }

@@ -10,7 +10,6 @@
 #>
 [CmdletBinding(DefaultParameterSetName = 'Access', SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [Parameter(Mandatory, ParameterSetName = 'Initialize')][switch]$Initialize,
     [Parameter(Mandatory, ParameterSetName = 'Access')][ValidateNotNullOrEmpty()][string]$Identity,
     [Parameter(Mandatory, ParameterSetName = 'Access')][ValidateNotNullOrEmpty()][string]$Control,
@@ -25,7 +24,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $CatalogPath) { $CatalogPath = Join-Path $root 'LabConfig\policies\access-controls.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root 'Reports\access-control.json' }
 
@@ -87,7 +86,7 @@ function Get-LabDirectoryObject {
     catch [Microsoft.ActiveDirectory.Management.ADIdentityNotFoundException] {
         $user = Get-ADUser -Identity $RequestedIdentity -ErrorAction Stop
         $canonicalMatches = @($Definition.virtualMachines | Where-Object {
-            $_.role -in @('client', 'aiml-client') -and $_.user -and $_.user.samAccountName -ieq $user.SamAccountName
+            $_.role -eq 'client' -and $_.user -and $_.user.samAccountName -ieq $user.SamAccountName
         })
         if ($canonicalMatches.Count -ne 1) {
             throw "User '$RequestedIdentity' does not map to exactly one canonical workstation. Supply the computer name instead."
@@ -125,7 +124,7 @@ $definition = Import-LabDefinition -Path $DefinitionPath
 $catalog = Get-LabAccessCatalog -Path $CatalogPath
 $domain = Get-ADDomain -ErrorAction Stop
 if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) {
-    throw "Current domain '$($domain.DNSRoot)' does not match the selected demo."
+    throw "Current domain '$($domain.DNSRoot)' does not match the lab definition."
 }
 $domainDn = ConvertTo-LabDistinguishedName -DomainName $domain.DNSRoot
 $baseOu = "OU=$($definition.domain.baseOrganizationalUnit),$domainDn"
@@ -138,7 +137,7 @@ foreach ($requiredOu in @($baseOu, $groupsOu, $workstationsOu)) {
 $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
+    lab = $definition.name
     domain = $domain.DNSRoot
     mode = $PSCmdlet.ParameterSetName
     status = 'planned'
@@ -254,7 +253,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Access control $($result.status)" -Data @{ Demo = $Demo; Mode = $result.mode; Report = $OutputPath }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Access control $($result.status)" -Data @{ Lab = $definition.name; Mode = $result.mode; Report = $OutputPath }
 }
 
 $result

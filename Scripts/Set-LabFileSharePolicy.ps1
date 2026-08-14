@@ -6,7 +6,6 @@
 #>
 [CmdletBinding(DefaultParameterSetName = 'Access', SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]{0,30}[A-Za-z0-9]$')][string]$ShareName,
     [Parameter(Mandatory, ParameterSetName = 'Initialize')][switch]$Initialize,
     [Parameter(Mandatory, ParameterSetName = 'Access')][string]$Identity,
@@ -22,7 +21,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root "Reports\file-share-policy-$ShareName.json" }
 $groupToken = ($ShareName -replace '[^A-Za-z0-9]', '').ToUpperInvariant()
 if ($groupToken.Length -gt 10) { $groupToken = $groupToken.Substring(0, 10) }
@@ -37,7 +36,7 @@ Import-Module ActiveDirectory -ErrorAction Stop
 Import-Module GroupPolicy -ErrorAction Stop
 $definition = Import-LabDefinition -Path $DefinitionPath
 $domain = Get-ADDomain -ErrorAction Stop
-if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'Current domain does not match the selected demo.' }
+if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'Current domain does not match the lab definition.' }
 $domainDn = ConvertTo-LabDistinguishedName -DomainName $domain.DNSRoot
 $baseOu = "OU=$($definition.domain.baseOrganizationalUnit),$domainDn"
 $groupsOu = "OU=Groups,$baseOu"
@@ -46,7 +45,7 @@ $groups = [ordered]@{ Read = $ReadGroupName; Change = $ChangeGroupName; Deny = $
 $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
+    lab = $definition.name
     shareName = $ShareName
     mode = $PSCmdlet.ParameterSetName
     groups = $groups
@@ -140,7 +139,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "File-share policy $($result.status)" -Data @{ Demo = $Demo; Share = $ShareName; Report = $OutputPath }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "File-share policy $($result.status)" -Data @{ Lab = $definition.name; Share = $ShareName; Report = $OutputPath }
 }
 
 $result

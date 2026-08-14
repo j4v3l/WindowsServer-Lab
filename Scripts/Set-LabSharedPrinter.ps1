@@ -6,7 +6,6 @@
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9 ._-]{0,62}[A-Za-z0-9]$')][string]$PrinterName,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]{0,30}[A-Za-z0-9]$')][string]$ShareName,
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$DriverName,
@@ -23,7 +22,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root "Reports\shared-printer-$ShareName.json" }
 if (-not $PortName) { $PortName = "IP_$PrinterAddress" }
 if (($DriverInfPath -and -not $DriverInfSha256) -or ($DriverInfSha256 -and -not $DriverInfPath)) { throw 'DriverInfPath and DriverInfSha256 must be supplied together.' }
@@ -33,7 +32,7 @@ $definition = Import-LabDefinition -Path $DefinitionPath
 $fileServer = @($definition.virtualMachines | Where-Object role -eq 'file-server')
 if ($fileServer.Count -ne 1 -or $env:COMPUTERNAME -ine $fileServer[0].name) { throw "Run this command on the canonical file/print server '$($fileServer[0].name)'." }
 $computerSystem = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
-if (-not $computerSystem.PartOfDomain -or $computerSystem.Domain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'The print server is not joined to the selected demo domain.' }
+if (-not $computerSystem.PartOfDomain -or $computerSystem.Domain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'The print server is not joined to the lab domain.' }
 $domain = $computerSystem.Domain
 $denyAccount = "$($definition.domain.netbiosName)\ACL-Print-Deny"
 $adminAccount = "$($definition.domain.netbiosName)\ACL-Print-Admin"
@@ -44,7 +43,7 @@ $permissionSddl = "O:BAG:BAD:P(D;;0x20008;;;$denySid)(A;;0xF000C;;;BA)(A;;0xF000
 $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
+    lab = $definition.name
     server = $env:COMPUTERNAME
     printer = $PrinterName
     shareName = $ShareName
@@ -111,7 +110,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Shared printer $($result.status)" -Data @{ Demo = $Demo; Printer = $PrinterName; Report = $OutputPath }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Shared printer $($result.status)" -Data @{ Lab = $definition.name; Printer = $PrinterName; Report = $OutputPath }
 }
 
 $result

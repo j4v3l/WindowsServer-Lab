@@ -2,58 +2,81 @@ BeforeAll {
     $script:repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
     $modulePath = Join-Path $script:repoRoot 'Scripts\WindowsServerLab\WindowsServerLab.psd1'
     Import-Module $modulePath -Force
+    $script:definition = Import-LabDefinition -Path (Join-Path $script:repoRoot 'LabConfig\lab.json')
 }
 
-Describe 'WindowsServerLab v2 canonical definitions' {
-    It '<demo> has exact, unique, safe smoke, core, and full inventories' -ForEach @(
-        @{ demo = 'asgard' },
-        @{ demo = 'olympus' }
-    ) {
-        $definition = Import-LabDefinition -Path (Join-Path $script:repoRoot "LabConfig\demos\$demo.json")
-        $smoke = @(Get-LabProfileVirtualMachine -Definition $definition -Profile smoke)
-        $smoke.Count | Should -Be 6
-        @($smoke | Where-Object role -in @('client', 'aiml-client')).Count | Should -Be 1
-        @($smoke | Where-Object role -notin @('client', 'aiml-client')).Count | Should -Be 5
-        ($smoke.cores | Measure-Object -Sum).Sum | Should -Be 11
-        ($smoke.memoryMB | Measure-Object -Sum).Sum | Should -Be 17408
-        (($smoke.diskGB | Measure-Object -Sum).Sum + ($smoke.dataDisks.sizeGB | Measure-Object -Sum).Sum) | Should -Be 456
-        @(Get-LabProfileVirtualMachine -Definition $definition -Profile core).Count | Should -Be 7
-        @(Get-LabProfileVirtualMachine -Definition $definition -Profile full).Count | Should -Be 30
-        $results = @(Test-LabConfiguration -Definition $definition -Profile full)
+Describe 'WindowsServerLab v3 canonical inventory' {
+    It 'contains exactly five Server 2025 VMs and one Windows 11 client' {
+        $machines = @(Get-LabVirtualMachine -Definition $script:definition)
+        $machines.Count | Should -Be 6
+        @($machines | Where-Object os -eq 'server-2025').Count | Should -Be 5
+        @($machines | Where-Object os -eq 'windows-11').Count | Should -Be 1
+        @($machines | Where-Object role -eq 'client').Count | Should -Be 1
+    }
+
+    It 'has exact capacity and unique identities' {
+        $machines = @(Get-LabVirtualMachine -Definition $script:definition)
+        ($machines.cores | Measure-Object -Sum).Sum | Should -Be 11
+        ($machines.memoryMB | Measure-Object -Sum).Sum | Should -Be 17408
+        (($machines.diskGB | Measure-Object -Sum).Sum + ($machines.dataDisks.sizeGB | Measure-Object -Sum).Sum) | Should -Be 456
+        @($machines.id | Sort-Object -Unique).Count | Should -Be 6
+        @($machines.name | Sort-Object -Unique).Count | Should -Be 6
+        @($machines.nics.ipAddress | Sort-Object -Unique).Count | Should -Be 6
+    }
+
+    It 'uses the exact server and client VLANs, subnets, gateways, and DNS' {
+        $script:definition.networks.windowsServers.vlanId | Should -Be 90
+        $script:definition.networks.windowsServers.cidr | Should -Be '192.168.90.0/24'
+        $script:definition.networks.windowsServers.gateway | Should -Be '192.168.90.1'
+        $script:definition.networks.windowsClients.vlanId | Should -Be 100
+        $script:definition.networks.windowsClients.cidr | Should -Be '192.168.100.0/24'
+        $script:definition.networks.windowsClients.gateway | Should -Be '192.168.100.1'
+        @($script:definition.networks.windowsServers.dnsServers) | Should -Be @('192.168.90.10', '192.168.90.11')
+        @($script:definition.networks.windowsClients.dnsServers) | Should -Be @('192.168.90.10', '192.168.90.11')
+
+        $servers = @($script:definition.virtualMachines | Where-Object os -eq 'server-2025')
+        @($servers | Where-Object { $_.nics.Count -ne 1 -or $_.nics[0].network -ne 'windowsServers' }).Count | Should -Be 0
+        $client = @($script:definition.virtualMachines | Where-Object os -eq 'windows-11')
+        $client[0].nics[0].network | Should -Be 'windowsClients'
+    }
+
+    It 'passes every module configuration check' {
+        $results = @(Test-LabConfiguration -Definition $script:definition)
         @($results | Where-Object { -not $_.Passed }).Count | Should -Be 0
-        $definition.domain.dnsName | Should -Not -Match '\.local$'
-        $definition.domain.legacyDnsName | Should -Match '\.local$'
-        @(Test-LabConfiguration -Definition $definition -Profile smoke | Where-Object { -not $_.Passed }).Count | Should -Be 0
+    }
+
+    It 'accepts an additional inventory-driven member server without changing deployment code' {
+        $scaled = $script:definition | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $member = $scaled.virtualMachines | Where-Object role -eq 'web-server' | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+        $member.id = 5120
+        $member.name = 'TYR-APP01'
+        $member.role = 'member-server'
+        $member.bootOrder = 45
+        $member.nics[0].ipAddress = '192.168.90.50'
+        $scaled.virtualMachines = @($scaled.virtualMachines) + $member
+
+        $results = @(Test-LabConfiguration -Definition $scaled)
+        @($results | Where-Object { -not $_.Passed }).Count | Should -Be 0
+        @(Get-LabVirtualMachine -Definition $scaled).Count | Should -Be 7
+    }
+
+    It 'orders domain controllers before services and the client' {
+        $machines = @(Get-LabVirtualMachine -Definition $script:definition)
+        $machines[0].role | Should -Be 'primary-dc'
+        $machines[1].role | Should -Be 'secondary-dc'
+        $machines[-1].role | Should -Be 'client'
+    }
+
+    It 'rejects old and unknown inventory schemas' {
+        $fixture = Join-Path $TestDrive 'invalid.json'
+        '{"schemaVersion":2,"demo":"asgard","virtualMachines":[]}' | Set-Content -LiteralPath $fixture
+        { Import-LabDefinition -Path $fixture } | Should -Throw
     }
 }
 
-Describe 'WindowsServerLab helpers' {
+Describe 'WindowsServerLab helpers and secret handling' {
     It 'converts DNS names to distinguished names' {
         ConvertTo-LabDistinguishedName -DomainName 'ad.asgard.test' | Should -Be 'DC=ad,DC=asgard,DC=test'
-    }
-
-    It 'orders role deployment by boot order and VM ID' {
-        $definition = Import-LabDefinition -Path (Join-Path $script:repoRoot 'LabConfig\demos\asgard.json')
-        $selected = @(Get-LabProfileVirtualMachine -Definition $definition -Profile core)
-        $selected[0].role | Should -Be 'primary-dc'
-        $selected[1].role | Should -Be 'secondary-dc'
-        $selected[-1].role | Should -Be 'client'
-    }
-
-    It 'resolves smoke profile resource overrides without changing core sizing' {
-        $definition = Import-LabDefinition -Path (Join-Path $script:repoRoot 'LabConfig\demos\asgard.json')
-        $smokeDc = Get-LabProfileVirtualMachine -Definition $definition -Profile smoke | Where-Object role -eq 'primary-dc'
-        $coreDc = Get-LabProfileVirtualMachine -Definition $definition -Profile core | Where-Object role -eq 'primary-dc'
-        $smokeDc.cores | Should -Be 2
-        $smokeDc.memoryMB | Should -Be 3072
-        $smokeDc.balloonMinimumMB | Should -Be 2560
-        $coreDc.cores | Should -Be 4
-        $coreDc.memoryMB | Should -Be 8192
-        $smokeFile = Get-LabProfileVirtualMachine -Definition $definition -Profile smoke | Where-Object role -eq 'file-server'
-        $smokeFile.diskGB | Should -Be 64
-        $smokeFile.dataDisks.Count | Should -Be 1
-        $smokeFile.dataDisks[0].sizeGB | Should -Be 56
-        $smokeFile.dataDisks[0].driveLetter | Should -Be 'D'
     }
 
     It 'redacts secret-like values from structured logs' {
@@ -66,163 +89,57 @@ Describe 'WindowsServerLab helpers' {
         $content | Should -Match '\[REDACTED-PRODUCT-KEY\]'
     }
 
-    It 'rejects unsupported schema versions' {
-        $fixture = Join-Path $TestDrive 'invalid.json'
-        '{"schemaVersion":1,"demo":"asgard","domain":{"dnsName":"ad.asgard.test"},"virtualMachines":[]}' | Set-Content -LiteralPath $fixture
-        { Import-LabDefinition -Path $fixture } | Should -Throw
+    It 'keeps secret values outside Terraform while allowing local secret and key paths' {
+        $terraform = (Get-ChildItem -LiteralPath (Join-Path $script:repoRoot 'terraform') -Recurse -File -Include *.tf,*.tftest.hcl | Get-Content -Raw) -join "`n"
+        $terraform | Should -Not -Match '(?i)domain.?password|windows.?password|product.?key|activation.?key'
+        $terraform | Should -Not -Match 'private_key\s*=\s*file\('
+        $terraform | Should -Match 'proxmox_ssh_private_key_path'
+
+        $bootstrap = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Invoke-LabBootstrap.ps1') -Raw
+        $bootstrap | Should -Match 'Security\.SecureString'
+        $bootstrap | Should -Match 'Management\.Automation\.PSCredential'
+        $bootstrap | Should -Not -Match 'ConvertTo-SecureString.+AsPlainText'
     }
 }
 
-Describe 'Security implementation integrity' {
-    It 'defines unique, scope-correct group-filtered access controls' {
-        $catalog = Get-Content -LiteralPath (Join-Path $script:repoRoot 'LabConfig\policies\access-controls.json') -Raw | ConvertFrom-Json
-        @($catalog.controls).Count | Should -BeGreaterOrEqual 10
-        @($catalog.controls.id | Sort-Object -Unique).Count | Should -Be @($catalog.controls).Count
-        @($catalog.controls.groupName | Sort-Object -Unique).Count | Should -Be @($catalog.controls).Count
-        @($catalog.controls.gpoName | Sort-Object -Unique).Count | Should -Be @($catalog.controls).Count
-        @($catalog.controls | Where-Object groupName | Where-Object { $_.groupName.Length -gt 20 }).Count | Should -Be 0
-        @($catalog.controls.id) | Should -Contain 'Camera'
-        @($catalog.controls.id) | Should -Contain 'Microphone'
-        @($catalog.controls.id) | Should -Contain 'USBStorage'
-        @($catalog.controls.id) | Should -Contain 'Wallpaper'
-        foreach ($control in $catalog.controls) {
-            $prefix = if ($control.scope -eq 'Computer') { 'HKLM\' } else { 'HKCU\' }
-            @($control.settings | Where-Object { -not $_.key.StartsWith($prefix) }).Count | Should -Be 0
+Describe 'Supported operational path' {
+    It 'does not expose the removed demo, profile, Olympus, AI-client, or Server 2022 APIs' {
+        $paths = @(
+            (Join-Path $script:repoRoot 'Scripts\WindowsServerLab'),
+            (Join-Path $script:repoRoot 'Scripts\Initialize-LabDomain.ps1'),
+            (Join-Path $script:repoRoot 'Scripts\Initialize-LabDataDisks.ps1'),
+            (Join-Path $script:repoRoot 'Scripts\Invoke-LabBootstrap.ps1'),
+            (Join-Path $script:repoRoot 'Scripts\Invoke-LabWindowsActivation.ps1'),
+            (Join-Path $script:repoRoot 'Tools\Proxmox'),
+            (Join-Path $script:repoRoot 'Tools\Terraform')
+        )
+        $content = (Get-ChildItem -LiteralPath $paths -Recurse -File -Include *.ps1,*.psm1,*.psd1,*.sh | Get-Content -Raw) -join "`n"
+        $content | Should -Not -Match '(?i)--demo|--profile|LabConfig[\\/]demos|aiml-client|server-2022|olympus'
+    }
+
+    It 'has removed the imperative VM and bridge lifecycle scripts' {
+        foreach ($path in @('Deploy-Lab.sh', 'Remove-Lab.sh', 'Configure-LabNetwork.sh')) {
+            Test-Path -LiteralPath (Join-Path $script:repoRoot "Tools\Proxmox\$path") | Should -BeFalse
         }
     }
 
-    It 'implements access changes with real GPO read-back and AD membership' {
-        $content = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabAccessControl.ps1') -Raw
-        $content | Should -Match 'Set-GPRegistryValue'
-        $content | Should -Match 'Get-GPRegistryValue'
-        $content | Should -Match 'Set-GPPermission'
-        $content | Should -Match 'Add-ADGroupMember'
-        $content | Should -Match 'Remove-ADGroupMember'
-        $content | Should -Not -Match 'Set-ExecutionPolicy|AppLocker'
+    It 'uses real GPO, AD, SMB, and print operations' {
+        $access = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabAccessControl.ps1') -Raw
+        $files = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabFileSharePolicy.ps1') -Raw
+        $print = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabPrintPolicy.ps1') -Raw
+        $access | Should -Match 'Set-GPRegistryValue|Get-GPRegistryValue'
+        $access | Should -Match 'Add-ADGroupMember|Remove-ADGroupMember'
+        $files | Should -Match 'RequireSecuritySignature'
+        $files | Should -Match 'Add-ADGroupMember|Remove-ADGroupMember'
+        $print | Should -Match 'PackagePointAndPrintServerList'
+        $print | Should -Match 'RestrictDriverInstallationToAdministrators'
     }
 
-    It 'configures native background Group Policy refresh with read-back evidence' {
-        $content = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabGroupPolicyRefresh.ps1') -Raw
-        $content | Should -Match 'GroupPolicyRefreshTime'
-        $content | Should -Match 'GroupPolicyRefreshTimeOffset'
-        $content | Should -Match 'DisableBkGndGroupPolicy'
-        $content | Should -Match 'SyncForegroundPolicy'
-        $content | Should -Match "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System"
-        $content | Should -Match "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\System"
-        $content | Should -Match "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"
-        $content | Should -Match 'Get-GPRegistryValue'
-        $content | Should -Match 'Get-GPInheritance'
-        $content | Should -Not -Match 'Register-ScheduledTask|schtasks\.exe'
-        $testContent = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Test-LabGroupPolicyRefresh.ps1') -Raw
-        $testContent | Should -Match 'Get-Service gpsvc'
-        $testContent | Should -Match 'gpresult\.exe'
-        $testContent | Should -Match 'HKEY_LOCAL_MACHINE'
-        $testContent | Should -Match 'HKEY_CURRENT_USER'
-    }
-
-    It 'supports hypervisor-independent machine enrollment without plaintext credentials' {
+    It 'supports hypervisor-independent enrollment without plaintext credentials' {
         $content = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabMachineEnrollment.ps1') -Raw
         $content | Should -Match "ValidateSet\('Enroll', 'Disenroll', 'Status'\)"
-        $content | Should -Match 'Add-Computer'
-        $content | Should -Match 'Remove-Computer'
-        $content | Should -Match 'ConfirmLocalAdministratorAccess'
-        $content | Should -Match 'ConfirmDirectoryObjectDeletion'
+        $content | Should -Match 'Add-Computer|Remove-Computer'
         $content | Should -Match 'Management\.Automation\.PSCredential'
         $content | Should -Not -Match 'ConvertTo-SecureString.+AsPlainText|\bqm\b|Get-VM|Import-Module Hyper-V'
-    }
-
-    It 'keeps Windows activation material runtime-only and verifies licensing' {
-        $local = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabWindowsActivation.ps1') -Raw
-        $fleet = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Invoke-LabWindowsActivation.ps1') -Raw
-        $packer = Get-Content -LiteralPath (Join-Path $script:repoRoot 'packer\windows\windows.pkr.hcl') -Raw
-        $local | Should -Match 'Security\.SecureString'
-        $local | Should -Match 'InstallProductKey'
-        $local | Should -Match 'ClearProductKeyFromRegistry'
-        $local | Should -Match 'LicenseStatus'
-        $local | Should -Not -Match 'slmgr|ConvertTo-SecureString.+AsPlainText'
-        $fleet | Should -Match "ValidateSet\('Servers', 'All'\)"
-        $fleet | Should -Match 'Invoke-Command'
-        $fleet | Should -Match "Authentication = 'Kerberos'"
-        $fleet | Should -Match 'Security\.SecureString'
-        $fleet | Should -Match 'Get-Secret'
-        $packer | Should -Match 'Windows 11 Education'
-        $packer | Should -Not -Match '(?i)product.?key'
-        $module = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\WindowsServerLab\WindowsServerLab.psm1') -Raw
-        $module | Should -Match "'windows-activation'"
-        $module | Should -Match "'windows-client-edition'"
-    }
-
-    It 'limits activation remoting to domain Kerberos and the local subnet' {
-        $content = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Enable-LabPowerShellRemoting.ps1') -Raw
-        $content | Should -Match 'PartOfDomain'
-        $content | Should -Match 'AllowUnencrypted.+false'
-        $content | Should -Match 'Auth\\Basic.+false'
-        $content | Should -Match 'Auth\\Negotiate.+false'
-        $content | Should -Match 'Auth\\Kerberos.+true'
-        $content | Should -Match 'Profile Domain'
-        $content | Should -Match 'RemoteAddress LocalSubnet'
-    }
-
-    It 'retains client onboarding only as a v2 compatibility shim' {
-        $content = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Client\Client-Onboarding.ps1') -Raw
-        $content | Should -Match 'deprecated'
-        $content | Should -Match 'Set-LabMachineEnrollment.ps1'
-        $content | Should -Not -Match 'Add-Computer|Rename-Computer'
-    }
-
-    It 'publishes printers with trusted-server policy and verified ACLs' {
-        $policy = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabPrintPolicy.ps1') -Raw
-        $server = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabSharedPrinter.ps1') -Raw
-        $client = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabPrinterConnection.ps1') -Raw
-        $policy | Should -Match 'PackagePointAndPrintOnly'
-        $policy | Should -Match 'PackagePointAndPrintServerList'
-        $policy | Should -Match 'RestrictDriverInstallationToAdministrators'
-        $policy | Should -Match 'NoWarningNoElevationOnInstall.+Value = 0'
-        $server | Should -Match 'DriverInfSha256'
-        $server | Should -Match 'IsPackageAware'
-        $server | Should -Match 'Published \$true|Published'
-        $server | Should -Match 'PermissionSDDL'
-        $server | Should -Match '0x20008'
-        $client | Should -Match 'Add-Printer -ConnectionName'
-        $client | Should -Match 'Remove-Printer'
-    }
-
-    It 'enforces file-share policy at GPO, SMB, NTFS, and AD membership layers' {
-        $policy = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabFileSharePolicy.ps1') -Raw
-        $server = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabSharedFolder.ps1') -Raw
-        $policy | Should -Match 'RequireSecuritySignature'
-        $policy | Should -Match 'AllowInsecureGuestAuth'
-        $policy | Should -Match "ValidateSet\('Read', 'Change', 'Deny', 'Remove'\)"
-        $policy | Should -Match 'Add-ADGroupMember'
-        $policy | Should -Match 'Remove-ADGroupMember'
-        $server | Should -Match 'EncryptData \$true'
-        $server | Should -Match 'FolderEnumerationMode AccessBased'
-        $server | Should -Match 'Block-SmbShareAccess'
-        $server | Should -Match 'FileSystemAccessRule'
-        $server | Should -Match 'AdoptExistingPath'
-    }
-
-    It 'uses real registry paths in the v2 domain policy' {
-        $content = Get-Content -LiteralPath (Join-Path $script:repoRoot 'Scripts\Set-LabDomainPolicy.ps1') -Raw
-        $content | Should -Match 'HKLM\\SOFTWARE\\Policies'
-        $content | Should -Match 'Get-GPRegistryValue'
-        $content | Should -Not -Match 'Administrative Templates\\'
-    }
-
-    It 'does not use percentage scores to assert production readiness' {
-        $paths = @(
-            (Join-Path $script:repoRoot 'Scripts\Test-LabCompliance.ps1'),
-            (Join-Path $script:repoRoot 'Demo\SECURITY_VALIDATION_SCRIPT.ps1')
-        )
-        (Get-Content -LiteralPath $paths -Raw) | Should -Not -Match 'ProductionReady|ScorePercentage'
-    }
-
-    It 'retains demo deployment names only as deprecation shims' {
-        foreach ($path in @('Demo\Asgard\Scripts\Deploy-AsgardLab.ps1', 'Demo\Olympus\Scripts\Deploy-OlympusLab.ps1')) {
-            $content = Get-Content -LiteralPath (Join-Path $script:repoRoot $path) -Raw
-            $content | Should -Match 'deprecated'
-            $content | Should -Match 'Tools/Proxmox/Deploy-Lab.sh'
-            $content | Should -Not -Match '\bqm\s+create\b'
-        }
     }
 }

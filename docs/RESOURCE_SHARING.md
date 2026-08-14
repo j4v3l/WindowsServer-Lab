@@ -2,7 +2,7 @@
 
 WindowsServerLab treats visibility and authorization as separate controls. A printer can be published in Active Directory for discovery by every joined machine while selected users are denied printing. An SMB share has a stable UNC path while read, change, deny, and removal decisions are enforced by matching AD, share, and NTFS permissions.
 
-The canonical file server also acts as the print server: `HEIMDALL-FS01` for Asgard and `HERMES-FS01` for Olympus. Organization-specific print hardware, signed drivers, storage volumes, quotas, classification, and retention remain operator inputs.
+The canonical `HEIMDALL-FS01` file server also acts as the print server. Organization-specific print hardware, signed drivers, storage volumes, quotas, classification, and retention remain operator inputs.
 
 ## Shared printer
 
@@ -12,7 +12,7 @@ Run on a domain controller:
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrintPolicy.ps1 `
-  -Demo asgard -Initialize
+  -Initialize
 ```
 
 This creates `ACL-Print-Deny` and `ACL-Print-Admin`, then creates and verifies `WSLAB-v2-Print-Policy`. Point and Print is restricted to the canonical FQDN, package-aware drivers are required, driver installation stays administrator-only, and warning/elevation bypass values remain disabled. Microsoft recommends configuring both ordinary and package Point-and-Print restrictions for approved servers because they are independent controls. See [Microsoft's printer Group Policy guidance](https://learn.microsoft.com/en-us/troubleshoot/windows-server/printing/use-group-policy-to-control-ad-printer).
@@ -29,7 +29,6 @@ Run on the canonical file server:
 $driverHash = (Get-FileHash C:\SecureStaging\Printer\driver.inf -Algorithm SHA256).Hash
 
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabSharedPrinter.ps1 `
-  -Demo asgard `
   -PrinterName 'Main Office Printer' `
   -ShareName MainPrinter `
   -DriverName 'Exact installed vendor driver name' `
@@ -45,10 +44,10 @@ Publishing makes the queue discoverable in the Windows Add Printer search. It do
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrinterConnection.ps1 `
-  -Action Add -Demo asgard -ShareName MainPrinter
+  -Action Add -ShareName MainPrinter
 
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrinterConnection.ps1 `
-  -Action Remove -Demo asgard -ShareName MainPrinter
+  -Action Remove -ShareName MainPrinter
 ```
 
 For automatic deployment to an OU, deploy the published queue from Print Management to a Group Policy after validating the driver and queue. Windows' deployed-printer extension is the supported mechanism for making the connection appear automatically on targeted computers or for targeted users. See Microsoft's [Deployed Printer Connections overview](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gpdpc/378fc637-aa56-4c42-93ae-04931b19552e). The repository does not hand-edit SYSVOL preference XML or GPO extension metadata.
@@ -60,15 +59,15 @@ All authenticated users can print unless directly or indirectly placed in the de
 ```powershell
 # Deny and later restore ordinary printing.
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrintPolicy.ps1 `
-  -Demo asgard -Identity thor.engineer -Permission Print -Access Deny
+  -Identity thor.engineer -Permission Print -Access Deny
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrintPolicy.ps1 `
-  -Demo asgard -Identity thor.engineer -Permission Print -Access Allow
+  -Identity thor.engineer -Permission Print -Access Allow
 
 # Delegate and later remove queue administration.
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrintPolicy.ps1 `
-  -Demo asgard -Identity thor.engineer -Permission Manage -Access Allow
+  -Identity thor.engineer -Permission Manage -Access Allow
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabPrintPolicy.ps1 `
-  -Demo asgard -Identity thor.engineer -Permission Manage -Access Deny
+  -Identity thor.engineer -Permission Manage -Access Deny
 ```
 
 `Print/Deny` adds the user to `ACL-Print-Deny`; `Print/Allow` removes that denial. `Manage/Allow` and `Manage/Deny` add or remove delegated administration. Group-token changes normally require sign-out before the print server sees the new authorization.
@@ -81,7 +80,7 @@ Run on a domain controller for each share:
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1 `
-  -Demo asgard -ShareName CompanyData -Initialize
+  -ShareName CompanyData -Initialize
 ```
 
 This creates three domain-local security groups with deterministic names, such as `FS-COMPANYDAT-R`, `FS-COMPANYDAT-RW`, and `FS-COMPANYDAT-D`. Supply explicit `-ReadGroupName`, `-ChangeGroupName`, and `-DenyGroupName` values when two long share names would otherwise produce the same ten-character token. Existing groups with incompatible scope or a description owned by another share are rejected.
@@ -92,14 +91,13 @@ Add `-DefaultReadForDomainUsers` only for content intended to be readable by eve
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1 `
-  -Demo asgard -ShareName PublicDocs -Initialize -DefaultReadForDomainUsers
+  -ShareName PublicDocs -Initialize -DefaultReadForDomainUsers
 ```
 
 ### 2. Create the share on the file server
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabSharedFolder.ps1 `
-  -Demo asgard `
   -ShareName CompanyData `
   -Path D:\Shares\CompanyData `
   -Description 'Controlled company data'
@@ -114,20 +112,20 @@ The script refuses to adopt a nonempty, previously unmanaged directory by defaul
 ```powershell
 # Read only
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1 `
-  -Demo asgard -ShareName CompanyData `
+  -ShareName CompanyData `
   -Identity thor.engineer -Permission Read
 
 # Read and modify
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1 `
-  -Demo asgard -ShareName CompanyData `
+  -ShareName CompanyData `
   -Identity thor.engineer -Permission Change
 
 # Explicit deny, or remove all managed membership
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1 `
-  -Demo asgard -ShareName CompanyData `
+  -ShareName CompanyData `
   -Identity thor.engineer -Permission Deny
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1 `
-  -Demo asgard -ShareName CompanyData `
+  -ShareName CompanyData `
   -Identity thor.engineer -Permission Remove
 ```
 

@@ -32,37 +32,46 @@ wslab_realpath() {
 }
 
 wslab_definition_path() {
-  local demo="$1"
-  printf '%s/LabConfig/demos/%s.json\n' "$WSLAB_ROOT" "$demo"
+  printf '%s/LabConfig/lab.json\n' "$WSLAB_ROOT"
+}
+
+wslab_proxmox_node() {
+  local site_file="$1"
+  local node="${WSLAB_PROXMOX_NODE:-}"
+  if [[ -z "$node" ]]; then
+    node="$(jq -r '.proxmox.node // empty' "$site_file")"
+  fi
+  if [[ -z "$node" ]]; then
+    node="$(hostname -s)"
+  fi
+  [[ "$node" =~ ^[A-Za-z0-9._-]+$ ]] || wslab_die 'The Proxmox node must be supplied by Terraform or legacy site configuration'
+  printf '%s\n' "$node"
 }
 
 wslab_validate_inputs() {
-  local demo="$1"
-  local profile="$2"
-  local site_file="$3"
+  local site_file
   local definition_file
 
-  [[ "$demo" == "asgard" || "$demo" == "olympus" ]] || wslab_die "Demo must be asgard or olympus"
-  [[ "$profile" == "smoke" || "$profile" == "core" || "$profile" == "full" ]] || wslab_die "Profile must be smoke, core, or full"
+  if (($# == 1)); then
+    site_file="$1"
+  else
+    wslab_die "wslab_validate_inputs expects <site-file>"
+  fi
   [[ -r "$site_file" ]] || wslab_die "Site configuration is not readable: $site_file"
 
-  definition_file="$(wslab_definition_path "$demo")"
-  [[ -r "$definition_file" ]] || wslab_die "Demo definition is not readable: $definition_file"
+  definition_file="$(wslab_definition_path)"
+  [[ -r "$definition_file" ]] || wslab_die "Lab definition is not readable: $definition_file"
 
-  jq -e '.schemaVersion == 2' "$site_file" >/dev/null || wslab_die "Site configuration must use schemaVersion 2"
+  jq -e '.schemaVersion == 3' "$site_file" >/dev/null || wslab_die "Site configuration must use schemaVersion 3"
   jq -e '
-    (.hostNetworking.bridges | arrays | length > 0) and
-    ([.hostNetworking.bridges[].name] | length == (unique | length)) and
-    ([.hostNetworking.bridges[].uplink] | length == (unique | length)) and
-    all(.hostNetworking.bridges[];
-      (.name | test("^vmbr[0-9]+$")) and
-      (.uplink | strings | length > 0) and
-      .vlanAware == true and
-      .management == false and
-      (.allowedVlans | arrays | length > 0) and
-      all(.allowedVlans[]; . >= 1 and . <= 4094)
-    )
-  ' "$site_file" >/dev/null || wslab_die "Site configuration is missing a safe, non-management hostNetworking bridge"
+    (.hostNetworking.bridge | strings | test("^vmbr[0-9]+$")) and
+    (.hostNetworking.uplink | strings | length > 0) and
+    (.hostNetworking.sharedManagementBridge | booleans) and
+    (if .hostNetworking.sharedManagementBridge then .hostNetworking.bridge == "vmbr0" else .hostNetworking.bridge != "vmbr0" end) and
+    (.hostNetworking.allowedVlans == [90, 100]) and
+    (.proxmox.templates | keys | sort == ["server-2025", "windows-11"]) and
+    ([.proxmox.templates[]] | length == (unique | length))
+  ' "$site_file" >/dev/null || wslab_die "Site configuration is missing a valid shared/dedicated VLAN 90/100 bridge or template mapping"
   jq -e '
     (.templateBuildNetwork.bridge | strings | length > 0) and
     (.templateBuildNetwork.address | strings | test("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$")) and
@@ -76,33 +85,37 @@ wslab_validate_inputs() {
     (.templateCertification.address | strings | test("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$")) and
     (.templateCertification.timeoutSeconds >= 300 and .templateCertification.timeoutSeconds <= 7200) and
     (.templateCertification.address != .templateBuildNetwork.address) and
-    ([.proxmox.templates[]] | index($site.templateCertification.vmId) | not)
+    ([.proxmox.templates[]] | index($site.templateCertification.vmId) | not) and
+    (.media["server-2025"].volume | strings | length > 0) and
+    (.media["server-2025"].sha256 | test("^[A-Fa-f0-9]{64}$")) and
+    (.media["windows-11"].volume | strings | length > 0) and
+    (.media["windows-11"].sha256 | test("^[A-Fa-f0-9]{64}$"))
   ' "$site_file" >/dev/null || wslab_die "Site configuration is missing a valid, nonconflicting templateCertification block"
-  jq -e --arg demo "$demo" '.schemaVersion == 2 and .demo == $demo' "$definition_file" >/dev/null || wslab_die "Invalid demo definition"
+  jq -e '.schemaVersion == 3 and .name == "asgard"' "$definition_file" >/dev/null || wslab_die "Invalid lab definition"
 
   local secret_paths
   secret_paths="$(jq -r '[paths(scalars) as $p | select(($p[-1] | tostring | ascii_downcase) | test("password|secret|credential|token")) | $p | join(".")] | .[]?' "$site_file" "$definition_file")"
   [[ -z "$secret_paths" ]] || wslab_die "Secrets are forbidden in lab/site JSON. Disallowed fields: $secret_paths"
 
-  local expected_count actual_count
-  case "$profile" in
-    smoke) expected_count=6 ;;
-    core) expected_count=7 ;;
-    full) expected_count=30 ;;
-  esac
-  actual_count="$(jq --arg profile "$profile" '[.virtualMachines[] | select(.profiles | index($profile))] | length' "$definition_file")"
-  [[ "$actual_count" -eq "$expected_count" ]] || wslab_die "$demo/$profile must contain $expected_count VMs; found $actual_count"
-
-  local unique_ids unique_names unique_ips
+  local actual_count unique_ids unique_names unique_ips
+  actual_count="$(jq '.virtualMachines | length' "$definition_file")"
+  [[ "$actual_count" -ge 6 ]] || wslab_die "The lab must contain the five core server roles and at least one client; found $actual_count VMs"
   unique_ids="$(jq '[.virtualMachines[].id] | unique | length' "$definition_file")"
   unique_names="$(jq '[.virtualMachines[].name] | unique | length' "$definition_file")"
   unique_ips="$(jq '[.virtualMachines[].nics[].ipAddress] | unique | length' "$definition_file")"
-  [[ "$unique_ids" -eq 30 && "$unique_names" -eq 30 ]] || wslab_die "VM IDs and names must be unique"
+  [[ "$unique_ids" -eq "$actual_count" && "$unique_names" -eq "$actual_count" ]] || wslab_die "VM IDs and names must be unique"
   [[ "$unique_ips" -eq "$(jq '[.virtualMachines[].nics[].ipAddress] | length' "$definition_file")" ]] || wslab_die "NIC addresses must be unique"
   jq -e '
     . as $root |
+    .networks.windowsServers.cidr == "192.168.90.0/24" and
+    .networks.windowsServers.gateway == "192.168.90.1" and
+    .networks.windowsServers.vlanId == 90 and
+    .networks.windowsClients.cidr == "192.168.100.0/24" and
+    .networks.windowsClients.gateway == "192.168.100.1" and
+    .networks.windowsClients.vlanId == 100 and
     (.domain.dnsName | endswith(".test")) and
     (.domain.legacyDnsName | endswith(".local")) and
+    all(.virtualMachines[]; (.nics | length) == 1) and
     all(.virtualMachines[]; ([.nics[] | select(.defaultGateway == true)] | length) == 1) and
     all($root.virtualMachines[].nics[];
       . as $nic |
@@ -110,30 +123,24 @@ wslab_validate_inputs() {
       ($nic.prefixLength == (($root.networks[$nic.network].cidr | split("/")[1]) | tonumber)) and
       ($nic.ipAddress | startswith((($root.networks[$nic.network].cidr | split(".")[0:3]) | join(".")) + "."))
     )
-  ' "$definition_file" >/dev/null || wslab_die "$demo has an invalid domain, gateway count, or NIC/network mapping"
-  jq -e --arg profile "$profile" '
-    [.virtualMachines[] | select(.profiles | index($profile))] as $selected |
-    ([$selected[] | select(.role == "client" or .role == "aiml-client")] | length) == (if $profile == "smoke" then 1 elif $profile == "core" then 2 else 25 end) and
-    ([$selected[] | select(.role != "client" and .role != "aiml-client")] | length) == 5
-  ' "$definition_file" >/dev/null || wslab_die "$demo/$profile must contain five servers and the expected client count"
-  jq -s -e '([.[].nics[].ipAddress] | length) == ([.[].nics[].ipAddress] | unique | length)' < <(wslab_profile_vms "$definition_file" "$profile") >/dev/null || wslab_die "$demo/$profile resolved NIC addresses must be unique"
-  jq -e --slurpfile selected <(wslab_profile_vms "$definition_file" "$profile") '
-    . as $root |
-    all($selected[].nics[];
-      . as $nic |
-      ($root.networks[$nic.network] != null) and
-      ($nic.prefixLength == (($root.networks[$nic.network].cidr | split("/")[1]) | tonumber)) and
-      ($nic.ipAddress | startswith((($root.networks[$nic.network].cidr | split(".")[0:3]) | join(".")) + "."))
-    )
-  ' "$definition_file" >/dev/null || wslab_die "$demo/$profile has an invalid resolved NIC override"
+  ' "$definition_file" >/dev/null || wslab_die "The lab has an invalid domain, gateway count, or NIC/network mapping"
+  jq -e '
+    ([.virtualMachines[] | select(.role == "primary-dc")] | length) == 1 and
+    ([.virtualMachines[] | select(.role == "secondary-dc")] | length) == 1 and
+    ([.virtualMachines[] | select(.role == "file-server")] | length) == 1 and
+    ([.virtualMachines[] | select(.role == "web-server")] | length) == 1 and
+    ([.virtualMachines[] | select(.role == "management-server")] | length) == 1 and
+    ([.virtualMachines[] | select(.role == "client")] | length) >= 1 and
+    all(.virtualMachines[]; if .role == "client" then .os == "windows-11" and .nics[0].network == "windowsClients" else .os == "server-2025" and .nics[0].network == "windowsServers" end)
+  ' "$definition_file" >/dev/null || wslab_die "The lab requires one of each core server role, at least one Windows 11 client, and valid OS/network role mappings"
   jq -s -e '
     all(.[];
       ((.dataDisks // []) | map(.slot) | length) == ((.dataDisks // []) | map(.slot) | unique | length) and
       ((.dataDisks // []) | map(.driveLetter) | length) == ((.dataDisks // []) | map(.driveLetter) | unique | length)
     )
-  ' < <(wslab_profile_vms "$definition_file" "$profile") >/dev/null || wslab_die "$demo/$profile has duplicate data-disk slots or drive letters"
+  ' < <(wslab_virtual_machines "$definition_file") >/dev/null || wslab_die "The lab has duplicate data-disk slots or drive letters"
 
-  jq -e '.proxmox.templates | [.[]] | length == 3 and (unique | length == 3)' "$site_file" >/dev/null || wslab_die "Template IDs must be unique"
+  jq -e '.proxmox.templates | [.[]] | length == 2 and (unique | length == 2)' "$site_file" >/dev/null || wslab_die "Template IDs must be unique"
   while IFS= read -r template_id; do
     if jq -e --argjson id "$template_id" '.virtualMachines[] | select(.id == $id)' "$definition_file" >/dev/null; then
       wslab_die "Template ID $template_id collides with a lab VM ID"
@@ -143,58 +150,15 @@ wslab_validate_inputs() {
   if jq -e --argjson id "$certification_vm_id" '.virtualMachines[] | select(.id == $id)' "$definition_file" >/dev/null; then
     wslab_die "Certification VM ID $certification_vm_id collides with a lab VM ID"
   fi
-  jq -s -e '[.[].networks[].cidr] | length == (unique | length)' "$WSLAB_ROOT/LabConfig/demos/asgard.json" "$WSLAB_ROOT/LabConfig/demos/olympus.json" >/dev/null || wslab_die "Asgard and Olympus logical networks must not overlap"
-
-  local required_vcpus required_memory required_storage capacity_vcpus capacity_memory capacity_storage
-  required_vcpus="$(jq --arg profile "$profile" '[.virtualMachines[] | select(.profiles | index($profile)) | (.profileResourceOverrides[$profile].cores // .cores)] | add' "$definition_file")"
-  required_memory="$(jq --arg profile "$profile" '[.virtualMachines[] | select(.profiles | index($profile)) | (.profileResourceOverrides[$profile].memoryMB // .memoryMB)] | add' "$definition_file")"
-  required_storage="$(wslab_profile_vms "$definition_file" "$profile" | jq -s '[.[] | .diskGB + ((.dataDisks // []) | map(.sizeGB) | add // 0)] | add')"
-  capacity_vcpus="$(jq -r '.capacity.vcpus' "$site_file")"
-  capacity_memory="$(jq -r '.capacity.memoryMB' "$site_file")"
-  capacity_storage="$(jq -r '.capacity.storageGB' "$site_file")"
-  [[ "$required_vcpus" -le "$capacity_vcpus" ]] || wslab_die "$demo/$profile requires $required_vcpus vCPU but the site declares $capacity_vcpus"
-  [[ "$required_memory" -le "$capacity_memory" ]] || wslab_die "$demo/$profile requires $required_memory MB RAM but the site declares $capacity_memory"
-  [[ "$required_storage" -le "$capacity_storage" ]] || wslab_die "$demo/$profile requires $required_storage GB storage but the site declares $capacity_storage"
-
-  jq -e --arg profile "$profile" --argjson vms "$actual_count" --argjson vcpus "$required_vcpus" --argjson memory "$required_memory" --argjson storage "$required_storage" '
-    .resourceLimits[$profile].maximumVMs == $vms and
-    .resourceLimits[$profile].maximumVcpus == $vcpus and
-    .resourceLimits[$profile].maximumMemoryMB == $memory and
-    .resourceLimits[$profile].maximumStorageGB == $storage
-  ' "$definition_file" >/dev/null || wslab_die "$demo/$profile resourceLimits do not match its canonical inventory"
-
-  while IFS= read -r network; do
-    if [[ "$demo" == "asgard" && "$profile" != "smoke" ]]; then
-      jq -e --arg demo "$demo" --arg network "$network" '.networkMappings[$demo][$network].configured == true' "$site_file" >/dev/null || wslab_die "Asgard $profile is blocked until the site explicitly supplies the $network network mapping"
-    fi
-    jq -e --arg demo "$demo" --arg network "$network" '
-      (.networkMappings[$demo][$network].bridge | strings | length > 0) and
-      (.networkMappings[$demo][$network] | has("vlanTag"))
-    ' "$site_file" >/dev/null || wslab_die "Missing site network mapping for $demo/$network"
-    mapping_bridge="$(jq -r --arg demo "$demo" --arg network "$network" '.networkMappings[$demo][$network].bridge' "$site_file")"
-    mapping_vlan="$(jq -r --arg demo "$demo" --arg network "$network" '.networkMappings[$demo][$network].vlanTag' "$site_file")"
-    if [[ "$mapping_vlan" -gt 0 ]] && jq -e --arg bridge "$mapping_bridge" 'any(.hostNetworking.bridges[]; .name == $bridge)' "$site_file" >/dev/null; then
-      jq -e --arg bridge "$mapping_bridge" --argjson vlan "$mapping_vlan" '
-        any(.hostNetworking.bridges[]; .name == $bridge and (.allowedVlans | index($vlan)) != null)
-      ' "$site_file" >/dev/null || wslab_die "Mapped VLAN $mapping_vlan for $demo/$network is not allowed on host bridge $mapping_bridge"
-    fi
-  done < <(wslab_profile_vms "$definition_file" "$profile" | jq -r '.nics[].network' | sort -u)
+  jq -e --slurpfile lab "$definition_file" '
+    ($lab[0].networks | [.[] | .vlanId] | sort) as $vlans |
+    (.hostNetworking.allowedVlans | sort) == $vlans
+  ' "$site_file" >/dev/null || wslab_die "Site bridge VLANs must exactly match the lab networks"
 }
 
-wslab_profile_vms() {
+wslab_virtual_machines() {
   local definition_file="$1"
-  local profile="$2"
-  jq -c --arg profile "$profile" '[.virtualMachines[] | select(.profiles | index($profile)) |
-    . as $vm | (.profileResourceOverrides[$profile] // {}) as $override |
-    . + {
-      cores: ($override.cores // $vm.cores),
-      memoryMB: ($override.memoryMB // $vm.memoryMB),
-      diskGB: ($override.diskGB // $vm.diskGB),
-      balloonMinimumMB: ($override.balloonMinimumMB // 2048),
-      nics: ($vm.profileNicOverrides[$profile] // $vm.nics),
-      dataDisks: ($vm.profileDataDiskOverrides[$profile] // $vm.dataDisks // [])
-    }
-  ] | sort_by(.bootOrder, .id) | .[]' "$definition_file"
+  jq -c '[.virtualMachines[] | . + {dataDisks: (.dataDisks // [])}] | sort_by(.bootOrder, .id) | .[]' "$definition_file"
 }
 
 wslab_print_command() {
@@ -226,8 +190,8 @@ wslab_require_proxmox() {
   version="$(pveversion | sed -E 's#^[^/]+/([0-9]+\.[0-9]+).*#\1#')"
   major="${version%%.*}"
   minor="${version#*.}"
-  if ((major < 8 || (major == 8 && minor < 4))); then
-    wslab_die "Proxmox VE 8.4 or later is required; found $version"
+  if ((major != 9 || minor < 2)); then
+    wslab_die "Proxmox VE 9.2 or later is required; found $version"
   fi
   wslab_log INFO "Detected Proxmox VE $version"
 }
@@ -287,20 +251,19 @@ wslab_sha256_file() {
 
 wslab_template_automation_sha256() {
   local file file_hash
-  local -a files=(
+  local -a fixed_files=(
     Tools/Proxmox/Build-WindowsTemplate.sh
+    Tools/Proxmox/Certify-WindowsTemplate.sh
     Tools/Proxmox/Render-WindowsAnswerMedia.py
-    packer/windows/Autounattend.xml.pkrtpl
-    packer/windows/bootstrap.ps1.pkrtpl
-    packer/windows/finalize-template.ps1
-    packer/windows/first-boot-cleanup.ps1
-    packer/windows/prepare-template.ps1
-    packer/windows/seal-template.ps1
-    packer/windows/wait-for-template-shutdown.sh
-    packer/windows/windows.pkr.hcl
+    Tools/Proxmox/lib/common.sh
+    Tools/Terraform/Reconcile-Template.sh
   )
   {
-    for file in "${files[@]}"; do
+    {
+      printf '%s\n' "${fixed_files[@]}"
+      find "$WSLAB_ROOT/packer/windows" -type f -print \
+        | sed "s#^$WSLAB_ROOT/##"
+    } | LC_ALL=C sort -u | while IFS= read -r file; do
       [[ -r "$WSLAB_ROOT/$file" ]] || wslab_die "Template automation file is missing: $file"
       file_hash="$(wslab_sha256_file "$WSLAB_ROOT/$file")"
       printf '%s\0%s\n' "$file" "$file_hash"
@@ -308,11 +271,34 @@ wslab_template_automation_sha256() {
   } | wslab_sha256_stream
 }
 
+wslab_template_input_sha256() {
+  local site_file="$1"
+  local os="$2"
+  local site_inputs node
+  case "$os" in server-2025|windows-11) ;; *) wslab_die "Unsupported template OS: $os" ;; esac
+  node="$(wslab_proxmox_node "$site_file")"
+  site_inputs="$(jq -cS --arg os "$os" --arg node "$node" '{
+    node: $node,
+    vmStorage: .proxmox.vmStorage,
+    isoStorage: .proxmox.isoStorage,
+    virtioIso: .proxmox.virtioIso,
+    virtioIsoSha256: .proxmox.virtioIsoSha256,
+    templateId: .proxmox.templates[$os],
+    windowsMedia: .media[$os],
+    buildNetwork: .templateBuildNetwork
+  }' "$site_file")"
+  printf '%s\0%s\0%s\0%s\n' \
+    "$os" \
+    "$(wslab_template_automation_sha256)" \
+    "$(wslab_sha256_file "$WSLAB_ROOT/LabConfig/build-artifacts.json")" \
+    "$site_inputs" | wslab_sha256_stream
+}
+
 wslab_require_template_certification() {
   local site_file="$1"
   local os="$2"
   local template_id="$3"
-  local evidence_file config_sha256 pve_version build_receipt_file expected_automation_sha256 automation_sha256
+  local evidence_file config_sha256 pve_version build_receipt_file expected_automation_sha256 automation_sha256 expected_input_sha256 input_sha256
   evidence_file="$(wslab_template_certification_file "$site_file" "$os" "$template_id")"
   [[ -r "$evidence_file" ]] || wslab_die "Template $template_id for $os has no certification evidence: $evidence_file"
   config_sha256="$(wslab_template_config_sha256 "$template_id")"
@@ -320,22 +306,28 @@ wslab_require_template_certification() {
   build_receipt_file="$(wslab_report_directory "$site_file")/template-builds/template-${os}-${template_id}.json"
   expected_automation_sha256="$(jq -r '.automationSha256 // empty' "$build_receipt_file" 2>/dev/null || true)"
   automation_sha256="$(wslab_template_automation_sha256)"
+  expected_input_sha256="$(jq -r '.inputSha256 // empty' "$build_receipt_file" 2>/dev/null || true)"
+  input_sha256="$(wslab_template_input_sha256 "$site_file" "$os")"
   jq -e \
     --arg os "$os" \
     --argjson templateId "$template_id" \
     --arg configSha256 "$config_sha256" \
     --arg pveVersion "$pve_version" \
     --arg expectedAutomationSha256 "$expected_automation_sha256" \
-    --arg automationSha256 "$automation_sha256" '
+    --arg automationSha256 "$automation_sha256" \
+    --arg expectedInputSha256 "$expected_input_sha256" \
+    --arg inputSha256 "$input_sha256" '
       .schemaVersion == 1 and
       .status == "passed" and
       .template.os == $os and
       .template.id == $templateId and
       .template.configSha256 == $configSha256 and
       .template.pveVersion == $pveVersion and
-      ($expectedAutomationSha256 == "" or
-        (.template.automationSha256 == $expectedAutomationSha256 and
-         $expectedAutomationSha256 == $automationSha256)) and
+      $expectedAutomationSha256 != "" and
+      .template.automationSha256 == $expectedAutomationSha256 and
+      $expectedAutomationSha256 == $automationSha256 and
+      $expectedInputSha256 != "" and
+      $expectedInputSha256 == $inputSha256 and
       (.canaries | length == 2) and
       all(.canaries[]; .status == "passed")
     ' "$evidence_file" >/dev/null || wslab_die "Template $template_id certification is failed, stale, or for a different PVE version"

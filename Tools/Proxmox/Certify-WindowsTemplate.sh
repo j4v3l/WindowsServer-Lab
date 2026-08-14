@@ -12,7 +12,7 @@ retain_failed_canary="false"
 apply="false"
 
 usage() {
-  printf 'Usage: %s --os <server-2025|server-2022|windows-11> --site <json> [--evidence-dir <path>] [--retain-failed-canary] [--apply]\n' "$0"
+  printf 'Usage: %s --os <server-2025|windows-11> --site <json> [--evidence-dir <path>] [--retain-failed-canary] [--apply]\n' "$0"
 }
 
 while (($#)); do
@@ -27,11 +27,11 @@ while (($#)); do
   esac
 done
 
-case "$os" in server-2025|server-2022|windows-11) ;; *) usage >&2; exit 2 ;; esac
+case "$os" in server-2025|windows-11) ;; *) usage >&2; exit 2 ;; esac
 [[ -n "$site_file" ]] || { usage >&2; exit 2; }
 wslab_require_command jq
 site_file="$(wslab_realpath "$site_file")"
-wslab_validate_inputs asgard smoke "$site_file"
+wslab_validate_inputs "$site_file"
 
 template_id="$(jq -r --arg os "$os" '.proxmox.templates[$os]' "$site_file")"
 canary_id="$(jq -r '.templateCertification.vmId' "$site_file")"
@@ -57,7 +57,7 @@ fi
 [[ "$(id -u)" -eq 0 ]] || wslab_die "--apply must run as root on a Proxmox VE node"
 wslab_require_proxmox
 for command in arping base64 iconv python3 sha256sum; do wslab_require_command "$command"; done
-[[ "$(hostname -s)" == "$(jq -r '.proxmox.node' "$site_file")" ]] || wslab_die "The site configuration targets a different Proxmox node"
+[[ "$(hostname -s)" == "$(wslab_proxmox_node "$site_file")" ]] || wslab_die "Terraform targets a different Proxmox node"
 [[ -d "/sys/class/net/$bridge" ]] || wslab_die "Certification bridge does not exist: $bridge"
 qm config "$template_id" | grep -Eq '^template: 1$' || wslab_die "Template $template_id for $os is missing or not a Proxmox template"
 if wslab_qm_exists "$canary_id"; then wslab_die "Certification VM ID $canary_id is already in use"; fi
@@ -81,6 +81,7 @@ windows_iso_sha256="$zero_sha"
 virtio_iso_sha256="$zero_sha"
 generated_media_sha256="$zero_sha"
 cloudbase_sha256="$zero_sha"
+osconfig_sha256="$zero_sha"
 qemu_agent_sha256="$zero_sha"
 automation_sha256="$zero_sha"
 canaries='[]'
@@ -112,6 +113,7 @@ write_evidence() {
     --arg virtioIsoSha256 "$virtio_iso_sha256" \
     --arg generatedMediaSha256 "$generated_media_sha256" \
     --arg cloudbaseInitSha256 "$cloudbase_sha256" \
+    --arg microsoftOsConfigSha256 "$osconfig_sha256" \
     --arg qemuGuestAgentSha256 "$qemu_agent_sha256" \
     --arg automationSha256 "$automation_sha256" \
     --argjson canaries "$canaries" '
@@ -128,7 +130,7 @@ write_evidence() {
           buildRunId: $buildRunId,
           automationSha256: $automationSha256,
           sources: {windowsIsoSha256: $windowsIsoSha256, virtioIsoSha256: $virtioIsoSha256, generatedMediaSha256: $generatedMediaSha256},
-          payloads: {cloudbaseInitSha256: $cloudbaseInitSha256, qemuGuestAgentSha256: $qemuGuestAgentSha256}
+          payloads: {cloudbaseInitSha256: $cloudbaseInitSha256, microsoftOsConfigSha256: $microsoftOsConfigSha256, qemuGuestAgentSha256: $qemuGuestAgentSha256}
         },
         canaries: $canaries
       } + (if $error == "" then {} else {error: $error} end)
@@ -202,6 +204,24 @@ guest_exec_powershell() {
   jq -r '."out-data" // empty' <<<"$result" | tr -d '\r'
 }
 
+restart_certification_guest() {
+  local vmid="$1" started saw_down="false" elapsed restart_script encoded
+  restart_script='Restart-Computer -Force'
+  encoded="$(printf '%s' "$restart_script" | iconv -f UTF-8 -t UTF-16LE | base64 -w 0)"
+  qm guest exec "$vmid" --timeout 60 -- powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "$encoded" >/dev/null 2>&1 || true
+  started="$(awk '{print int($1)}' /proc/uptime)"
+  while true; do
+    if qm guest cmd "$vmid" ping >/dev/null 2>&1; then
+      [[ "$saw_down" == "false" ]] || return 0
+    else
+      saw_down="true"
+    fi
+    elapsed="$(( $(awk '{print int($1)}' /proc/uptime) - started ))"
+    ((elapsed < timeout_seconds)) || { failure_message="Certification VM $vmid did not complete its post-cleanup restart."; return 1; }
+    sleep 5
+  done
+}
+
 read -r -d '' inspection_script <<'POWERSHELL' || true
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -234,6 +254,12 @@ $cachedAnswers = @(
 $ipv4 = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | Select-Object -ExpandProperty IPAddress)
 $operatingSystem = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
 $imageState = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State' -Name ImageState -ErrorAction Stop).ImageState
+$setupState = Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\Setup' -ErrorAction Stop
+$oobeComplete =
+    [int]$setupState.OOBEInProgress -eq 0 -and
+    [int]$setupState.SystemSetupInProgress -eq 0 -and
+    [int]$setupState.SetupType -eq 0 -and
+    [string]::IsNullOrWhiteSpace([string]$setupState.CmdLine)
 $cloudbaseConfig = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init.conf'
 $cloudbaseUnattend = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
 $cloudbaseLog = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\log\cloudbase-init.log'
@@ -242,6 +268,15 @@ $firstBootCleanupCompletePath = Join-Path $root 'first-boot-cleanup.complete'
 $firstBootCleanupComplete = if (Test-Path -LiteralPath $firstBootCleanupCompletePath -PathType Leaf) {
     (Get-Content -LiteralPath $firstBootCleanupCompletePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop).status -eq 'complete'
 } else { $false }
+$osConfigModule = Get-Module -ListAvailable -Name Microsoft.OSConfig | Sort-Object Version -Descending | Select-Object -First 1
+$osConfigReady = if ($manifest.os -eq 'server-2025') {
+    [bool]$osConfigModule -and
+    [bool](Get-Command -Name Get-OSConfigDesiredConfiguration -ErrorAction SilentlyContinue) -and
+    [bool](Get-Command -Name Set-OSConfigDesiredConfiguration -ErrorAction SilentlyContinue)
+}
+else {
+    $true
+}
 $result = [ordered]@{
     hostname = $env:COMPUTERNAME
     machineSid = $machineSid
@@ -265,6 +300,8 @@ $result = [ordered]@{
     firstBootCleanupScriptAbsent = (-not (Test-Path -LiteralPath $firstBootCleanupPath))
     firstBootCleanupTaskAbsent = (-not [bool](Get-ScheduledTask -TaskName 'WindowsServerLab-FirstBootCleanup' -ErrorAction SilentlyContinue))
     builtInAdministratorDisabled = (-not $administrator.Enabled)
+    oobeComplete = $oobeComplete
+    microsoftOsConfigReady = $osConfigReady
     manifest = $manifest
 }
 $result | ConvertTo-Json -Depth 10 -Compress
@@ -272,11 +309,10 @@ POWERSHELL
 
 run_canary() {
   local sequence="$1"
-  local suffix hostname guest_output guest_json check_json canary_json inspection_deadline last_failed_checks
+  local suffix hostname guest_output guest_json check_json canary_json inspection_deadline last_failed_checks post_cleanup_rebooted="false"
   suffix="$(if [[ "$sequence" -eq 1 ]]; then printf A; else printf B; fi)"
   case "$os" in
     server-2025) hostname="WSLAB-S25-$suffix" ;;
-    server-2022) hostname="WSLAB-S22-$suffix" ;;
     windows-11) hostname="WSLAB-W11-$suffix" ;;
   esac
 
@@ -335,6 +371,7 @@ run_canary() {
         networkApplied: (($guest.ipv4 | index($expectedAddress)) != null),
         qemuAgent: ($guest.qemuAgentRunning and $guest.qemuAgentAutomatic),
         cloudbaseInit: ($guest.cloudbaseAutomatic and $guest.cloudbaseConfigDrive and $guest.cloudbaseLogPresent),
+        microsoftOsConfig: $guest.microsoftOsConfigReady,
         cloudbaseSecretsRemoved: $guest.cloudbaseSecretsAbsent,
         winRmBuildAccessRemoved: $guest.winRmClean,
         buildCertificateRemoved: $guest.buildCertificateAbsent,
@@ -344,16 +381,25 @@ run_canary() {
         sealScriptRemoved: $guest.sealScriptAbsent,
         firstBootCleanupCompleted: ($guest.firstBootCleanupComplete and $guest.firstBootCleanupScriptAbsent and $guest.firstBootCleanupTaskAbsent),
         builtInAdministratorDisabled: $guest.builtInAdministratorDisabled,
+        oobeCompleted: $guest.oobeComplete,
         imageGeneralized: ($guest.imageState == "IMAGE_STATE_COMPLETE"),
         manifestMatchesOs: ($guest.manifest.schemaVersion == 1 and $guest.manifest.os == $expectedOs),
         editionMatches: (
           if $expectedOs == "windows-11" then $guest.operatingSystem == "Microsoft Windows 11 Education"
-          elif $expectedOs == "server-2025" then ($guest.operatingSystem | test("Windows Server 2025"))
-          else ($guest.operatingSystem | test("Windows Server 2022")) end
+          else ($guest.operatingSystem | test("Windows Server 2025")) end
         )
       }
     ')"
     if jq -e 'all(.[]; . == true)' >/dev/null <<<"$check_json"; then
+      if [[ "$post_cleanup_rebooted" == "false" ]]; then
+        wslab_log INFO "Restarting certification canary $sequence to prove OOBE completion and hostname persistence"
+        restart_certification_guest "$canary_id" || return 1
+        post_cleanup_rebooted="true"
+        last_failed_checks='post-cleanup reboot inspection pending'
+        check_json='{}'
+        continue
+      fi
+      check_json="$(jq '. + {postCleanupRebootStable:true}' <<<"$check_json")"
       break
     fi
     last_failed_checks="$(jq -r 'to_entries | map(select(.value == false) | .key) | join(", ")' <<<"$check_json")"
@@ -369,6 +415,7 @@ run_canary() {
     windows_iso_sha256="$(jq -r '.manifest.sources.windowsIsoSha256' <<<"$guest_json")"
     virtio_iso_sha256="$(jq -r '.manifest.sources.virtioIsoSha256' <<<"$guest_json")"
     cloudbase_sha256="$(jq -r '.manifest.payloads.cloudbaseInit.sha256' <<<"$guest_json")"
+    osconfig_sha256="$(jq -r '.manifest.payloads.microsoftOsConfig.sha256' <<<"$guest_json")"
     qemu_agent_sha256="$(jq -r '.manifest.payloads.qemuGuestAgent.sha256' <<<"$guest_json")"
     automation_sha256="$(jq -r '.manifest.automationSha256' <<<"$guest_json")"
     [[ -r "$build_receipt" ]] || { failure_message="Build receipt is missing for template $template_id."; return 1; }
@@ -380,7 +427,8 @@ run_canary() {
       --arg windowsIsoSha256 "$windows_iso_sha256" \
       --arg virtioIsoSha256 "$virtio_iso_sha256" \
       --arg automationSha256 "$automation_sha256" \
-      --arg currentAutomationSha256 "$(wslab_template_automation_sha256)" '
+      --arg currentAutomationSha256 "$(wslab_template_automation_sha256)" \
+      --arg currentInputSha256 "$(wslab_template_input_sha256 "$site_file" "$os")" '
         .schemaVersion == 1 and
         .os == $os and
         .templateId == $templateId and
@@ -390,6 +438,7 @@ run_canary() {
         .sources.virtioIsoSha256 == $virtioIsoSha256 and
         .automationSha256 == $automationSha256 and
         $automationSha256 == $currentAutomationSha256 and
+        .inputSha256 == $currentInputSha256 and
         (.sources.generatedMediaSha256 | test("^[A-Fa-f0-9]{64}$"))
       ' >/dev/null "$build_receipt" || { failure_message="Build receipt does not match template $template_id or its embedded manifest."; return 1; }
     generated_media_sha256="$(jq -r '.sources.generatedMediaSha256' "$build_receipt")"

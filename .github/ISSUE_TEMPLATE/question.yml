@@ -47,7 +47,7 @@ body:
     attributes:
       label: Environment Information
       description: What environment are you working with?
-      placeholder: Windows Server 2022, Windows 11, Proxmox VE, etc.
+      placeholder: Windows Server 2025, Windows 11, Proxmox VE 9.2, etc.
     validations:
       required: false
 
@@ -100,4 +100,4 @@ body:
       description: By submitting this issue, you agree to follow our Code of Conduct
       options:
         - label: I agree to follow this project's Code of Conduct
-          required: true 
+          required: true

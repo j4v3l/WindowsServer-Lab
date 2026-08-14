@@ -1,15 +1,15 @@
 @{
     RootModule        = 'WindowsServerLab.psm1'
-    ModuleVersion     = '2.0.0'
+    ModuleVersion     = '3.0.0'
     GUID              = 'f28dca4f-3de4-4daf-b8f7-69f63f80cf7b'
     Author            = 'Windows Server Lab Project'
     CompanyName       = 'Windows Server Lab Project'
     Copyright         = '(c) Windows Server Lab Project. MIT licensed.'
-    Description       = 'Data-driven configuration and validation for Windows Server Lab v2 guests.'
+    Description       = 'Single-inventory configuration and validation for the Terraform-managed Windows Server Lab.'
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
         'ConvertTo-LabDistinguishedName',
-        'Get-LabProfileVirtualMachine',
+        'Get-LabVirtualMachine',
         'Import-LabDefinition',
         'Initialize-LabDirectory',
         'Install-LabRole',

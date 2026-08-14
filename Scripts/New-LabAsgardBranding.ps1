@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-$definition = Get-Content -LiteralPath "$root\LabConfig\demos\asgard.json" -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+$definition = Get-Content -LiteralPath "$root\LabConfig\lab.json" -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
 $fileServer = @($definition.virtualMachines | Where-Object role -eq 'file-server')
 if ($fileServer.Count -ne 1 -or $env:COMPUTERNAME -ine $fileServer[0].name) { throw "Run this script on $($fileServer[0].name)." }
 $computerSystem = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop

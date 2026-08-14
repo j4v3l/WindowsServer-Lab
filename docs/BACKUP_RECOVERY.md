@@ -1,20 +1,31 @@
-# Backup and recovery runbook
+# Backup and recovery
 
-## Backup layers
+## Destruction gate
 
-1. Run `Start-LabSystemStateBackup.ps1` on both domain controllers to a protected non-system volume.
-2. Run `Start-LabFileBackup.ps1` on the file server to a protected target.
-3. Run `Backup-Lab.sh --apply` on Proxmox for owned VM snapshots to the configured Proxmox/PBS storage. It applies the declared last/daily/weekly/monthly prune policy and records JSON evidence.
-4. Verify job results and retention at the destination; a successful command without restorable media is not a passed control.
+The single Terraform state owns the inventory VMs and, when configured, a dedicated lab bridge. Preview and destroy from the workstation:
 
-## File restore drill
+```bash
+terraform -chdir=terraform plan -destroy
+terraform -chdir=terraform destroy
+```
 
-Restore a representative file to an alternate path, verify its digest and ACL, record start/end time and backup identifier, then remove the drill copy. Never overwrite the source for a routine test.
+`terraform_data.backup_before_destroy` invokes the remote backup operation before any dependent VM is destroyed. It verifies every ID/name/ownership tag and creates a `vzdump` snapshot on the configured backup storage with configured retention. Missing resources, identity mismatches, storage failures, or backup failures stop destruction. Inventory changes replace the gate so destructive replacements do not bypass backup.
 
-## AD System State drill
+The guest agent remains enabled and `stop_on_destroy = false`, so Proxmox requests graceful guest shutdown before purging each managed VM and disk. Packer-created templates, certification evidence, and a shared management bridge remain. A Terraform-owned dedicated bridge is removed after its dependent VMs.
 
-Clone the DC backup into an isolated network with no route to the active domain. Follow Microsoft's nonauthoritative/authoritative recovery procedure appropriate to the scenario, verify `dcdiag`, DNS, SYSVOL, and replication only within the isolated clone, and destroy the clone after evidence is retained.
+## Additional Windows backups
 
-## Teardown
+A VM backup is not the complete Active Directory recovery method. Run and test Windows System State backups for both domain controllers. Use `Start-LabSystemStateBackup.ps1` and retain credentials and keys outside this repository.
 
-Review `Remove-Lab.sh` without `--apply`. The apply path backs up first by default, requires `--confirm <demo>-<profile>`, checks each VM's canonical name and ownership tag, and does not touch unrelated VMs. Use `--skip-backup` only when an existing verified recovery point is recorded.
+The file server data disk needs application-consistent file backup and periodic restore tests. Use `Start-LabFileBackup.ps1` and `Test-LabFileRestore.ps1` with an approved target. Record restore evidence independently from Terraform state.
+
+## Recovery order
+
+1. Restore the single Terraform state and verify the shared or dedicated VLAN-aware bridge.
+2. Verify or rebuild/certify templates before restoring clones.
+3. Restore the forest with Microsoft's AD forest recovery procedure and a tested System State copy.
+4. Restore the secondary DC only after the primary recovery state is sound.
+5. Restore member servers, file data, and clients.
+6. Run `terraform apply`, acceptance, and a zero-change plan.
+
+Keep Terraform state backups, Proxmox VM backups, Windows backups, recovery passwords, and activation material in separately protected systems.

@@ -2,7 +2,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Activates or audits Windows licensing across a canonical lab profile.
+    Activates or audits Windows licensing across the inventory-driven lab.
 .DESCRIPTION
     Prompts once for each required product key and transmits SecureString objects over
     authenticated PowerShell remoting. Keys are never persisted or placed in process
@@ -11,8 +11,6 @@
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory)][ValidateSet('Activate', 'Status')][string]$Action,
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
-    [Parameter(Mandatory)][Alias('Profile')][ValidateSet('smoke', 'core', 'full')][string]$LabProfile,
     [ValidateSet('Servers', 'All')][string]$Scope = 'All',
     [Security.SecureString]$ServerProductKey,
     [Security.SecureString]$Windows11EducationProductKey,
@@ -27,7 +25,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root 'Reports\windows-activation-fleet.json' }
 $moduleCandidates = @(
     (Join-Path $root 'Modules\WindowsServerLab\WindowsServerLab.psd1'),
@@ -38,8 +36,8 @@ if (-not $modulePath) { throw 'WindowsServerLab module was not found.' }
 Import-Module $modulePath -Force -ErrorAction Stop
 
 $definition = Import-LabDefinition -Path $DefinitionPath
-$targets = @(Get-LabProfileVirtualMachine -Definition $definition -LabProfile $LabProfile)
-if ($Scope -eq 'Servers') { $targets = @($targets | Where-Object role -notin @('client', 'aiml-client')) }
+$targets = @(Get-LabVirtualMachine -Definition $definition)
+if ($Scope -eq 'Servers') { $targets = @($targets | Where-Object role -ne 'client') }
 if ($targets.Count -eq 0) { throw 'The requested activation scope contains no machines.' }
 
 if ($Action -eq 'Activate' -and -not $WhatIfPreference) {
@@ -61,19 +59,18 @@ if ($Action -eq 'Activate' -and -not $WhatIfPreference) {
         $Windows11EducationProductKey = Get-Secret @secretParameters
         if ($Windows11EducationProductKey -isnot [Security.SecureString]) { throw 'The Windows 11 Education activation secret must be returned as a SecureString.' }
     }
-    if (@($targets | Where-Object role -notin @('client', 'aiml-client')).Count -gt 0 -and -not $ServerProductKey) {
+    if (@($targets | Where-Object role -ne 'client').Count -gt 0 -and -not $ServerProductKey) {
         $ServerProductKey = Read-Host -Prompt 'Enter the Windows Server product key for this activation run' -AsSecureString
     }
-    if (@($targets | Where-Object role -in @('client', 'aiml-client')).Count -gt 0 -and -not $Windows11EducationProductKey) {
+    if (@($targets | Where-Object role -eq 'client').Count -gt 0 -and -not $Windows11EducationProductKey) {
         $Windows11EducationProductKey = Read-Host -Prompt 'Enter the Windows 11 Education product key for this activation run' -AsSecureString
     }
 }
 
 $result = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 3
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
-    profile = $LabProfile
+    lab = 'asgard'
     scope = $Scope
     action = $Action
     targetCount = $targets.Count
@@ -94,7 +91,7 @@ $remoteScript = {
 
 try {
     foreach ($target in $targets) {
-        $productClass = if ($target.role -in @('client', 'aiml-client')) { 'Windows11Education' } else { 'Server' }
+        $productClass = if ($target.role -eq 'client') { 'Windows11Education' } else { 'Server' }
         $machineResult = [ordered]@{ computerName = $target.name; productClass = $productClass; status = 'planned' }
         try {
             if ($PSCmdlet.ShouldProcess($target.name, "$Action Windows licensing")) {
@@ -128,7 +125,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Fleet activation state: $($result.status)" -Data @{ Demo = $Demo; Profile = $LabProfile; Scope = $Scope; TargetCount = $targets.Count }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Fleet activation state: $($result.status)" -Data @{ Lab = 'asgard'; Scope = $Scope; TargetCount = $targets.Count }
 }
 
 $result

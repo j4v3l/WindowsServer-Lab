@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateSet('infrastructure', 'domain', 'services', 'security', 'full')][string]$Phase,
-    [Parameter(Mandatory)][ValidateSet('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'client', 'aiml-client')][string]$Role,
+    [Parameter(Mandatory)][ValidateSet('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'member-server', 'client')][string]$Role,
     [string]$OutputPath = "C:\ProgramData\WindowsServerLab\Reports\compliance-$env:COMPUTERNAME.json"
 )
 

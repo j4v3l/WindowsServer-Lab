@@ -139,9 +139,6 @@ TestResults/
 !Scripts/*.ps1
 !Scripts/*.psd1
 !Scripts/*.psm1
-!Demo/Asgard/Scripts/*.ps1
-!Demo/Olympus/Scripts/*.ps1
-!Demo/**/*.ps1
 !LabSetupTutorials/*.ps1
 
 # Allow documentation and configuration files
@@ -158,8 +155,23 @@ TestResults/
 
 # Operator-local topology mapping. Commit site.example.json, never site.json.
 LabConfig/site.json
+# Preserve any legacy operator-local credential file outside version control.
 LabConfig/operator.json
 LabConfig/setup-keys.json
+LabConfig/secrets.json
+LabConfig/proxmox-ca.pem
+
+# Terraform keeps local state on the Proxmox node by default. Provider locks are
+# committed; state, plans, local variables, and working directories are not.
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.example.tfvars
+crash.log
+crash.*.log
 
 # Runtime activation material and other operator-local secret stores. Product keys are
 # supplied interactively or by a secret provider and must never be committed.
@@ -177,18 +189,9 @@ activation.local.*
 artifacts/certification/
 
 # =============================================================================
-# PROJECT-SPECIFIC EXCEPTIONS
-# =============================================================================
-
-# Allow specific project files that might match blocked patterns
-# Removed PowerShell module files and Demo scripts (no longer needed for Proxmox version)
-
-# =============================================================================
 # KEEP EMPTY DIRECTORIES
 # =============================================================================
 
 # Keep important empty directories
 !Scripts/.gitkeep
-!Demo/Asgard/Scripts/.gitkeep
-!Demo/Olympus/Scripts/.gitkeep
 !LabSetupTutorials/.gitkeep

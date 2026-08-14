@@ -140,6 +140,7 @@ if ($manifest.schemaVersion -ne 1 -or $manifest.os -ne '${os_type}') { throw 'Th
 
 $qemuAgentPath = Resolve-VerifiedPayload -Payload $manifest.payloads.qemuGuestAgent -ExpectedHash '${qemu_agent_msi_sha256}'.ToUpperInvariant() -MediaRoot $answerRoot
 $cloudbasePath = Resolve-VerifiedPayload -Payload $manifest.payloads.cloudbaseInit -ExpectedHash '${cloudbase_msi_sha256}'.ToUpperInvariant() -MediaRoot $answerRoot
+$osConfigPath = Resolve-VerifiedPayload -Payload $manifest.payloads.microsoftOsConfig -ExpectedHash '${osconfig_nupkg_sha256}'.ToUpperInvariant() -MediaRoot $answerRoot
 
 Install-VerifiedMsi -Name 'QEMU Guest Agent' -Path $qemuAgentPath
 $qemuService = Get-Service -Name QEMU-GA -ErrorAction Stop
@@ -150,6 +151,35 @@ $qemuService.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
 Install-VerifiedMsi -Name 'Cloudbase-Init' -Path $cloudbasePath -AdditionalArguments @('RUN_SERVICE_AS_LOCAL_SYSTEM=1')
 Get-Service -Name cloudbase-init -ErrorAction Stop | Out-Null
 Set-Service -Name cloudbase-init -StartupType Automatic
+
+$osConfigState = 'not-required'
+if ('${os_type}' -eq 'server-2025') {
+    $osConfigVersion = '${osconfig_version}'
+    if ($osConfigVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'The pinned Microsoft.OSConfig version is invalid.' }
+    $moduleVersionPath = Join-Path "$env:ProgramFiles\WindowsPowerShell\Modules\Microsoft.OSConfig" $osConfigVersion
+    if (-not (Test-Path -LiteralPath $moduleVersionPath -PathType Container)) {
+        $moduleArchive = Join-Path $root 'Microsoft.OSConfig.zip'
+        Copy-Item -LiteralPath $osConfigPath -Destination $moduleArchive -Force
+        try {
+            New-Item -Path $moduleVersionPath -ItemType Directory -Force | Out-Null
+            Expand-Archive -LiteralPath $moduleArchive -DestinationPath $moduleVersionPath -Force
+        }
+        finally {
+            Remove-Item -LiteralPath $moduleArchive -Force -ErrorAction SilentlyContinue
+        }
+    }
+    $osConfigModule = Get-Module -ListAvailable -Name Microsoft.OSConfig |
+        Where-Object { $_.Version -eq [version]$osConfigVersion -and $_.ModuleBase -eq $moduleVersionPath } |
+        Select-Object -First 1
+    if (-not $osConfigModule) { throw "Pinned Microsoft.OSConfig $osConfigVersion did not install correctly." }
+    Import-Module $osConfigModule.Path -Force -ErrorAction Stop
+    foreach ($requiredCommand in @('Get-OSConfigDesiredConfiguration', 'Set-OSConfigDesiredConfiguration')) {
+        if (-not (Get-Command -Name $requiredCommand -Module Microsoft.OSConfig -ErrorAction SilentlyContinue)) {
+            throw "Microsoft.OSConfig is missing required command $requiredCommand."
+        }
+    }
+    $osConfigState = $osConfigModule.Version.ToString()
+}
 
 # OpenSSH is deliberately not downloaded during image creation. It can be enabled
 # after deployment when the operator has supplied a reachable update source or FoD.
@@ -176,6 +206,7 @@ $completion = [ordered]@{
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
     qemuGuestAgent = 'running'
     cloudbaseInit = 'installed'
+    microsoftOsConfig = $osConfigState
     openSsh = $openSshState
 }
 $completion | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $bootstrapComplete -Encoding UTF8

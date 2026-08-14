@@ -48,8 +48,12 @@ $xml = @"
 "@
 try {
     Set-Content -LiteralPath $subscriptionPath -Value $xml -Encoding UTF8
-    wecutil.exe gs $SubscriptionName 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) { wecutil.exe ds $SubscriptionName | Out-Null }
+    $existingSubscriptions = @(& wecutil.exe es)
+    if ($LASTEXITCODE -ne 0) { throw "wecutil could not enumerate subscriptions (exit code $LASTEXITCODE)" }
+    if ($SubscriptionName -in $existingSubscriptions) {
+        & wecutil.exe ds $SubscriptionName | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "wecutil could not replace subscription $SubscriptionName (exit code $LASTEXITCODE)" }
+    }
     wecutil.exe cs $subscriptionPath
     if ($LASTEXITCODE -ne 0) { throw "wecutil failed with exit code $LASTEXITCODE" }
 }

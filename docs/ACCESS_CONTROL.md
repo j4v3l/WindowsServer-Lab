@@ -8,7 +8,6 @@ Run on a domain controller in elevated Windows PowerShell 5.1 after `Initialize-
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 `
-  -Demo asgard `
   -Initialize
 ```
 
@@ -16,34 +15,33 @@ To lock selected users to an approved image as well as preventing wallpaper chan
 
 ```powershell
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 `
-  -Demo asgard `
   -Initialize `
   -WallpaperPath '\\HEIMDALL-FS01\Tools\Branding\asgard.jpg'
 ```
 
-Initialization is declarative and rerunnable. It creates or reconciles every GPO, reads each registry policy value back, gives `Authenticated Users` read permission, grants only the matching control group permission to apply the GPO, and verifies its OU link. Computer controls link to `OU=Workstations`; user controls link to the demo's base OU.
+Initialization is declarative and rerunnable. It creates or reconciles every GPO, reads each registry policy value back, gives `Authenticated Users` read permission, grants only the matching control group permission to apply the GPO, and verifies its OU link. Computer controls link to `OU=Workstations`; user controls link to the lab base OU.
 
 ## Give or remove access
 
 `Deny` adds the target to a control group. `Allow` removes it from that group:
 
 ```powershell
-# Hardware policy: a canonical user name resolves to that user's demo workstation.
+# Hardware policy: a canonical user name resolves to that user's lab workstation.
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 `
-  -Demo asgard -Identity thor.engineer -Control Camera -Access Deny -RefreshPolicy
+  -Identity thor.engineer -Control Camera -Access Deny -RefreshPolicy
 
 # A computer name is also accepted for computer-scoped controls.
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 `
-  -Demo asgard -Identity THOR-WS01 -Control USBStorage -Access Allow -RefreshPolicy
+  -Identity THOR-WS01 -Control USBStorage -Access Allow -RefreshPolicy
 
 # User policy: prevent and later permit wallpaper changes.
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 `
-  -Demo asgard -Identity thor.engineer -Control Wallpaper -Access Deny -RefreshPolicy
+  -Identity thor.engineer -Control Wallpaper -Access Deny -RefreshPolicy
 C:\ProgramData\WindowsServerLab\Scripts\Set-LabAccessControl.ps1 `
-  -Demo asgard -Identity thor.engineer -Control Wallpaper -Access Allow -RefreshPolicy
+  -Identity thor.engineer -Control Wallpaper -Access Allow -RefreshPolicy
 ```
 
-Camera, microphone, USB storage, Store, OneDrive, and RDP clipboard are computer-scoped: naming a user is a convenience that resolves their canonical demo workstation, and the resulting policy affects everyone who uses that workstation. Wallpaper, Control Panel, command prompt, and registry-tool controls are user-scoped and follow the user across in-scope workstations.
+Camera, microphone, USB storage, Store, OneDrive, and RDP clipboard are computer-scoped: naming a user is a convenience that resolves their canonical lab workstation, and the resulting policy affects everyone who uses that workstation. Wallpaper, Control Panel, command prompt, and registry-tool controls are user-scoped and follow the user across in-scope workstations.
 
 The available control IDs are:
 

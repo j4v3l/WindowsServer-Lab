@@ -10,8 +10,6 @@
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
-    [Parameter(Mandatory)][ValidateSet('smoke', 'core', 'full')][string]$LabProfile,
     [Parameter(Mandatory)][int]$VmId,
     [string]$DefinitionPath,
     [string]$OutputPath
@@ -20,29 +18,21 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root "Reports\data-disks-$VmId.json" }
 
 Import-Module (Join-Path $root 'Modules\WindowsServerLab\WindowsServerLab.psd1') -Force -ErrorAction Stop
 $definition = Import-LabDefinition -Path $DefinitionPath
 $vm = @($definition.virtualMachines | Where-Object id -eq $VmId)
-if ($vm.Count -ne 1) { throw "VM ID $VmId is not unique in the $Demo definition." }
+if ($vm.Count -ne 1) { throw "VM ID $VmId is not unique in the lab definition." }
 
-$declared = @()
-if ($vm[0].PSObject.Properties.Name -contains 'profileDataDiskOverrides' -and $vm[0].profileDataDiskOverrides) {
-    $profileProperty = $vm[0].profileDataDiskOverrides.PSObject.Properties[$LabProfile]
-    if ($profileProperty) { $declared = @($profileProperty.Value) }
-}
-if ($declared.Count -eq 0 -and $vm[0].PSObject.Properties.Name -contains 'dataDisks') {
-    $declared = @($vm[0].dataDisks)
-}
+$declared = if ($vm[0].PSObject.Properties.Name -contains 'dataDisks') { @($vm[0].dataDisks) } else { @() }
 $declared = @($declared | Sort-Object { [int]($_.slot -replace '^scsi', '') })
 
 $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
-    profile = $LabProfile
+    lab = 'asgard'
     vmId = $VmId
     computerName = $env:COMPUTERNAME
     status = 'configured'
@@ -54,6 +44,30 @@ try {
     foreach ($expected in $declared) {
         $driveLetter = [string]$expected.driveLetter
         $volume = Get-Volume -DriveLetter $driveLetter -ErrorAction Ignore
+        if ($volume -and ($volume.FileSystem -ne 'NTFS' -or $volume.FileSystemLabel -ne [string]$expected.label)) {
+            $logicalDisk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID = '${driveLetter}:'" -ErrorAction Stop
+            $configurationVolume = @(Get-CimInstance -ClassName Win32_Volume -Filter "DriveLetter = '${driveLetter}:'" -ErrorAction Stop)
+            $isProxmoxConfigurationDrive =
+                $logicalDisk.DriveType -eq 5 -and
+                $volume.FileSystem -eq 'CDFS' -and
+                $volume.FileSystemLabel -eq 'config-2' -and
+                $configurationVolume.Count -eq 1
+            if ($isProxmoxConfigurationDrive) {
+                $usedLetters = @(Get-Volume -ErrorAction Stop | Where-Object DriveLetter | ForEach-Object { ([string]$_.DriveLetter).ToUpperInvariant() })
+                $relocationLetter = @(90..69 | ForEach-Object { [string][char]$_ } | Where-Object { $_ -notin $usedLetters } | Select-Object -First 1)
+                if ($relocationLetter.Count -ne 1) { throw "No unused drive letter is available for the Proxmox configuration drive currently mounted as ${driveLetter}:." }
+                if ($PSCmdlet.ShouldProcess("Proxmox configuration drive ${driveLetter}:", "Relocate to $($relocationLetter[0]): so the declared data disk can use ${driveLetter}:")) {
+                    Set-CimInstance -InputObject $configurationVolume[0] -Property @{ DriveLetter = "$($relocationLetter[0]):" } -ErrorAction Stop | Out-Null
+                }
+                if ($WhatIfPreference) {
+                    $volume = $null
+                }
+                else {
+                    $volume = Get-Volume -DriveLetter $driveLetter -ErrorAction Ignore
+                    if ($volume) { throw "Proxmox configuration drive relocation did not release ${driveLetter}:." }
+                }
+            }
+        }
         if ($volume) {
             if ($volume.FileSystem -ne 'NTFS' -or $volume.FileSystemLabel -ne [string]$expected.label) {
                 throw "Drive ${driveLetter}: exists but is not the declared NTFS volume '$($expected.label)'; refusing to alter it."
@@ -102,7 +116,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if (-not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Data disk reconciliation $($result.status) for VM $VmId" -Data @{ Demo = $Demo; Profile = $LabProfile }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Data disk reconciliation $($result.status) for VM $VmId" -Data @{ Lab = 'asgard' }
 }
 
 $result

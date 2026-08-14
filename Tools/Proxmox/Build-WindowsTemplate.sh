@@ -28,28 +28,35 @@ while (($#)); do
   esac
 done
 
-case "$os" in server-2025|server-2022|windows-11) ;; *) wslab_die "--os must be server-2025, server-2022, or windows-11" ;; esac
-[[ -n "$iso" && -n "$site_file" ]] || wslab_die "Usage: $0 --os <server-2025|server-2022|windows-11> --iso <local-path|storage:iso/file.iso> --site <file> [--iso-sha256 <sha256>] [--artifacts <json>] [--setup-keys <runtime-json>] [--ephemeral-build-secrets] [--apply]"
+case "$os" in server-2025|windows-11) ;; *) wslab_die "--os must be server-2025 or windows-11" ;; esac
+[[ -n "$iso" && -n "$site_file" ]] || wslab_die "Usage: $0 --os <server-2025|windows-11> --iso <local-path|storage:iso/file.iso> --site <file> [--iso-sha256 <sha256>] [--artifacts <json>] [--setup-keys <runtime-json>] [--ephemeral-build-secrets] [--apply]"
 [[ "$iso_sha256" =~ ^[A-Fa-f0-9]{64}$ ]] || wslab_die "--iso-sha256 with the approved media digest is required"
 wslab_require_command jq
 site_file="$(wslab_realpath "$site_file")"
-jq -e '.schemaVersion == 2' "$site_file" >/dev/null || wslab_die "Invalid site configuration"
+jq -e '.schemaVersion == 3' "$site_file" >/dev/null || wslab_die "Invalid site configuration"
 if [[ -n "$artifact_file" ]]; then
   artifact_file="$(wslab_realpath "$artifact_file")"
   [[ -r "$artifact_file" ]] || wslab_die "Build artifact manifest is not readable: $artifact_file"
-  jq -e '.schemaVersion == 1 and .cloudbaseInit.url and .cloudbaseInit.sha256' "$artifact_file" >/dev/null || wslab_die "Invalid build artifact manifest"
+  jq -e '.schemaVersion == 1 and .cloudbaseInit.url and .cloudbaseInit.sha256 and .microsoftOsConfig.version and .microsoftOsConfig.url and .microsoftOsConfig.sha256' "$artifact_file" >/dev/null || wslab_die "Invalid build artifact manifest"
   PKR_VAR_cloudbase_msi_url="$(jq -r '.cloudbaseInit.url' "$artifact_file")"
   PKR_VAR_cloudbase_msi_sha256="$(jq -r '.cloudbaseInit.sha256' "$artifact_file")"
-  export PKR_VAR_cloudbase_msi_url PKR_VAR_cloudbase_msi_sha256
+  PKR_VAR_osconfig_version="$(jq -r '.microsoftOsConfig.version' "$artifact_file")"
+  PKR_VAR_osconfig_nupkg_url="$(jq -r '.microsoftOsConfig.url' "$artifact_file")"
+  PKR_VAR_osconfig_nupkg_sha256="$(jq -r '.microsoftOsConfig.sha256' "$artifact_file")"
+  export PKR_VAR_cloudbase_msi_url PKR_VAR_cloudbase_msi_sha256 PKR_VAR_osconfig_version PKR_VAR_osconfig_nupkg_url PKR_VAR_osconfig_nupkg_sha256
 fi
+case "$os" in
+  server-2025) PKR_VAR_windows_setup_key='TVRH6-WHNXV-R9WG3-9XRFY-MY832' ;;
+  windows-11) PKR_VAR_windows_setup_key='NW6C2-QMPVW-D7KKK-3GKT6-VCFB2' ;;
+esac
 if [[ -n "$setup_keys_file" ]]; then
   setup_keys_file="$(wslab_realpath "$setup_keys_file")"
   [[ -r "$setup_keys_file" ]] || wslab_die "Runtime setup-key file is not readable: $setup_keys_file"
   jq -e --arg os "$os" '.schemaVersion == 1 and (.setupKeys[$os] | strings)' "$setup_keys_file" >/dev/null || wslab_die "Runtime setup-key file does not contain $os"
   PKR_VAR_windows_setup_key="$(jq -r --arg os "$os" '.setupKeys[$os]' "$setup_keys_file")"
   [[ "$PKR_VAR_windows_setup_key" =~ ^[A-Za-z0-9]{5}(-[A-Za-z0-9]{5}){4}$ ]] || wslab_die "Runtime setup key has an invalid format"
-  export PKR_VAR_windows_setup_key
 fi
+export PKR_VAR_windows_setup_key
 
 if [[ "$iso" != *:* ]]; then
   [[ -r "$iso" ]] || wslab_die "ISO is not readable: $iso"
@@ -59,7 +66,7 @@ if [[ "$iso" != *:* ]]; then
 fi
 
 template_id="$(jq -r --arg os "$os" '.proxmox.templates[$os]' "$site_file")"
-node="$(jq -r '.proxmox.node' "$site_file")"
+node="$(wslab_proxmox_node "$site_file")"
 storage="$(jq -r '.proxmox.vmStorage' "$site_file")"
 iso_storage="$(jq -r '.proxmox.isoStorage' "$site_file")"
 build_bridge="$(jq -r '.templateBuildNetwork.bridge' "$site_file")"
@@ -148,6 +155,7 @@ cleanup() {
   fi
   unset PKR_VAR_proxmox_token PKR_VAR_windows_password
   unset PKR_VAR_windows_setup_key
+  unset PKR_VAR_osconfig_version PKR_VAR_osconfig_nupkg_url PKR_VAR_osconfig_nupkg_sha256
   unset WSLAB_QEMU_AGENT_MSI_SHA256
   return "$exit_status"
 }
@@ -174,19 +182,46 @@ if [[ -r /etc/pve/pve-root-ca.pem ]]; then
   export SSL_CERT_FILE
 fi
 
-for required_var in PKR_VAR_proxmox_url PKR_VAR_proxmox_username PKR_VAR_proxmox_token PKR_VAR_windows_password PKR_VAR_cloudbase_msi_url PKR_VAR_cloudbase_msi_sha256; do
+for required_var in PKR_VAR_proxmox_url PKR_VAR_proxmox_username PKR_VAR_proxmox_token PKR_VAR_windows_password PKR_VAR_windows_setup_key PKR_VAR_cloudbase_msi_url PKR_VAR_cloudbase_msi_sha256 PKR_VAR_osconfig_version PKR_VAR_osconfig_nupkg_url PKR_VAR_osconfig_nupkg_sha256; do
   [[ -n "${!required_var:-}" ]] || wslab_die "Required secret/build environment variable is not set: $required_var"
 done
 wslab_log INFO "Runtime build inputs are present"
 [[ "${PKR_VAR_proxmox_url:-}" == https://* ]] || wslab_die "PKR_VAR_proxmox_url must use HTTPS"
 [[ "${PKR_VAR_cloudbase_msi_url:-}" == https://* ]] || wslab_die "PKR_VAR_cloudbase_msi_url must use HTTPS"
 [[ "${PKR_VAR_cloudbase_msi_sha256:-}" =~ ^[A-Fa-f0-9]{64}$ ]] || wslab_die "PKR_VAR_cloudbase_msi_sha256 must be a SHA-256 digest"
+[[ "${PKR_VAR_osconfig_nupkg_url:-}" == https://* ]] || wslab_die "PKR_VAR_osconfig_nupkg_url must use HTTPS"
+[[ "${PKR_VAR_osconfig_nupkg_sha256:-}" =~ ^[A-Fa-f0-9]{64}$ ]] || wslab_die "PKR_VAR_osconfig_nupkg_sha256 must be a SHA-256 digest"
+[[ "${PKR_VAR_osconfig_version:-}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || wslab_die "PKR_VAR_osconfig_version must use semantic version format"
+[[ "${PKR_VAR_windows_setup_key:-}" =~ ^[A-Za-z0-9]{5}(-[A-Za-z0-9]{5}){4}$ ]] || wslab_die "PKR_VAR_windows_setup_key must use the five-by-five product-key format"
 wslab_log INFO "Runtime build inputs passed format checks"
 
 if wslab_qm_exists "$template_id"; then
   wslab_die "Template ID $template_id already exists; remove it explicitly before rebuilding"
 fi
 wslab_log INFO "Template ID $template_id is available"
+current_epoch="$(date +%s)"
+while IFS=$'\t' read -r stale_token_id stale_token_expiry; do
+  [[ -n "$stale_token_id" ]] || continue
+  [[ "$stale_token_id" =~ ^wslab-packer-${template_id}-[0-9]{14}-[0-9]+$ ]] || wslab_die "Refusing malformed stale Packer token: $stale_token_id"
+  [[ "$stale_token_expiry" =~ ^[0-9]+$ ]] || wslab_die "Refusing Packer token with malformed expiry: $stale_token_id"
+  (( stale_token_expiry > 0 && stale_token_expiry <= current_epoch )) || continue
+  wslab_log WARN "Revoking expired API token from an earlier interrupted build: $stale_token_id"
+  pveum user token remove root@pam "$stale_token_id"
+done < <(pveum user token list root@pam --output-format json | jq -r --arg prefix "wslab-packer-${template_id}-" '.[] | select(.tokenid | startswith($prefix)) | [.tokenid, (.expire // 0)] | @tsv')
+stale_answer_prefix="${iso_storage}:iso/wslab-install-${os}-${template_id}-"
+while IFS= read -r stale_answer_volume; do
+  stale_answer_suffix="${stale_answer_volume#"$stale_answer_prefix"}"
+  [[ "$stale_answer_suffix" =~ ^[0-9]+\.iso$ ]] || wslab_die "Refusing malformed stale answer-media volume: $stale_answer_volume"
+  wslab_log WARN "Removing orphaned answer media from an earlier interrupted build: $stale_answer_volume"
+  pvesm free "$stale_answer_volume"
+done < <(pvesm list "$iso_storage" --content iso | awk -v prefix="$stale_answer_prefix" 'NR > 1 && index($1, prefix) == 1 {print $1}')
+while IFS= read -r stale_answer_directory; do
+  [[ "$stale_answer_directory" == /tmp/windows-server-lab-answer.* && -d "$stale_answer_directory" && ! -L "$stale_answer_directory" ]] || wslab_die "Refusing unsafe stale answer directory: $stale_answer_directory"
+  stale_build_run_id="$(jq -r '.buildRunId // empty' "$stale_answer_directory/payload-manifest.json" 2>/dev/null || true)"
+  [[ "$stale_build_run_id" =~ ^${os}-${template_id}-[0-9]{8}T[0-9]{6}Z-[0-9]+$ ]] || continue
+  wslab_log WARN "Removing answer directory from an earlier interrupted build: $stale_answer_directory"
+  rm -rf -- "$stale_answer_directory"
+done < <(find -P /tmp -maxdepth 1 -type d -name 'windows-server-lab-answer.*' -print)
 stale_certification_file="$(wslab_template_certification_file "$site_file" "$os" "$template_id")"
 stale_certification_junit="$(dirname "$stale_certification_file")/template-${os}-${template_id}.junit.xml"
 if [[ -e "$stale_certification_file" || -e "$stale_certification_junit" ]]; then
@@ -216,6 +251,9 @@ umask 077
 cloudbase_media_path="$answer_directory/CloudbaseInitSetup.msi"
 curl --fail --location --proto '=https' --tlsv1.2 --output "$cloudbase_media_path" "$PKR_VAR_cloudbase_msi_url"
 printf '%s  %s\n' "$PKR_VAR_cloudbase_msi_sha256" "$cloudbase_media_path" | sha256sum --check --status || wslab_die "Cloudbase-Init installer checksum mismatch"
+osconfig_media_path="$answer_directory/Microsoft.OSConfig.nupkg"
+curl --fail --location --proto '=https' --tlsv1.2 --output "$osconfig_media_path" "$PKR_VAR_osconfig_nupkg_url"
+printf '%s  %s\n' "$PKR_VAR_osconfig_nupkg_sha256" "$osconfig_media_path" | sha256sum --check --status || wslab_die "Microsoft.OSConfig package checksum mismatch"
 qemu_agent_media_path="$answer_directory/qemu-ga-x86_64.msi"
 xorriso -osirrox on -indev "$virtio_iso_path" -extract /guest-agent/qemu-ga-x86_64.msi "$qemu_agent_media_path" >/dev/null 2>&1 || wslab_die "Unable to extract QEMU Guest Agent from the verified VirtIO ISO"
 [[ -s "$qemu_agent_media_path" ]] || wslab_die "The extracted QEMU Guest Agent installer is empty"
@@ -224,7 +262,6 @@ WSLAB_QEMU_AGENT_MSI_SHA256="$(sha256sum "$qemu_agent_media_path" | awk '{print 
 export WSLAB_QEMU_AGENT_MSI_SHA256
 case "$os" in
   server-2025) virtio_driver_directory='2k25' ;;
-  server-2022) virtio_driver_directory='2k22' ;;
   windows-11) virtio_driver_directory='w11' ;;
 esac
 for driver_family in vioscsi NetKVM vioserial; do
@@ -239,6 +276,7 @@ jq -n \
   --arg windowsIsoSha256 "${iso_sha256,,}" \
   --arg virtioIsoSha256 "${virtio_iso_sha256,,}" \
   --arg cloudbaseSha256 "${PKR_VAR_cloudbase_msi_sha256,,}" \
+  --arg osconfigSha256 "${PKR_VAR_osconfig_nupkg_sha256,,}" \
   --arg qemuAgentSha256 "$WSLAB_QEMU_AGENT_MSI_SHA256" \
   '{
     schemaVersion: 1,
@@ -248,6 +286,7 @@ jq -n \
     sources: {windowsIsoSha256: $windowsIsoSha256, virtioIsoSha256: $virtioIsoSha256},
     payloads: {
       cloudbaseInit: {file: "CloudbaseInitSetup.msi", sha256: $cloudbaseSha256},
+      microsoftOsConfig: {file: "Microsoft.OSConfig.nupkg", sha256: $osconfigSha256},
       qemuGuestAgent: {file: "qemu-ga-x86_64.msi", sha256: $qemuAgentSha256}
     }
   }' >"$answer_directory/payload-manifest.json"
@@ -279,6 +318,7 @@ install -m 0600 "$answer_directory/Autounattend.xml" "$overlay_upper/Autounatten
 install -m 0600 "$answer_directory/bootstrap.ps1" "$overlay_upper/bootstrap.ps1"
 install -m 0600 "$answer_directory/payload-manifest.json" "$overlay_upper/payload-manifest.json"
 install -m 0600 "$cloudbase_media_path" "$overlay_upper/CloudbaseInitSetup.msi"
+install -m 0600 "$osconfig_media_path" "$overlay_upper/Microsoft.OSConfig.nupkg"
 install -m 0600 "$qemu_agent_media_path" "$overlay_upper/qemu-ga-x86_64.msi"
 cp -a "$answer_directory/WSLABDRIVERS" "$overlay_upper/WSLABDRIVERS"
 mount -t overlay overlay -o "lowerdir=$source_mount,upperdir=$overlay_upper,workdir=$overlay_work" "$overlay_mount"
@@ -294,7 +334,7 @@ umount "$source_mount"
 source_mount=""
 python3 -c 'import sys,xml.etree.ElementTree as E; E.parse(sys.argv[1])' "$answer_directory/Autounattend.xml" || wslab_die "Rendered Autounattend.xml failed final XML validation"
 answer_contents="$(xorriso -indev "$answer_iso_path" -ls / 2>/dev/null)"
-for required_file in Autounattend.xml bootstrap.ps1 payload-manifest.json CloudbaseInitSetup.msi qemu-ga-x86_64.msi WSLABDRIVERS; do
+for required_file in Autounattend.xml bootstrap.ps1 payload-manifest.json CloudbaseInitSetup.msi Microsoft.OSConfig.nupkg qemu-ga-x86_64.msi WSLABDRIVERS; do
   grep -Fq "'$required_file'" <<<"$answer_contents" || wslab_die "Integrated WSLABDATA media is missing $required_file"
 done
 xorriso -indev "$answer_iso_path" -pvd_info 2>&1 | grep -Fq "Volume id    : 'WSLABDATA'" || wslab_die "Integrated media has the wrong volume label"
@@ -354,7 +394,9 @@ jq -n \
   --arg generatedMediaSha256 "$answer_iso_sha256" \
   --arg templateConfigSha256 "$(wslab_template_config_sha256 "$template_id")" \
   --arg automationSha256 "$(wslab_template_automation_sha256)" \
-  '{schemaVersion:1,os:$os,templateId:$templateId,buildRunId:$buildRunId,timestamp:$timestamp,sources:{windowsIsoSha256:$sourceWindowsIsoSha256,virtioIsoSha256:$sourceVirtioIsoSha256,generatedMediaSha256:$generatedMediaSha256},templateConfigSha256:$templateConfigSha256,automationSha256:$automationSha256}' \
+  --arg buildArtifactsSha256 "$(wslab_sha256_file "$WSLAB_ROOT/LabConfig/build-artifacts.json")" \
+  --arg inputSha256 "$(wslab_template_input_sha256 "$site_file" "$os")" \
+  '{schemaVersion:1,os:$os,templateId:$templateId,buildRunId:$buildRunId,timestamp:$timestamp,sources:{windowsIsoSha256:$sourceWindowsIsoSha256,virtioIsoSha256:$sourceVirtioIsoSha256,generatedMediaSha256:$generatedMediaSha256},templateConfigSha256:$templateConfigSha256,automationSha256:$automationSha256,buildArtifactsSha256:$buildArtifactsSha256,inputSha256:$inputSha256}' \
   >"${build_receipt}.tmp.$$"
 chmod 0640 "${build_receipt}.tmp.$$"
 mv -f "${build_receipt}.tmp.$$" "$build_receipt"

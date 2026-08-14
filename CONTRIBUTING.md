@@ -22,7 +22,7 @@ CI also parses every PowerShell file with Windows PowerShell 5.1, validates JSON
 
 ## Change rules
 
-- Treat `LabConfig/demos/*.json` as canonical. If an inventory changes, update schema, resource totals, tests, and generated documentation together.
+- Treat `LabConfig/lab.json` as canonical. If the inventory changes, update its schema, Terraform tests, resource totals, PowerShell tests, and generated documentation together.
 - Keep host commands dry-run by default. Mutations require `--apply`; destructive work requires exact target confirmation and ownership checks.
 - Never add passwords, API tokens, private keys, offline-domain-join blobs, retained Cloud-Init secrets, or real recovery data.
 - Guest scripts must use strict mode, terminating errors, structured evidence, useful exit codes, parameter validation, idempotent reads before writes, and `SupportsShouldProcess` for state changes.

@@ -10,7 +10,6 @@
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [ValidateRange(15, 1440)][int]$ComputerIntervalMinutes = 30,
     [ValidateRange(0, 60)][int]$ComputerRandomOffsetMinutes = 10,
     [ValidateRange(15, 1440)][int]$UserIntervalMinutes = 30,
@@ -22,7 +21,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root 'Reports\group-policy-refresh.json' }
 
 Import-Module (Join-Path $root 'Modules\WindowsServerLab\WindowsServerLab.psd1') -Force -ErrorAction Stop
@@ -31,7 +30,7 @@ Import-Module GroupPolicy -ErrorAction Stop
 $definition = Import-LabDefinition -Path $DefinitionPath
 $domain = Get-ADDomain -ErrorAction Stop
 if ($domain.DNSRoot -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) {
-    throw "Current domain '$($domain.DNSRoot)' does not match the selected demo."
+    throw "Current domain '$($domain.DNSRoot)' does not match the lab definition."
 }
 $domainDn = ConvertTo-LabDistinguishedName -DomainName $domain.DNSRoot
 $baseOu = "OU=$($definition.domain.baseOrganizationalUnit),$domainDn"
@@ -54,7 +53,7 @@ $settings = @(
 $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
+    lab = $definition.name
     domain = $domain.DNSRoot
     gpo = $gpoName
     targetOu = $baseOu
@@ -96,7 +95,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Group Policy refresh $($result.status)" -Data @{ Demo = $Demo; Gpo = $gpoName; Report = $OutputPath }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Group Policy refresh $($result.status)" -Data @{ Lab = $definition.name; Gpo = $gpoName; Report = $OutputPath }
 }
 
 $result

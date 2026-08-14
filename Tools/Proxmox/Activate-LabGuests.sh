@@ -5,20 +5,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=Tools/Proxmox/lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
 
-demo=""
-profile=""
 site_file=""
 action="status"
 apply="false"
 
 usage() {
-  printf 'Usage: %s --demo <asgard|olympus> --profile <smoke|core|full> --site <json> --action <activate|status> [--apply]\n' "$0"
+  printf 'Usage: %s --site <json> --action <activate|status> [--apply]\n' "$0"
 }
 
 while (($#)); do
   case "$1" in
-    --demo) demo="${2:-}"; shift 2 ;;
-    --profile) profile="${2:-}"; shift 2 ;;
     --site) site_file="${2:-}"; shift 2 ;;
     --action) action="${2:-}"; shift 2 ;;
     --apply) apply="true"; shift ;;
@@ -27,28 +23,28 @@ while (($#)); do
   esac
 done
 
-[[ -n "$demo" && -n "$profile" && -n "$site_file" ]] || { usage >&2; exit 2; }
+[[ -n "$site_file" ]] || { usage >&2; exit 2; }
 [[ "$action" == "activate" || "$action" == "status" ]] || wslab_die "--action must be activate or status"
 wslab_require_command jq
 site_file="$(wslab_realpath "$site_file")"
-wslab_validate_inputs "$demo" "$profile" "$site_file"
-definition_file="$(wslab_definition_path "$demo")"
+wslab_validate_inputs "$site_file"
+definition_file="$(wslab_definition_path)"
 
 if [[ "$apply" == "false" ]]; then
-  wslab_log PLAN "$action Windows licensing on $demo/$profile through QEMU Guest Agent"
+  wslab_log PLAN "$action Windows licensing on all six lab guests through QEMU Guest Agent"
   if [[ "$action" == "activate" ]]; then
     wslab_log PLAN "prompt without echo for one Server key and one Windows 11 Education key; send them only over guest-agent stdin"
   fi
   while IFS= read -r vm; do
     wslab_log PLAN "$(jq -r '.name' <<<"$vm") ($(jq -r '.id' <<<"$vm"))"
-  done < <(wslab_profile_vms "$definition_file" "$profile")
+  done < <(wslab_virtual_machines "$definition_file")
   exit 0
 fi
 
 [[ "$(id -u)" -eq 0 ]] || wslab_die "--apply must run as root on a Proxmox VE node"
 wslab_require_proxmox
 for command in base64 iconv; do wslab_require_command "$command"; done
-[[ "$(hostname -s)" == "$(jq -r '.proxmox.node' "$site_file")" ]] || wslab_die "The site configuration targets a different Proxmox node"
+[[ "$(hostname -s)" == "$(wslab_proxmox_node "$site_file")" ]] || wslab_die "Terraform targets a different Proxmox node"
 
 server_key=""
 client_key=""
@@ -102,7 +98,7 @@ while IFS= read -r vm; do
   role="$(jq -r '.role' <<<"$vm")"
   product_class="Server"
   runtime_key="$server_key"
-  if [[ "$role" == "client" || "$role" == "aiml-client" ]]; then
+  if [[ "$role" == "client" ]]; then
     product_class="Windows11Education"
     runtime_key="$client_key"
   fi
@@ -126,18 +122,16 @@ while IFS= read -r vm; do
     --argjson exitCode "$exit_code" \
     '. + [{vmId:$vmId,name:$name,productClass:$productClass,status:$status,exitCode:$exitCode}]' <<<"$results")"
   runtime_key=""
-done < <(wslab_profile_vms "$definition_file" "$profile")
+done < <(wslab_virtual_machines "$definition_file")
 
 report_directory="$(wslab_report_directory "$site_file")"
 mkdir -p "$report_directory"
-report_file="$report_directory/activation-${demo}-${profile}-$(date -u +%Y%m%dT%H%M%SZ).json"
+report_file="$report_directory/activation-$(date -u +%Y%m%dT%H%M%SZ).json"
 jq -n \
   --arg action "$action" \
-  --arg demo "$demo" \
-  --arg profile "$profile" \
   --arg status "$([[ "$failed" -eq 0 ]] && printf passed || printf failed)" \
   --argjson machines "$results" \
-  '{schemaVersion:1,timestamp:(now|todate),action:$action,demo:$demo,profile:$profile,status:$status,machines:$machines}' >"$report_file"
+  '{schemaVersion:3,timestamp:(now|todate),lab:"asgard",action:$action,status:$status,machines:$machines}' >"$report_file"
 chmod 0640 "$report_file"
 wslab_log INFO "Redacted activation report: $report_file"
 ((failed == 0)) || wslab_die "$failed machines failed the requested licensing action"

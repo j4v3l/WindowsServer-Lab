@@ -4,14 +4,13 @@
 .SYNOPSIS
     Enrolls, inspects, or disenrolls a physical or virtual Windows machine.
 .DESCRIPTION
-    Joins any supported Windows machine to a selected lab domain and canonical OU. The
+    Joins any supported Windows machine to the lab domain and canonical OU. The
     script is hypervisor-independent. Credentials are accepted only as PSCredential values
     or acquired interactively and are never written to the report or command line.
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory)][ValidateSet('Enroll', 'Disenroll', 'Status')][string]$Action,
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [ValidateSet('Workstation', 'MemberServer')][string]$DeviceType = 'Workstation',
     [ValidatePattern('^(?!-)(?![0-9]+$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,13}[A-Za-z0-9])?$')][string]$ComputerName,
     [switch]$LegacyDomain,
@@ -32,7 +31,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $labRoot = Split-Path -Parent $PSScriptRoot
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $labRoot "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $labRoot 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $labRoot 'Reports\machine-enrollment.json' }
 $moduleCandidates = @(
     (Join-Path $labRoot 'Modules\WindowsServerLab\WindowsServerLab.psd1'),
@@ -103,7 +102,7 @@ $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
     action = $Action
-    demo = $Demo
+    lab = $definition.name
     deviceType = $DeviceType
     originalComputerName = $env:COMPUTERNAME
     desiredComputerName = $desiredName
@@ -189,7 +188,7 @@ try {
         }
         else {
             if ($currentDomain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) {
-                throw "Current domain '$currentDomain' is not owned by the selected demo; refusing to disenroll it."
+                throw "Current domain '$currentDomain' is not owned by the lab definition; refusing to disenroll it."
             }
             if ($DirectoryDisposition -eq 'Delete' -and $ConfirmDirectoryObjectDeletion -cne $env:COMPUTERNAME) {
                 throw "Deleting the directory object requires -ConfirmDirectoryObjectDeletion '$env:COMPUTERNAME'."
@@ -235,7 +234,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -like 'failed*') { 'Error' } else { 'Info' }) -Message "Machine enrollment $($result.status)" -Data @{ Action = $Action; Demo = $Demo; Report = $OutputPath }
+    Write-LabLog -Level $(if ($result.status -like 'failed*') { 'Error' } else { 'Info' }) -Message "Machine enrollment $($result.status)" -Data @{ Action = $Action; Lab = $definition.name; Report = $OutputPath }
 }
 
 $result

@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-server-lab/v3/lab.schema.json",
+  "title": "Windows Server Lab Terraform inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "name", "displayName", "domain", "networks", "departments", "features", "virtualMachines"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 3 },
+    "name": { "const": "asgard" },
+    "displayName": { "type": "string", "minLength": 1 },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dnsName", "legacyDnsName", "netbiosName", "baseOrganizationalUnit"],
+      "properties": {
+        "dnsName": { "const": "ad.asgard.test" },
+        "legacyDnsName": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" },
+        "netbiosName": { "const": "ASGARD" },
+        "baseOrganizationalUnit": { "type": "string", "minLength": 1 }
+      }
+    },
+    "networks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowsServers", "windowsClients"],
+      "properties": {
+        "windowsServers": {
+          "allOf": [
+            { "$ref": "#/$defs/network" },
+            {
+              "type": "object",
+              "properties": {
+                "cidr": { "const": "192.168.90.0/24" },
+                "gateway": { "const": "192.168.90.1" },
+                "vlanId": { "const": 90 }
+              }
+            }
+          ]
+        },
+        "windowsClients": {
+          "allOf": [
+            { "$ref": "#/$defs/network" },
+            {
+              "type": "object",
+              "properties": {
+                "cidr": { "const": "192.168.100.0/24" },
+                "gateway": { "const": "192.168.100.1" },
+                "vlanId": { "const": 100 }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "departments": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": { "oneOf": [{ "type": "boolean" }, { "type": "string" }, { "type": "number" }] }
+    },
+    "virtualMachines": {
+      "type": "array",
+      "minItems": 6,
+      "items": { "$ref": "#/$defs/virtualMachine" }
+    }
+  },
+  "$defs": {
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cidr", "gateway", "vlanId", "dnsServers"],
+      "properties": {
+        "cidr": { "type": "string" },
+        "gateway": { "type": "string", "format": "ipv4" },
+        "vlanId": { "type": "integer", "minimum": 1, "maximum": 4094 },
+        "dnsServers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "format": "ipv4" }
+        },
+        "description": { "type": "string" }
+      }
+    },
+    "nic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network", "ipAddress", "prefixLength", "defaultGateway"],
+      "properties": {
+        "network": { "enum": ["windowsServers", "windowsClients"] },
+        "ipAddress": { "type": "string", "format": "ipv4" },
+        "prefixLength": { "const": 24 },
+        "defaultGateway": { "const": true }
+      }
+    },
+    "dataDisk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot", "sizeGB", "driveLetter", "label"],
+      "properties": {
+        "slot": { "type": "string", "pattern": "^scsi(?:[1-9]|[12][0-9]|30)$" },
+        "sizeGB": { "type": "integer", "minimum": 1 },
+        "driveLetter": { "type": "string", "pattern": "^[D-Z]$" },
+        "label": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 _-]{0,30}$" }
+      }
+    },
+    "virtualMachine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "role", "os", "bootOrder", "cores", "memoryMB", "balloonMinimumMB", "diskGB", "nics"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 100, "maximum": 999999999 },
+        "name": { "type": "string", "pattern": "^[A-Z0-9-]{1,15}$" },
+        "role": { "enum": ["primary-dc", "secondary-dc", "file-server", "web-server", "management-server", "member-server", "client"] },
+        "os": { "enum": ["server-2025", "windows-11"] },
+        "bootOrder": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "cores": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "memoryMB": { "type": "integer", "minimum": 2048 },
+        "balloonMinimumMB": { "type": "integer", "minimum": 2048 },
+        "diskGB": { "type": "integer", "minimum": 40 },
+        "dataDisks": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/dataDisk" } },
+        "department": { "type": "string" },
+        "user": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["samAccountName", "displayName"],
+          "properties": {
+            "samAccountName": { "type": "string", "pattern": "^[a-z0-9._-]+$" },
+            "displayName": { "type": "string", "minLength": 1 },
+            "title": { "type": "string" },
+            "privileged": { "type": "boolean", "default": false }
+          }
+        },
+        "nics": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/$defs/nic" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "role": { "const": "client" } }, "required": ["role"] },
+          "then": {
+            "required": ["department", "user"],
+            "properties": {
+              "os": { "const": "windows-11" },
+              "nics": { "type": "array", "items": { "type": "object", "properties": { "network": { "const": "windowsClients" } } } }
+            }
+          },
+          "else": {
+            "properties": {
+              "os": { "const": "server-2025" },
+              "nics": { "type": "array", "items": { "type": "object", "properties": { "network": { "const": "windowsServers" } } } }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

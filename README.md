@@ -1,111 +1,93 @@
-# Windows Server Lab v2
+# Windows Server Lab on Proxmox
 
-Windows Server Lab v2 builds repeatable, production-like Active Directory labs on Proxmox VE. It is a secure lab framework, not a turnkey enterprise production environment.
+This repository builds a Terraform-managed Asgard lab on Proxmox VE 9.2. The canonical inventory contains five Windows Server 2025 machines and one Windows 11 Education client; extra `member-server` and `client` entries scale through the same inventory. One Terraform root validates or creates the lab bridge, asks Packer to build and certify missing Windows templates, creates every VM, and converges Active Directory and guest roles over QEMU Guest Agent. There is no separate deploy or guest-configuration command.
 
-The repository now has canonical, schema-validated inventories, dry-run-first Proxmox automation, Packer-built Windows templates, phased guest configuration, evidence-based security checks, backup/teardown safeguards, and CI tests. A release is not called Proxmox-version validated until its live certification run has passed.
+## Topology
 
-## Profiles
+| VM ID | Name | Role | vCPU / RAM | Storage | Network |
+|---:|---|---|---|---|---|
+| 5100 | ODIN-DC01 | Primary DC | 2 / 3072 MB | 64 GB | `192.168.90.10`, VLAN 90 |
+| 5101 | FRIGG-DC02 | Secondary DC | 2 / 3072 MB | 64 GB | `192.168.90.11`, VLAN 90 |
+| 5102 | HEIMDALL-FS01 | File server | 2 / 2560 MB | 64 GB + 56 GB | `192.168.90.20`, VLAN 90 |
+| 5103 | BALDER-WEB01 | Web server | 1 / 2048 MB | 64 GB | `192.168.90.30`, VLAN 90 |
+| 5104 | VIDAR-SEC01 | Management/security | 2 / 2560 MB | 64 GB | `192.168.90.40`, VLAN 90 |
+| 5110 | ODIN-WS01 | Windows 11 client | 2 / 4096 MB | 80 GB | `192.168.100.10`, VLAN 100 |
 
-| Demo | Default domain | Smoke | Core | Full | Distinguishing feature |
-|---|---|---:|---:|---:|---|
-| Asgard | `ad.asgard.test` | 6 VMs | 7 VMs | 30 VMs | Conventional segmented enterprise lab |
-| Olympus | `ad.olympus.test` | 6 VMs | 7 VMs | 30 VMs | Isolated, optional AI/ML feature pack |
-
-The default smoke profile has two domain controllers, a file server, a web server, a management/security server, and one Windows 11 client. It is the six-machine functional test requested for resource-constrained hosts. Core adds a second client; full selects all 25 documented departmental workstations. Existing `.local` labs remain supported with `--legacy-domain`; the tooling does not attempt an AD domain rename.
+Servers use `192.168.90.1`; the client uses `192.168.100.1`. DNS is `192.168.90.10` and `192.168.90.11`. The upstream router owns both gateways and the inter-VLAN policy. Planned capacity is 11 vCPU, 17,408 MB RAM, and 456 GB thin-provisioned storage.
 
 ## Quick start
 
-Run remote inspection/preparation from the operator workstation, provisioning commands on the Proxmox node, and PowerShell commands inside Windows guests. The [six-VM startup runbook](docs/SMOKE_STARTUP.md) separates those contexts explicitly.
+Run Terraform from your workstation. SSH host-key verification must already succeed for the Proxmox host, and the SSH account must be able to run the host-local Packer, certification, backup, and QEMU Guest Agent operations (the default is `root`). The default topology uses existing VLAN-aware management bridge `vmbr0`; Terraform validates it without changing its address or default route. A dedicated non-management bridge can instead be fully Terraform-owned through `site.json`.
 
-1. Copy and edit the site mapping. The tooling never edits the Proxmox management network.
+```bash
+cp LabConfig/site.example.json LabConfig/site.json
+cp LabConfig/secrets.example.json LabConfig/secrets.json
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+chmod 600 LabConfig/site.json LabConfig/secrets.json terraform/terraform.tfvars
+Tools/Proxmox/Validate-LabConfig.sh --site LabConfig/site.json
 
-   ```bash
-   cp LabConfig/site.example.json LabConfig/site.json
-   cp LabConfig/operator.example.json LabConfig/operator.json
-   Tools/Proxmox/Validate-LabConfig.sh --demo asgard --profile smoke --site LabConfig/site.json
-   Tools/Proxmox/Inspect-RemoteHost.sh --operator LabConfig/operator.json --site LabConfig/site.json --demo asgard --profile smoke
-   ```
+export PROXMOX_VE_API_TOKEN='terraform@pve!provider=REDACTED'
 
-2. Prepare the host with checksum-pinned Packer and VirtIO artifacts, then build the Server 2025 and Windows 11 templates needed by smoke. Every command is plan-only until `--apply` is added. Server 2022 can be built later for its compatibility gate.
+terraform -chdir=terraform init
+terraform -chdir=terraform plan -out=lab.tfplan
+terraform -chdir=terraform apply lab.tfplan
+```
 
-   ```bash
-   Tools/Proxmox/Prepare-LabHost.sh --operator LabConfig/operator.json --site LabConfig/site.json --artifacts LabConfig/build-artifacts.json
-   Tools/Proxmox/Build-WindowsTemplate.sh --os server-2025 --iso /path/server-2025.iso --iso-sha256 SHA256 --site LabConfig/site.json --artifacts LabConfig/build-artifacts.json
-   Tools/Proxmox/Build-WindowsTemplate.sh --os windows-11 --iso /path/windows-11.iso --iso-sha256 SHA256 --site LabConfig/site.json --artifacts LabConfig/build-artifacts.json
-   ```
+Set the Windows media volumes and real SHA-256 values, storage IDs, physical uplink, temporary build addresses, and backup storage in `site.json`. Set strong domain-administrator, DSRM, and initial-user passwords in ignored `secrets.json`; Terraform stores only that file's path, and the remote runner deletes its temporary copy after guest convergence. Use `PROXMOX_VE_USERNAME` and `PROXMOX_VE_PASSWORD` instead of the token only when the site intentionally uses password authentication. TLS verification is always enabled. If the Proxmox API uses a private CA, install that CA in the workstation operating system's trust store before `plan`; relying only on `SSL_CERT_FILE` is not portable across provider runtimes.
 
-   Apply mode resolves Proxmox API credentials and the temporary Windows build password through `PKR_VAR_*` environment variables. Those sensitive values must come from the operator's runtime secret system, never JSON or command arguments. The non-secret Cloudbase-Init URL and digest come from the pinned build-artifact manifest.
+Template builds automatically inject Microsoft-published KMS client setup keys for Windows Server 2025 Standard and Windows 11 Education so Setup remains unattended. These public keys select the installation edition but do not activate Windows or grant a license; activation remains separate.
 
-3. Certify two fresh clones from each template. Deployment refuses missing, failed, stale, or different-PVE-version evidence.
+An absent template is built and certified by foundation. A stale template makes ordinary apply fail. Rebuild only with the exact confirmation printed by the tool:
 
-   ```bash
-   Tools/Proxmox/Certify-WindowsTemplate.sh --os server-2025 --site LabConfig/site.json
-   sudo Tools/Proxmox/Certify-WindowsTemplate.sh --os server-2025 --site LabConfig/site.json --apply
-   Tools/Proxmox/Certify-WindowsTemplate.sh --os windows-11 --site LabConfig/site.json
-   sudo Tools/Proxmox/Certify-WindowsTemplate.sh --os windows-11 --site LabConfig/site.json --apply
-   ```
+```bash
+Tools/Terraform/Rebuild-Templates.sh \
+  --site LabConfig/site.json \
+  --os server-2025 \
+  --confirm rebuild-server-2025-9000
+```
 
-4. Review and apply a deployment.
+Guest configuration is part of `terraform apply`. Windows activation remains deliberately separate because product keys are licensing secrets, not lab-creation inputs. If desired, use a checkout on the Proxmox node for the interactive activation and acceptance commands:
 
-   ```bash
-   Tools/Proxmox/Deploy-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json
-   sudo Tools/Proxmox/Deploy-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json --apply
-   ```
+```bash
+sudo Tools/Proxmox/Activate-LabGuests.sh --site LabConfig/site.json --action activate --apply
+sudo Tools/Proxmox/Test-Lab.sh --site LabConfig/site.json --phase full
+```
 
-5. Complete the credential-requiring AD phases interactively in the relevant Windows guests. The first Cloudbase-Init pass records these as pending instead of retaining a password. Start with `Scripts/Initialize-LabDomain.ps1`, then use offline-domain-join blobs or a runtime `PSCredential` with `Scripts/Invoke-LabBootstrap.ps1`. Activation can be performed locally through QEMU Guest Agent with `Tools/Proxmox/Activate-LabGuests.sh`, or after domain enrollment with `Scripts/Invoke-LabWindowsActivation.ps1`.
+Require a zero-change plan after acceptance:
 
-6. Validate. Required failures produce a nonzero exit status; live runs write JSON and JUnit evidence.
+```bash
+terraform -chdir=terraform plan -detailed-exitcode
+```
 
-   ```bash
-   Tools/Proxmox/Test-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json --phase full
-   ```
+Destroy first backs up every inventory VM. A failed backup blocks destruction. Shared management networking and Packer-created templates are retained; a Terraform-owned dedicated lab bridge is removed after the VMs:
 
-7. Back up before a recovery drill or removal.
+```bash
+terraform -chdir=terraform destroy
+```
 
-   ```bash
-   Tools/Proxmox/Backup-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json
-   Tools/Proxmox/Remove-Lab.sh --demo asgard --profile smoke --site LabConfig/site.json
-   ```
+## Repository layout
 
-## Safety model
+- `LabConfig/lab.json`: schema-validated source of truth for Terraform and PowerShell
+- `LabConfig/site.example.json`: non-secret Proxmox, storage, media, bridge, capacity, and key-path settings
+- `terraform`: the only operator entry point and state; composes foundation and lab modules
+- `terraform/foundation`: bridge validation/creation plus Packer template orchestration and certification
+- `terraform/lab`: inventory-driven full clones, static networking, Secure Boot, TPM, guest agent, disks, guest convergence, startup order, and backup-gated destruction
+- `packer/windows`: Server 2025 and Windows 11 template construction
+- `Tools/Terraform` and `Tools/Proxmox`: Terraform-invoked remote preflight, Packer reconciliation, backup, guest convergence, activation, and acceptance helpers
+- `Scripts`: guest-side Active Directory, service, security, sharing, enrollment, and recovery operations
 
-- All host mutations require `--apply`; removal additionally requires `--confirm <demo>-<profile>`.
-- VMs must carry the `wslab` ownership tag and match the canonical name before they can be reconciled, backed up, or removed.
-- VM IDs, names, IP addresses, site capacity, template IDs, bridge mappings, VLANs, and profile counts are checked before deployment.
-- Definitions reject keys that resemble passwords, credentials, secrets, or tokens.
-- Secure Boot, TPM 2.0, QEMU Guest Agent, Cloudbase-Init, firewall defaults, SMB hardening, Defender, audit policy, Windows LAPS, Windows Event Forwarding, and role-aware baselines are supported and validated as required controls. OpenSSH is optional and is installed only after a reachable update source or offline Features on Demand media is available.
-- App Control for Business begins in audit mode. Cloud and GPU claims remain disabled unless explicitly configured and verified.
+Local Terraform state is the default and must remain protected with restrictive permissions. State, plans, local variable files, secret files, and `.terraform` directories are ignored. Teams should use an encrypted locking backend when more than one operator manages the lab.
 
-## Repository map
+## Runbooks
 
-- `LabConfig/`: versioned definitions, schemas, and the site example
-- `Tools/Proxmox/`: template, deploy, validate, backup, test, and remove commands
-- `packer/windows/`: Server 2025, Server 2022, and Windows 11 template source
-- `Scripts/WindowsServerLab/`: shared PowerShell module
-- `Scripts/`: phased guest, policy, security, operations, and compatibility commands
-- `Tests/`: Pester and Linux host tests
-- `docs/`: execution, compatibility, certification, security, and recovery runbooks
-- `Demo/`: scenario-specific entry points and documentation
-
-## Documentation
-
-- [Execution contexts](docs/EXECUTION_CONTEXT.md)
-- [Compatibility and sizing](docs/COMPATIBILITY.md)
-- [Six-VM smoke startup](docs/SMOKE_STARTUP.md)
-- [Generated canonical inventory](docs/generated/INVENTORY.md)
-- [Security model and limitations](docs/SECURITY_MODEL.md)
-- [AD endpoint access controls](docs/ACCESS_CONTROL.md)
-- [Machine enrollment and Group Policy refresh](docs/MACHINE_ENROLLMENT.md)
-- [Printer and file-sharing policies](docs/RESOURCE_SHARING.md)
-- [Runtime-only Windows activation](docs/WINDOWS_ACTIVATION.md)
-- [Live certification gates](docs/LIVE_CERTIFICATION.md)
+- [Terraform startup](docs/SMOKE_STARTUP.md)
+- [Compatibility](docs/COMPATIBILITY.md)
+- [Execution context](docs/EXECUTION_CONTEXT.md)
+- [Template and live certification](docs/LIVE_CERTIFICATION.md)
 - [Backup and recovery](docs/BACKUP_RECOVERY.md)
-- [Server 2022 baseline](docs/SERVER_2022_BASELINE.md)
-- [Asgard quick start](Demo/Asgard/Guides/QUICK_START_ASGARD.md)
-- [Olympus quick start](Demo/Olympus/Guides/QUICK_START_OLYMPUS.md)
-
-## Validation status
-
-Static validation covers the 6-, 7-, and 30-VM inventories, deterministic command generation, shell syntax, schemas, PowerShell parsing/analysis, Pester, documentation links, secret scanning, and release packaging. Live Proxmox 9.2 and 8.4 certification still requires operator-provided hosts, networking, media, licenses, and capacity; see the certification runbook before applying a compatibility label.
-
-Licensed under the [MIT License](LICENSE).
+- [Security model](docs/SECURITY_MODEL.md)
+- [Windows activation](docs/WINDOWS_ACTIVATION.md)
+- [Machine enrollment](docs/MACHINE_ENROLLMENT.md)
+- [Access controls](docs/ACCESS_CONTROL.md)
+- [Resource sharing](docs/RESOURCE_SHARING.md)
+- [Generated inventory](docs/generated/INVENTORY.md)

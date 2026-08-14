@@ -14,9 +14,11 @@ from xml.sax.saxutils import escape
 
 
 OS_SETTINGS = {
-    "server-2025": ("/IMAGE/INDEX", "2", "2k25"),
-    "server-2022": ("/IMAGE/INDEX", "2", "2k22"),
-    "windows-11": ("/IMAGE/NAME", "Windows 11 Education", "w11"),
+    # Microsoft-published KMS client setup keys select the intended edition
+    # during unattended installation. They do not provide an activation
+    # entitlement; activation remains a separate operator workflow.
+    "server-2025": ("/IMAGE/INDEX", "2", "2k25", "TVRH6-WHNXV-R9WG3-9XRFY-MY832"),
+    "windows-11": ("/IMAGE/NAME", "Windows 11 Education", "w11", "NW6C2-QMPVW-D7KKK-3GKT6-VCFB2"),
 }
 
 
@@ -54,16 +56,23 @@ def main() -> None:
 
     windows_password = required_environment("PKR_VAR_windows_password")
     cloudbase_sha256 = required_environment("PKR_VAR_cloudbase_msi_sha256")
+    osconfig_sha256 = required_environment("PKR_VAR_osconfig_nupkg_sha256")
+    osconfig_version = required_environment("PKR_VAR_osconfig_version")
     qemu_agent_sha256 = required_environment("WSLAB_QEMU_AGENT_MSI_SHA256")
     build_ipv4_address = required_environment("WSLAB_BUILD_IPV4_ADDRESS")
     build_ipv4_prefix_length = required_environment("WSLAB_BUILD_IPV4_PREFIX_LENGTH")
     build_ipv4_gateway = required_environment("WSLAB_BUILD_IPV4_GATEWAY")
     build_dns_servers = required_environment("WSLAB_BUILD_DNS_SERVERS").split(",")
-    windows_setup_key = os.environ.get("PKR_VAR_windows_setup_key", "")
+    selector_key, selector_value, driver_path, default_setup_key = OS_SETTINGS[arguments.os]
+    windows_setup_key = os.environ.get("PKR_VAR_windows_setup_key", default_setup_key)
     if not re.fullmatch(r"[A-Fa-f0-9]{64}", cloudbase_sha256):
         raise SystemExit("Cloudbase-Init digest must be SHA-256")
     if not re.fullmatch(r"[A-Fa-f0-9]{64}", qemu_agent_sha256):
         raise SystemExit("QEMU Guest Agent digest must be SHA-256")
+    if not re.fullmatch(r"[A-Fa-f0-9]{64}", osconfig_sha256):
+        raise SystemExit("Microsoft.OSConfig digest must be SHA-256")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", osconfig_version):
+        raise SystemExit("Microsoft.OSConfig version must use semantic version format")
     try:
         ipaddress.IPv4Address(build_ipv4_address)
         ipaddress.IPv4Address(build_ipv4_gateway)
@@ -74,17 +83,14 @@ def main() -> None:
             ipaddress.IPv4Address(dns_server)
     except ValueError as error:
         raise SystemExit("Template build network values must be valid IPv4 settings") from error
-    if windows_setup_key and not re.fullmatch(r"[A-Za-z0-9]{5}(?:-[A-Za-z0-9]{5}){4}", windows_setup_key):
+    if not re.fullmatch(r"[A-Za-z0-9]{5}(?:-[A-Za-z0-9]{5}){4}", windows_setup_key):
         raise SystemExit("Windows setup key has an invalid format")
-    product_key_block = ""
-    if windows_setup_key:
-        product_key_block = (
-            "<ProductKey><Key>"
-            + escape(windows_setup_key)
-            + "</Key><WillShowUI>Never</WillShowUI></ProductKey>"
-        )
+    product_key_block = (
+        "<ProductKey><Key>"
+        + escape(windows_setup_key)
+        + "</Key><WillShowUI>Never</WillShowUI></ProductKey>"
+    )
 
-    selector_key, selector_value, driver_path = OS_SETTINGS[arguments.os]
     answer_template = (arguments.template_directory / "Autounattend.xml.pkrtpl").read_text(encoding="utf-8")
     answer = replace_all(
         answer_template,
@@ -108,6 +114,8 @@ def main() -> None:
             "${os_type}": arguments.os,
             "${cloudbase_msi_sha256}": cloudbase_sha256,
             "${qemu_agent_msi_sha256}": qemu_agent_sha256,
+            "${osconfig_nupkg_sha256}": osconfig_sha256,
+            "${osconfig_version}": osconfig_version,
             "${build_ipv4_address}": build_ipv4_address,
             "${build_ipv4_prefix_length}": str(prefix_length),
             "${build_ipv4_gateway}": build_ipv4_gateway,

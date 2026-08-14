@@ -1,5 +1,5 @@
 Set-StrictMode -Version Latest
-$script:LabModuleVersion = '2.0.0'
+$script:LabModuleVersion = '3.0.0'
 
 function Write-LabLog {
     [CmdletBinding()]
@@ -60,8 +60,8 @@ function Import-LabDefinition {
         throw "Unable to read lab definition '$Path': $($_.Exception.Message)"
     }
 
-    if ($definition.schemaVersion -ne 2) { throw 'Lab definition schemaVersion must be 2.' }
-    if ($definition.demo -notin @('asgard', 'olympus')) { throw 'Lab definition demo must be asgard or olympus.' }
+    if ($definition.schemaVersion -ne 3) { throw 'Lab definition schemaVersion must be 3.' }
+    if ($definition.name -ne 'asgard') { throw 'Lab definition name must be asgard.' }
     if (-not $definition.domain.dnsName -or -not $definition.virtualMachines) { throw 'Lab definition is missing domain or virtualMachines.' }
     $definition
 }
@@ -73,42 +73,14 @@ function ConvertTo-LabDistinguishedName {
     (($DomainName.Trim('.') -split '\.') | ForEach-Object { "DC=$_" }) -join ','
 }
 
-function Get-LabProfileVirtualMachine {
+function Get-LabVirtualMachine {
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]$Definition,
-        [Parameter(Mandatory)][Alias('Profile')][ValidateSet('smoke', 'core', 'full')][string]$LabProfile
-    )
+    param([Parameter(Mandatory)]$Definition)
 
-    @($Definition.virtualMachines | Where-Object { $_.profiles -contains $LabProfile } | ForEach-Object {
+    @($Definition.virtualMachines | ForEach-Object {
         $resolved = $_ | Select-Object *
-        $override = $null
-        if ($_.PSObject.Properties.Name -contains 'profileResourceOverrides') {
-            $profileProperty = $_.profileResourceOverrides.PSObject.Properties[$LabProfile]
-            if ($profileProperty) { $override = $profileProperty.Value }
-        }
-        if ($override) {
-            $resolved.cores = $override.cores
-            $resolved.memoryMB = $override.memoryMB
-            $resolved.diskGB = $override.diskGB
-            $resolved | Add-Member -NotePropertyName balloonMinimumMB -NotePropertyValue $override.balloonMinimumMB -Force
-        }
-        elseif (-not ($resolved.PSObject.Properties.Name -contains 'balloonMinimumMB')) {
-            $resolved | Add-Member -NotePropertyName balloonMinimumMB -NotePropertyValue ([Math]::Min(2048, [int]$resolved.memoryMB))
-        }
-        if ($_.PSObject.Properties.Name -contains 'profileNicOverrides') {
-            $nicProperty = $_.profileNicOverrides.PSObject.Properties[$LabProfile]
-            if ($nicProperty) { $resolved.nics = @($nicProperty.Value) }
-        }
-        $resolvedDataDisks = @()
-        if ($_.PSObject.Properties.Name -contains 'profileDataDiskOverrides') {
-            $dataDiskProperty = $_.profileDataDiskOverrides.PSObject.Properties[$LabProfile]
-            if ($dataDiskProperty) { $resolvedDataDisks = @($dataDiskProperty.Value) }
-        }
-        if ($resolvedDataDisks.Count -eq 0 -and $_.PSObject.Properties.Name -contains 'dataDisks') {
-            $resolvedDataDisks = @($_.dataDisks)
-        }
-        $resolved | Add-Member -NotePropertyName dataDisks -NotePropertyValue $resolvedDataDisks -Force
+        $resolvedDataDisks = if ($_.PSObject.Properties.Name -contains 'dataDisks') { @($_.dataDisks) } else { @() }
+        $resolved | Add-Member -NotePropertyName dataDisks -NotePropertyValue @($resolvedDataDisks) -Force
         $resolved
     } | Sort-Object bootOrder, id)
 }
@@ -117,22 +89,30 @@ function Test-LabConfiguration {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]$Definition,
-        [Parameter(Mandatory)][Alias('Profile')][ValidateSet('smoke', 'core', 'full')][string]$LabProfile,
         [switch]$ThrowOnFailure
     )
 
-    $selected = @(Get-LabProfileVirtualMachine -Definition $Definition -LabProfile $LabProfile)
-    $expected = switch ($LabProfile) { 'smoke' { 6 } 'core' { 7 } default { 30 } }
+    $selected = @(Get-LabVirtualMachine -Definition $Definition)
     $results = [System.Collections.Generic.List[object]]::new()
 
-    $results.Add([pscustomobject]@{ Name = 'ProfileCount'; Passed = ($selected.Count -eq $expected); Evidence = "$($selected.Count)/$expected" })
-    $results.Add([pscustomobject]@{ Name = 'UniqueVmIds'; Passed = (@($Definition.virtualMachines.id | Sort-Object -Unique).Count -eq 30); Evidence = 'VM IDs must be unique' })
-    $results.Add([pscustomobject]@{ Name = 'UniqueVmNames'; Passed = (@($Definition.virtualMachines.name | Sort-Object -Unique).Count -eq 30); Evidence = 'VM names must be unique' })
+    $results.Add([pscustomobject]@{ Name = 'MachineCount'; Passed = ($selected.Count -ge 6); Evidence = "$($selected.Count) machines" })
+    $coreRolesValid = @('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server') |
+        ForEach-Object { @($selected | Where-Object role -eq $_).Count -eq 1 } |
+        Where-Object { -not $_ } |
+        Measure-Object
+    $results.Add([pscustomobject]@{ Name = 'CoreRoles'; Passed = ($coreRolesValid.Count -eq 0 -and @($selected | Where-Object role -eq 'client').Count -ge 1); Evidence = 'One of each core server role and at least one client are required' })
+    $invalidRoleMappings = @($selected | Where-Object {
+        ($_.role -eq 'client' -and ($_.os -ne 'windows-11' -or $_.nics[0].network -ne 'windowsClients')) -or
+        ($_.role -ne 'client' -and ($_.os -ne 'server-2025' -or $_.nics[0].network -ne 'windowsServers'))
+    })
+    $results.Add([pscustomobject]@{ Name = 'RoleOsNetworkMapping'; Passed = ($invalidRoleMappings.Count -eq 0); Evidence = 'Clients use Windows 11/client VLAN; all server roles use Server 2025/server VLAN' })
+    $results.Add([pscustomobject]@{ Name = 'UniqueVmIds'; Passed = (@($Definition.virtualMachines.id | Sort-Object -Unique).Count -eq $selected.Count); Evidence = 'VM IDs must be unique' })
+    $results.Add([pscustomobject]@{ Name = 'UniqueVmNames'; Passed = (@($Definition.virtualMachines.name | Sort-Object -Unique).Count -eq $selected.Count); Evidence = 'VM names must be unique' })
     $allAddresses = @($Definition.virtualMachines | ForEach-Object { $_.nics.ipAddress })
     $results.Add([pscustomobject]@{ Name = 'UniqueIpAddresses'; Passed = (@($allAddresses | Sort-Object -Unique).Count -eq $allAddresses.Count); Evidence = 'NIC addresses must be unique' })
     $results.Add([pscustomobject]@{ Name = 'SafeDefaultDomain'; Passed = ($Definition.domain.dnsName -notlike '*.local'); Evidence = $Definition.domain.dnsName })
-    $selectedAddresses = @($selected | ForEach-Object { $_.nics.ipAddress })
-    $results.Add([pscustomobject]@{ Name = 'SelectedUniqueIpAddresses'; Passed = (@($selectedAddresses | Sort-Object -Unique).Count -eq $selectedAddresses.Count); Evidence = "$LabProfile selected NIC addresses must be unique" })
+    $results.Add([pscustomobject]@{ Name = 'ServerNetwork'; Passed = ($Definition.networks.windowsServers.cidr -eq '192.168.90.0/24' -and $Definition.networks.windowsServers.gateway -eq '192.168.90.1' -and $Definition.networks.windowsServers.vlanId -eq 90); Evidence = 'VLAN 90 / 192.168.90.0/24' })
+    $results.Add([pscustomobject]@{ Name = 'ClientNetwork'; Passed = ($Definition.networks.windowsClients.cidr -eq '192.168.100.0/24' -and $Definition.networks.windowsClients.gateway -eq '192.168.100.1' -and $Definition.networks.windowsClients.vlanId -eq 100); Evidence = 'VLAN 100 / 192.168.100.0/24' })
 
     if ($ThrowOnFailure -and @($results | Where-Object { -not $_.Passed }).Count -gt 0) {
         $failures = ($results | Where-Object { -not $_.Passed } | ForEach-Object Name) -join ', '
@@ -204,7 +184,7 @@ function Initialize-LabDirectory {
     }
 
     foreach ($vm in $Definition.virtualMachines) {
-        if ($vm.role -notin @('client', 'aiml-client') -or -not $vm.user) { continue }
+        if ($vm.role -ne 'client' -or -not $vm.user) { continue }
         $user = $vm.user
         $existing = Get-ADUser -LDAPFilter "(sAMAccountName=$($user.samAccountName))" -ErrorAction Stop
         if (-not $existing) {
@@ -224,27 +204,33 @@ function Initialize-LabDirectory {
         }
     }
 
-    foreach ($vm in $Definition.virtualMachines | Where-Object role -notin @('client', 'aiml-client')) {
+    foreach ($vm in $Definition.virtualMachines | Where-Object role -ne 'client') {
         $computer = Get-ADComputer -Filter "Name -eq '$($vm.name)'" -ErrorAction Stop
-        if ($computer -and $computer.DistinguishedName -notlike "*,$serversOu") {
-            Move-ADObject -Identity $computer.DistinguishedName -TargetPath $serversOu -ErrorAction Stop
+        $computerTargetOu = if ($vm.role -in @('primary-dc', 'secondary-dc')) {
+            $domain.DomainControllersContainer
+        }
+        else {
+            $serversOu
+        }
+        if ($computer -and $computer.DistinguishedName -notlike "*,$computerTargetOu") {
+            Move-ADObject -Identity $computer.DistinguishedName -TargetPath $computerTargetOu -ErrorAction Stop
         }
     }
 
-    Write-LabLog -Level Info -Message "Reconciled directory structure for $($Definition.demo)" -Data @{ Domain = $domain.DNSRoot; ServiceAccountsOu = $serviceAccountsOu; WorkstationsOu = $workstationsOu }
+    Write-LabLog -Level Info -Message "Reconciled directory structure for $($Definition.name)" -Data @{ Domain = $domain.DNSRoot; ServiceAccountsOu = $serviceAccountsOu; WorkstationsOu = $workstationsOu }
 }
 
 function Install-LabRole {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
-        [Parameter(Mandatory)][ValidateSet('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'client', 'aiml-client')][string]$Role,
+        [Parameter(Mandatory)][ValidateSet('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'member-server', 'client')][string]$Role,
         [Parameter(Mandatory)]$Definition
     )
 
     Assert-LabAdministrator
     if (-not $PSCmdlet.ShouldProcess($env:COMPUTERNAME, "Install and configure role $Role")) { return }
 
-    if ($Role -in @('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server')) {
+    if ($Role -in @('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'member-server')) {
         Import-Module ServerManager -ErrorAction Stop
     }
     switch ($Role) {
@@ -288,30 +274,28 @@ function Install-LabRole {
         }
         'web-server' {
             Install-WindowsFeature Web-Server, Web-Http-Logging, Web-Request-Monitor, Web-Windows-Auth -IncludeManagementTools -ErrorAction Stop | Out-Null
-            $health = @{ demo = $Definition.demo; service = 'web'; status = 'healthy'; aiml = [bool]$Definition.features.aiml } | ConvertTo-Json
+            $health = @{ lab = $Definition.name; service = 'web'; status = 'healthy' } | ConvertTo-Json
             Set-Content -LiteralPath 'C:\inetpub\wwwroot\wslab-health.json' -Value $health -Encoding UTF8
         }
         'management-server' {
             Set-Service Wecsvc -StartupType Automatic
             wecutil.exe qc /q | Out-Null
         }
-        'aiml-client' {
-            foreach ($path in @('C:\AIMLData', 'C:\AIMLData\Models', 'C:\AIMLData\Notebooks')) {
-                if (-not (Test-Path -LiteralPath $path)) { New-Item -Path $path -ItemType Directory -Force | Out-Null }
-            }
-        }
     }
-    Write-LabLog -Level Info -Message "Role $Role reconciled" -Data @{ Role = $Role; Demo = $Definition.demo }
+    Write-LabLog -Level Info -Message "Role $Role reconciled" -Data @{ Role = $Role; Lab = $Definition.name }
 }
 
 function Set-LabDhcpService {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
-    param([Parameter(Mandatory)]$Definition)
+    param(
+        [Parameter(Mandatory)]$Definition,
+        [switch]$RequireAllDnsServers
+    )
 
     Assert-LabAdministrator
     if (-not $Definition.features.dhcp) { return }
     if (-not (Get-Service NTDS -ErrorAction Ignore)) { throw 'DHCP authorization must run on a configured domain controller.' }
-    $clientNetwork = $Definition.networks.client
+    $clientNetwork = $Definition.networks.windowsClients
     if ($clientNetwork.cidr -notmatch '^(?<prefix>\d{1,3}\.\d{1,3}\.\d{1,3})\.0/24$') {
         throw "The v2 DHCP helper currently requires a /24 client network; found $($clientNetwork.cidr)."
     }
@@ -321,17 +305,25 @@ function Set-LabDhcpService {
     $prefix = $Matches.prefix
     $scopeId = "$prefix.0"
     $domain = Get-ADDomain -ErrorAction Stop
-    $serverAddress = @($Definition.virtualMachines | Where-Object role -eq 'primary-dc').nics | Where-Object network -eq 'production' | Select-Object -ExpandProperty ipAddress -First 1
+    $serverAddress = @($Definition.virtualMachines | Where-Object role -eq 'primary-dc').nics | Where-Object network -eq 'windowsServers' | Select-Object -ExpandProperty ipAddress -First 1
+    if (-not $serverAddress) { throw 'The primary domain controller has no windowsServers address for DHCP authorization.' }
     if (-not (Get-DhcpServerInDC -ErrorAction Stop | Where-Object DnsName -eq "$env:COMPUTERNAME.$($domain.DNSRoot)")) {
         Add-DhcpServerInDC -DnsName "$env:COMPUTERNAME.$($domain.DNSRoot)" -IPAddress $serverAddress -ErrorAction Stop
     }
     if (-not (Get-DhcpServerv4Scope -ScopeId $scopeId -ErrorAction Ignore)) {
         Add-DhcpServerv4Scope -Name "$($Definition.displayName) clients" -StartRange "$prefix.100" -EndRange "$prefix.199" -SubnetMask 255.255.255.0 -State Active -ErrorAction Stop
     }
-    Set-DhcpServerv4OptionValue -ScopeId $scopeId -Router $clientNetwork.gateway -DnsServer @($clientNetwork.dnsServers) -DnsDomain $domain.DNSRoot -ErrorAction Stop
+    $activeDnsServers = @($clientNetwork.dnsServers | Where-Object {
+        Test-NetConnection -ComputerName $_ -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue
+    })
+    if ($activeDnsServers.Count -eq 0) { throw 'No configured lab DNS server is currently reachable on TCP port 53.' }
+    if ($RequireAllDnsServers -and $activeDnsServers.Count -ne @($clientNetwork.dnsServers).Count) {
+        throw 'Not every configured lab DNS server is ready for the final DHCP option reconciliation.'
+    }
+    Set-DhcpServerv4OptionValue -ScopeId $scopeId -Router $clientNetwork.gateway -DnsServer $activeDnsServers -DnsDomain $domain.DNSRoot -ErrorAction Stop
     Set-Service DHCPServer -StartupType Automatic
     Start-Service DHCPServer
-    Write-LabLog -Level Info -Message "Reconciled DHCP scope $scopeId" -Data @{ ScopeId = $scopeId; Start = "$prefix.100"; End = "$prefix.199" }
+    Write-LabLog -Level Info -Message "Reconciled DHCP scope $scopeId" -Data @{ ScopeId = $scopeId; Start = "$prefix.100"; End = "$prefix.199"; DnsServers = $activeDnsServers }
 }
 
 function Set-LabRegistryValue {
@@ -346,8 +338,6 @@ function Set-LabSecurityBaseline {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param(
         [Parameter(Mandatory)][ValidateSet('DomainController', 'MemberServer', 'WorkgroupMember')][string]$ServerRole,
-        [string]$SctBaselinePath,
-        [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$SctBaselineSha256,
         [switch]$EnableAppControl
     )
 
@@ -369,33 +359,6 @@ function Set-LabSecurityBaseline {
         if ($EnableAppControl) {
             Set-OSConfigDesiredConfiguration -Scenario 'AppControl\WS2025\DefaultPolicy\Audit' -Default -ErrorAction Stop
             Set-OSConfigDesiredConfiguration -Scenario 'AppControl\WS2025\AppBlockList\Audit' -Default -ErrorAction Stop
-        }
-    }
-    elseif ($caption -match '2022') {
-        if (-not $SctBaselinePath -or -not $SctBaselineSha256) {
-            throw 'Windows Server 2022 requires -SctBaselinePath and -SctBaselineSha256 for the approved Security Compliance Toolkit package.'
-        }
-        if (-not (Test-Path -LiteralPath $SctBaselinePath -PathType Leaf)) { throw "SCT package not found: $SctBaselinePath" }
-        $actual = (Get-FileHash -LiteralPath $SctBaselinePath -Algorithm SHA256 -ErrorAction Stop).Hash
-        if ($actual -ne $SctBaselineSha256.ToUpperInvariant()) { throw 'Security Compliance Toolkit package checksum mismatch.' }
-        $temporaryPath = Join-Path $env:TEMP ("wslab-sct-{0}" -f ([guid]::NewGuid().ToString('N')))
-        try {
-            Expand-Archive -LiteralPath $SctBaselinePath -DestinationPath $temporaryPath -Force -ErrorAction Stop
-            $lgpo = Get-ChildItem -LiteralPath $temporaryPath -Filter LGPO.exe -File -Recurse -ErrorAction Stop | Select-Object -First 1
-            if (-not $lgpo) { throw 'The approved SCT package does not contain LGPO.exe.' }
-
-            $rolePattern = if ($ServerRole -eq 'DomainController') { 'Domain Controller' } else { 'Member Server' }
-            $backupInfo = Get-ChildItem -LiteralPath $temporaryPath -Filter bkupInfo.xml -File -Recurse -ErrorAction Stop | Where-Object {
-                (Get-Content -LiteralPath $_.FullName -Raw -ErrorAction Stop) -match $rolePattern
-            } | Select-Object -First 1
-            if (-not $backupInfo) { throw "No Windows Server 2022 $rolePattern policy backup was found in the approved SCT package." }
-
-            $process = Start-Process -FilePath $lgpo.FullName -ArgumentList @('/g', $backupInfo.Directory.FullName) -Wait -PassThru -NoNewWindow
-            if ($process.ExitCode -ne 0) { throw "LGPO.exe failed with exit code $($process.ExitCode)." }
-            Set-LabRegistryValue -Path 'HKLM:\SOFTWARE\WindowsServerLab\Baseline' -Name Server2022SctSha256 -Type String -Value $actual
-        }
-        finally {
-            if (Test-Path -LiteralPath $temporaryPath) { Remove-Item -LiteralPath $temporaryPath -Recurse -Force -ErrorAction Ignore }
         }
     }
     else {
@@ -433,7 +396,7 @@ function Set-LabSecurityBaseline {
 function Test-LabGuestCompliance {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][ValidateSet('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'client', 'aiml-client')][string]$Role,
+        [Parameter(Mandatory)][ValidateSet('primary-dc', 'secondary-dc', 'file-server', 'web-server', 'management-server', 'member-server', 'client')][string]$Role,
         [Parameter(Mandatory)][ValidateSet('infrastructure', 'domain', 'services', 'security', 'full')][string]$Phase
     )
 
@@ -485,10 +448,6 @@ function Test-LabGuestCompliance {
             $subscription = & wecutil.exe gs WindowsServerLab-Security 2>&1
             & $add 'event-subscription' $true ($LASTEXITCODE -eq 0) ($subscription -join '; ') 'Create the source-initiated WindowsServerLab-Security subscription.'
         }
-        if ($Role -eq 'aiml-client') {
-            $aimlHealth = 'C:\ProgramData\WindowsServerLab\Reports\olympus-aiml-health.json'
-            & $add 'aiml-feature-health' $true (Test-Path -LiteralPath $aimlHealth) 'Pinned toolchain health evidence' 'Install the pinned AI/ML feature manifest and start its health endpoint.'
-        }
     }
 
     if ($Phase -in @('security', 'full')) {
@@ -515,7 +474,7 @@ function Test-LabGuestCompliance {
             & $add 'trusted-print-server-policy' $true ($print.Value -like 'HEIMDALL-FS01.*') ([string]$print.Value) 'Reconcile the trusted Point-and-Print server policy.'
             & $add 'file-sharing-policy' $true ($filePolicy.Value -eq 1) "RequireSecuritySignature=$($filePolicy.Value)" 'Reconcile the SMB signing file-sharing policy.'
         }
-        if ($Role -notin @('client', 'aiml-client')) {
+        if ($Role -ne 'client') {
             $caption = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption
             if ($caption -match '2025') {
                 $getOsConfig = Get-Command Get-OSConfigDesiredConfiguration -ErrorAction Ignore
@@ -532,10 +491,6 @@ function Test-LabGuestCompliance {
                     & $add 'server-2025-osconfig-baseline' $true $false 'Microsoft.OSConfig is unavailable' 'Install Microsoft.OSConfig and apply the role-aware baseline.'
                 }
             }
-            elseif ($caption -match '2022') {
-                $sctMarker = Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\WindowsServerLab\Baseline' -Name Server2022SctSha256 -ErrorAction Ignore
-                & $add 'server-2022-sct-baseline' $true ([bool]($sctMarker -match '^[A-F0-9]{64}$')) 'Verified SCT import marker' 'Apply the checksum-pinned Server 2022 SCT role baseline.'
-            }
         }
     }
 
@@ -543,8 +498,8 @@ function Test-LabGuestCompliance {
         $windowsApplicationId = '55c92734-d682-4d71-983e-d6ec3f16059f'
         $licensedWindows = @(Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "ApplicationID='$windowsApplicationId'" -ErrorAction Stop |
             Where-Object { $_.Name -like 'Windows*' -and $_.PartialProductKey -and $_.LicenseStatus -eq 1 })
-        & $add 'windows-activation' $true ($licensedWindows.Count -gt 0) 'Windows Software Licensing LicenseStatus' 'Run Invoke-LabWindowsActivation.ps1 for the selected profile and resolve any edition or activation errors.'
-        if ($Role -in @('client', 'aiml-client')) {
+        & $add 'windows-activation' $true ($licensedWindows.Count -gt 0) 'Windows Software Licensing LicenseStatus' 'Run Invoke-LabWindowsActivation.ps1 and resolve any edition or activation errors.'
+        if ($Role -eq 'client') {
             $clientCaption = [string](Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption
             & $add 'windows-client-edition' $true ($clientCaption -eq 'Microsoft Windows 11 Education') $clientCaption 'Rebuild the Windows client template from media containing the Windows 11 Education image.'
         }
@@ -553,4 +508,4 @@ function Test-LabGuestCompliance {
     $results
 }
 
-Export-ModuleMember -Function ConvertTo-LabDistinguishedName, Get-LabProfileVirtualMachine, Import-LabDefinition, Initialize-LabDirectory, Install-LabRole, Set-LabDhcpService, Set-LabSecurityBaseline, Test-LabConfiguration, Test-LabGuestCompliance, Write-LabLog
+Export-ModuleMember -Function ConvertTo-LabDistinguishedName, Get-LabVirtualMachine, Import-LabDefinition, Initialize-LabDirectory, Install-LabRole, Set-LabDhcpService, Set-LabSecurityBaseline, Test-LabConfiguration, Test-LabGuestCompliance, Write-LabLog

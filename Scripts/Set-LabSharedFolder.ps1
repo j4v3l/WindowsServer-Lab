@@ -6,7 +6,6 @@
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [Parameter(Mandatory)][ValidateSet('asgard', 'olympus')][string]$Demo,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]{0,30}[A-Za-z0-9]$')][string]$ShareName,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z]:\\')][string]$Path,
     [string]$Description = 'WindowsServerLab managed file share',
@@ -21,7 +20,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
-if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root "LabConfig\demos\$Demo.json" }
+if (-not $DefinitionPath) { $DefinitionPath = Join-Path $root 'LabConfig\lab.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $root "Reports\shared-folder-$ShareName.json" }
 $groupToken = ($ShareName -replace '[^A-Za-z0-9]', '').ToUpperInvariant()
 if ($groupToken.Length -gt 10) { $groupToken = $groupToken.Substring(0, 10) }
@@ -34,7 +33,7 @@ $definition = Import-LabDefinition -Path $DefinitionPath
 $fileServer = @($definition.virtualMachines | Where-Object role -eq 'file-server')
 if ($fileServer.Count -ne 1 -or $env:COMPUTERNAME -ine $fileServer[0].name) { throw "Run this command on the canonical file server '$($fileServer[0].name)'." }
 $computerSystem = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
-if (-not $computerSystem.PartOfDomain -or $computerSystem.Domain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'The file server is not joined to the selected demo domain.' }
+if (-not $computerSystem.PartOfDomain -or $computerSystem.Domain -notin @($definition.domain.dnsName, $definition.domain.legacyDnsName)) { throw 'The file server is not joined to the lab domain.' }
 $domainPrefix = $definition.domain.netbiosName
 $accounts = [ordered]@{
     Read = "$domainPrefix\$ReadGroupName"
@@ -46,7 +45,7 @@ foreach ($account in $accounts.Values) { $null = [Security.Principal.NTAccount]:
 $result = [ordered]@{
     schemaVersion = 1
     timestamp = (Get-Date).ToUniversalTime().ToString('o')
-    demo = $Demo
+    lab = $definition.name
     server = $env:COMPUTERNAME
     shareName = $ShareName
     path = $Path
@@ -134,7 +133,7 @@ finally {
     $reportDirectory = Split-Path -Parent $OutputPath
     if ($reportDirectory -and -not (Test-Path -LiteralPath $reportDirectory)) { New-Item -Path $reportDirectory -ItemType Directory -Force | Out-Null }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Shared folder $($result.status)" -Data @{ Demo = $Demo; Share = $ShareName; Report = $OutputPath }
+    Write-LabLog -Level $(if ($result.status -eq 'failed') { 'Error' } else { 'Info' }) -Message "Shared folder $($result.status)" -Data @{ Lab = $definition.name; Share = $ShareName; Report = $OutputPath }
 }
 
 $result
