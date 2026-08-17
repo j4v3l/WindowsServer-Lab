@@ -16,7 +16,8 @@
 .PARAMETER Theme
     The Oh My Posh theme to use. If not specified, the default theme 'jandedobbeleer' will be used.
 .PARAMETER FontName
-    The Nerd Font to install. Default is 'MesloLGM Nerd Font'.
+    The Nerd Font library to install. Default is 'MesloLGM' (normalized to the
+    current Oh My Posh library name 'meslo').
 .PARAMETER SkipFontInstall
     Skip the font installation step. Use this if you already have a Nerd Font installed.
 .PARAMETER ConfigureWindowsTerminal
@@ -25,6 +26,8 @@
     Configure VS Code integrated terminal to use the installed Nerd Font.
 .PARAMETER LogPath
     The path where log files will be stored. Default is "C:\Logs\OhMyPosh".
+.PARAMETER ShowThemes
+    Display the available themes after setup completes.
 .EXAMPLE
     .\Setup-OhMyPosh.ps1
     # Install Oh My Posh with default settings
@@ -43,7 +46,7 @@
 .NOTES
     Author: Windows Server Lab Environment (Proxmox VE Edition)
     Date: June 12, 2025
-    Version: 1.0
+    Version: 1.1
 .LINK
     https://ohmyposh.dev/
     https://github.com/j4v3l/WindowsServer-Lab
@@ -55,11 +58,19 @@ param (
     [switch]$SkipFontInstall = $false,
     [switch]$ConfigureWindowsTerminal = $false,
     [switch]$ConfigureVSCode = $false,
-    [string]$LogPath = "C:\Logs\OhMyPosh"
+    [string]$LogPath = "C:\Logs\OhMyPosh",
+    [switch]$ShowThemes = $false
 )
 
 # Set error action preference
 $ErrorActionPreference = "Stop"
+
+# This script uses Windows-only package, registry, and terminal APIs. Fail early
+# with a useful message instead of producing confusing cross-platform errors.
+$isWindows = ($env:OS -eq 'Windows_NT') -or ($PSVersionTable.PSVersion.Major -lt 6)
+if (-not $isWindows) {
+    throw 'Setup-OhMyPosh.ps1 must be run inside Windows PowerShell or PowerShell 7 on Windows.'
+}
 
 # Color settings for output
 $InfoColor = "Cyan"
@@ -67,8 +78,21 @@ $SuccessColor = "Green"
 $WarningColor = "Yellow"
 $ErrorColor = "Red"
 
-# Create log directory if it doesn't exist
-if (-not (Test-Path -Path $LogPath)) {
+# Create log directory if it doesn't exist. C:\Logs normally requires elevation;
+# fall back to the current user's local application data when the default path is
+# not writable so administrator rights remain optional.
+$logPathWasExplicit = $PSBoundParameters.ContainsKey('LogPath')
+try {
+    if (-not (Test-Path -LiteralPath $LogPath -PathType Container)) {
+        New-Item -Path $LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+    }
+}
+catch {
+    if ($logPathWasExplicit) {
+        throw "Unable to create the requested log directory '$LogPath': $($_.Exception.Message)"
+    }
+
+    $LogPath = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OhMyPosh\Logs'
     New-Item -Path $LogPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
 }
 
@@ -114,6 +138,36 @@ function Test-CommandExists {
     return $exists
 }
 
+function Get-FontInstallName {
+    param(
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    # The current Oh My Posh CLI installs the Meslo family with the library name
+    # "meslo". Keep accepting the older MesloLGM value used by this script.
+    if ($Name -match '^meslolgm$' -or $Name -match '^meslo$') {
+        return 'meslo'
+    }
+
+    return $Name
+}
+
+function Get-FontFaceName {
+    param(
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    if ($Name -match '^meslolgm$' -or $Name -match '^meslo$') {
+        return 'MesloLGM Nerd Font'
+    }
+
+    if ($Name -match 'nerd\s*font$') {
+        return $Name
+    }
+
+    return "$Name Nerd Font"
+}
+
 function Test-WindowsTerminalVersion {
     try {
         # Try to get Windows Terminal version
@@ -142,13 +196,22 @@ function Test-FontInstalled {
     )
     
     try {
-        $fontNameWithNF = "$FontName NF"
-        $fontKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
-        $installedFonts = Get-ItemProperty -Path $fontKey
-        
-        foreach ($font in $installedFonts.PSObject.Properties) {
-            if ($font.Name -like "*$fontNameWithNF*" -or $font.Value -like "*$fontNameWithNF*") {
-                return $true
+        $fontFace = Get-FontFaceName -Name $FontName
+        $patterns = @($FontName, $fontFace, "$FontName NF") | Where-Object { $_ } | Select-Object -Unique
+        $fontKeys = @(
+            'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts',
+            'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+        )
+
+        foreach ($fontKey in $fontKeys) {
+            if (-not (Test-Path -LiteralPath $fontKey)) { continue }
+            $installedFonts = Get-ItemProperty -LiteralPath $fontKey
+            foreach ($font in $installedFonts.PSObject.Properties) {
+                foreach ($pattern in $patterns) {
+                    if ($font.Name -like "*$pattern*" -or $font.Value -like "*$pattern*") {
+                        return $true
+                    }
+                }
             }
         }
         
@@ -166,9 +229,22 @@ function Install-OhMyPosh {
     # Check if Oh My Posh is already installed
     if (Test-CommandExists "oh-my-posh") {
         Write-ColorOutput "Oh My Posh is already installed. Checking for updates..." $WarningColor
+        if (-not (Test-CommandExists 'winget')) {
+            Write-ColorOutput "winget is not available; continuing with the existing Oh My Posh installation." $WarningColor
+            Write-Log "winget was not found while checking for an update"
+            return
+        }
+
         try {
-            # Update Oh My Posh using winget
-            winget upgrade JanDeDobbeleer.OhMyPosh -s winget
+            # Update Oh My Posh using winget. Native commands do not reliably
+            # throw terminating PowerShell errors, so check LASTEXITCODE.
+            & winget upgrade JanDeDobbeleer.OhMyPosh --source winget --accept-source-agreements --accept-package-agreements
+            $upgradeExitCode = $LASTEXITCODE
+            if ($upgradeExitCode -ne 0) {
+                Write-ColorOutput "Oh My Posh update returned exit code $upgradeExitCode; continuing with the existing installation." $WarningColor
+                Write-Log "Oh My Posh update returned exit code $upgradeExitCode"
+                return
+            }
             Write-ColorOutput "Oh My Posh has been updated successfully." $SuccessColor
         }
         catch {
@@ -179,11 +255,16 @@ function Install-OhMyPosh {
         return
     }
     
-    # Install Oh My Posh using winget
-    try {
+    # Install Oh My Posh using winget when available.
+    if (Test-CommandExists 'winget') {
+        try {
         Write-ColorOutput "Installing Oh My Posh via winget..." $InfoColor
         Write-Log "Attempting winget installation..."
-        winget install JanDeDobbeleer.OhMyPosh -s winget
+        & winget install JanDeDobbeleer.OhMyPosh --source winget --accept-source-agreements --accept-package-agreements
+        $installExitCode = $LASTEXITCODE
+        if ($installExitCode -ne 0) {
+            throw "winget returned exit code $installExitCode."
+        }
         
         # Reload PATH environment variable
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -197,26 +278,31 @@ function Install-OhMyPosh {
             Write-ColorOutput "Oh My Posh has been installed successfully." $SuccessColor
             Write-Log "Oh My Posh successfully installed via winget"
         }
-    }
-    catch {
+        }
+        catch {
         Write-ColorOutput "Failed to install Oh My Posh using winget: $_" $ErrorColor
         Write-Log "Winget installation failed: $($_.Exception.Message)"
-        
-        # Fallback to manual installation using the installer script
+        }
+    }
+
+    if (-not (Test-CommandExists 'oh-my-posh')) {
+        # Fallback to the official installer when winget is unavailable or failed.
         Write-ColorOutput "Trying alternative installation method..." $WarningColor
         try {
             Write-ColorOutput "Installing Oh My Posh via installer script..." $InfoColor
             Write-Log "Attempting installer script installation..."
             Set-ExecutionPolicy Bypass -Scope Process -Force
             Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://ohmyposh.dev/install.ps1'))
+            if (-not (Test-CommandExists 'oh-my-posh')) {
+                throw 'The installer completed but oh-my-posh is still not available in PATH. Restart PowerShell and run the script again.'
+            }
             Write-ColorOutput "Oh My Posh has been installed successfully using the installer script." $SuccessColor
             Write-Log "Oh My Posh successfully installed via installer script"
         }
         catch {
             Write-ColorOutput "Failed to install Oh My Posh: $_" $ErrorColor
             Write-Log "Installation failed: $($_.Exception.Message)"
-            Write-ColorOutput "Please install Oh My Posh manually from https://ohmyposh.dev/docs/installation/windows" $ErrorColor
-            exit 1
+            throw 'Oh My Posh installation failed. Install it from https://ohmyposh.dev/docs/installation/windows and rerun this script.'
         }
     }
 }
@@ -232,34 +318,38 @@ function Install-NerdFont {
         return
     }
     
+    $fontInstallName = Get-FontInstallName -Name $Font
+    $fontFace = Get-FontFaceName -Name $Font
+
     # Check if the font is already installed
     if (Test-FontInstalled -FontName $Font) {
-        Write-ColorOutput "$Font Nerd Font is already installed." $WarningColor
+        Write-ColorOutput "$fontFace is already installed." $WarningColor
         Write-Log "Font $Font already installed, skipping installation"
         return
     }
     
-    Write-ColorOutput "Installing $Font Nerd Font..." $InfoColor
-    Write-Log "Starting font installation for $Font"
+    Write-ColorOutput "Installing $fontFace..." $InfoColor
+    Write-Log "Starting font installation for $fontInstallName"
     
     try {
         # Use Oh My Posh to install the font
-        oh-my-posh font install $Font
+        if (-not (Test-CommandExists 'oh-my-posh')) {
+            throw 'oh-my-posh is not available in PATH after installation.'
+        }
+        & oh-my-posh font install $fontInstallName
         
         if ($LASTEXITCODE -eq 0) {
-            Write-ColorOutput "$Font Nerd Font has been installed successfully." $SuccessColor
+            Write-ColorOutput "$fontFace has been installed successfully." $SuccessColor
             Write-Log "Font installation successful"
         }
         else {
-            Write-ColorOutput "Failed to install $Font Nerd Font. Exit code: $LASTEXITCODE" $ErrorColor
-            Write-Log "Font installation failed with exit code: $LASTEXITCODE"
-            Write-ColorOutput "Please install a Nerd Font manually from https://www.nerdfonts.com/" $ErrorColor
+            throw "Font installation returned exit code $LASTEXITCODE."
         }
     }
     catch {
         Write-ColorOutput "Failed to install $Font Nerd Font: $_" $ErrorColor
         Write-Log "Font installation exception: $($_.Exception.Message)"
-        Write-ColorOutput "Please install a Nerd Font manually from https://www.nerdfonts.com/" $ErrorColor
+        throw "Nerd Font installation failed. Install '$fontInstallName' manually and rerun the script."
     }
 }
 
@@ -276,6 +366,10 @@ function Configure-PowerShellProfile {
         Write-ColorOutput "Creating PowerShell profile at $PROFILE..." $InfoColor
         Write-Log "Creating new PowerShell profile"
         try {
+            $profileDirectory = Split-Path -Path $PROFILE -Parent
+            if (-not (Test-Path -LiteralPath $profileDirectory -PathType Container)) {
+                New-Item -Path $profileDirectory -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            }
             New-Item -Path $PROFILE -Type File -Force | Out-Null
             Write-ColorOutput "PowerShell profile created successfully." $SuccessColor
             Write-Log "Profile created successfully"
@@ -290,63 +384,61 @@ function Configure-PowerShellProfile {
     # Get the content of the profile
     $profileContent = Get-Content -Path $PROFILE -Raw -ErrorAction Ignore
     
-    # Check if Oh My Posh init is already in the profile
-    if ($profileContent -and $profileContent -match "oh-my-posh init") {
-        Write-ColorOutput "Oh My Posh is already configured in your PowerShell profile." $WarningColor
-        Write-Log "Found existing Oh My Posh configuration in profile"
-        
-        # Ask if the user wants to update the configuration
-        $updateConfig = Read-Host "Do you want to update the Oh My Posh configuration? (y/n)"
-        if ($updateConfig -ne "y") {
-            Write-Log "User declined to update existing configuration"
-            return
-        }
-        
-        Write-Log "Updating existing Oh My Posh configuration"
-        # Remove existing Oh My Posh init line
-        $profileContent = $profileContent -replace "oh-my-posh init.*\r?\n", ""
+    # Replace any previous Oh My Posh initialization without prompting. This
+    # makes repeated runs safe for provisioning and avoids duplicate prompts.
+    if ($profileContent -and $profileContent -match '(?im)^\s*oh-my-posh\s+(?:init|--init)\s+') {
+        Write-ColorOutput "Updating the existing Oh My Posh configuration in your PowerShell profile." $WarningColor
+        Write-Log "Found existing Oh My Posh configuration in profile; replacing it"
+        $profileContent = $profileContent -replace '(?im)^\s*oh-my-posh\s+(?:init|--init)\s+.*(?:\r?\n|$)', ''
     }
     
-    # Get theme path
-    $themePath = ''
+    # Resolve a custom theme path when POSH_THEMES_PATH is available. For
+    # built-in themes, use the theme name directly so the profile does not
+    # depend on a deprecated environment variable or Invoke-Expression.
+    $themeConfig = ''
     if ($ThemeName -match '\.omp\.json$') {
         # If it's a full path or custom theme
-        if (Test-Path $ThemeName) {
-            $themePath = $ThemeName
+        if (Test-Path -LiteralPath $ThemeName -PathType Leaf) {
+            $themeConfig = (Resolve-Path -LiteralPath $ThemeName).Path
             Write-Log "Using custom theme at path: $ThemeName"
         } else {
-            Write-ColorOutput "Theme file $ThemeName not found. Using default theme." $WarningColor
-            Write-Log "Theme file not found, falling back to default theme"
-            $themePath = "`$env:POSH_THEMES_PATH\jandedobbeleer.omp.json"
+            throw "Theme file '$ThemeName' was not found. Provide a valid .omp.json path or a built-in theme name."
         }
     } else {
-        # It's a standard theme name
-        $themePath = "`$env:POSH_THEMES_PATH\$ThemeName.omp.json"
-        
-        # Check if the theme exists
-        if (-not (Test-Path (Invoke-Expression "`$env:POSH_THEMES_PATH\$ThemeName.omp.json"))) {
-            Write-ColorOutput "Theme $ThemeName not found. Using default theme." $WarningColor
-            Write-Log "Theme not found, falling back to default theme"
-            $themePath = "`$env:POSH_THEMES_PATH\jandedobbeleer.omp.json"
-        } else {
-            Write-Log "Using standard theme: $ThemeName"
+        # Built-in names are accepted directly by current Oh My Posh versions.
+        $themeConfig = $ThemeName
+        if ($env:POSH_THEMES_PATH) {
+            $candidateTheme = Join-Path $env:POSH_THEMES_PATH "$ThemeName.omp.json"
+            if (Test-Path -LiteralPath $candidateTheme -PathType Leaf) {
+                $themeConfig = $candidateTheme
+            }
         }
+        Write-Log "Using standard theme: $ThemeName"
+    }
+
+    # Validate the resolved configuration before changing the user's profile.
+    # The init command emits the generated prompt script; capture it so setup
+    # remains quiet and use its native exit code as the validation result.
+    $themeProbe = @(& oh-my-posh init pwsh --config $themeConfig 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        $probeMessage = ($themeProbe -join ' ').Trim()
+        throw "Oh My Posh theme '$ThemeName' could not be loaded. $probeMessage"
     }
     
     # Add the init line
-    $ohMyPoshInit = "oh-my-posh init pwsh --config `"$themePath`" | Invoke-Expression"
+    $ohMyPoshInit = "oh-my-posh init pwsh --config `"$themeConfig`" | Invoke-Expression"
     Write-Log "Setting init command: $ohMyPoshInit"
     
     if ($profileContent) {
         $newContent = $profileContent.TrimEnd() + "`n`n# Oh My Posh Initialization`n$ohMyPoshInit`n"
-        $newContent | Set-Content -Path $PROFILE
+        $newContent | Set-Content -Path $PROFILE -Encoding UTF8
     } else {
         $newContent = "# PowerShell Profile`n`n# Oh My Posh Initialization`n$ohMyPoshInit`n"
-        $newContent | Set-Content -Path $PROFILE
+        $newContent | Set-Content -Path $PROFILE -Encoding UTF8
     }
     
-    Write-ColorOutput "Oh My Posh has been configured in your PowerShell profile with theme: $(Split-Path $themePath -Leaf)" $SuccessColor
-    Write-Log "Profile successfully configured with theme: $(Split-Path $themePath -Leaf)"
+    Write-ColorOutput "Oh My Posh has been configured in your PowerShell profile with theme: $ThemeName" $SuccessColor
+    Write-Log "Profile successfully configured with theme: $ThemeName"
 }
 
 function Configure-WindowsTerminal {
@@ -376,7 +468,7 @@ function Configure-WindowsTerminal {
     if (-not (Test-Path $settingsPath)) {
         Write-ColorOutput "Windows Terminal settings file not found. Please configure it manually." $WarningColor
         Write-Log "Windows Terminal settings file not found"
-        Write-ColorOutput "Set your font to '$FontName Nerd Font' in the Windows Terminal settings." $WarningColor
+        Write-ColorOutput "Set your font to '$(Get-FontFaceName -Name $FontName)' in the Windows Terminal settings." $WarningColor
         return
     }
     
@@ -387,7 +479,7 @@ function Configure-WindowsTerminal {
         Write-Log "Settings file backed up"
         
         # Load the settings JSON
-        $terminalSettings = Get-Content $settingsPath | ConvertFrom-Json
+        $terminalSettings = Get-Content $settingsPath -Raw | ConvertFrom-Json
         
         # Check if profiles.defaults exists, create it if it doesn't
         if (-not $terminalSettings.profiles.defaults) {
@@ -406,12 +498,12 @@ function Configure-WindowsTerminal {
         }
         
         # Update the font face
-        $fontFace = "$FontName NF"
+        $fontFace = Get-FontFaceName -Name $FontName
         $terminalSettings.profiles.defaults.font | Add-Member -Type NoteProperty -Name "face" -Value $fontFace -Force
         Write-Log "Set font face to: $fontFace"
         
         # Save the updated settings
-        $terminalSettings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath
+        $terminalSettings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
         
         Write-ColorOutput "Windows Terminal has been configured to use '$fontFace' font." $SuccessColor
         Write-Log "Windows Terminal configuration successful"
@@ -419,7 +511,7 @@ function Configure-WindowsTerminal {
     catch {
         Write-ColorOutput "Failed to configure Windows Terminal: $_" $ErrorColor
         Write-Log "Windows Terminal configuration failed: $($_.Exception.Message)"
-        Write-ColorOutput "Please configure it manually by setting your font to '$FontName Nerd Font'." $WarningColor
+        Write-ColorOutput "Please configure it manually by setting your font to '$(Get-FontFaceName -Name $FontName)'." $WarningColor
     }
 }
 
@@ -464,10 +556,10 @@ function Configure-VSCode {
             }
             
             $initialSettings = @{
-                "terminal.integrated.fontFamily" = "$FontName NF"
+                "terminal.integrated.fontFamily" = (Get-FontFaceName -Name $FontName)
             }
             
-            $initialSettings | ConvertTo-Json | Set-Content $settingsPath
+            $initialSettings | ConvertTo-Json | Set-Content $settingsPath -Encoding UTF8
             Write-ColorOutput "Created VS Code settings file with Nerd Font configuration." $SuccessColor
             Write-Log "Created new VS Code settings file"
             return
@@ -490,12 +582,12 @@ function Configure-VSCode {
         $vsCodeSettings = Get-Content $settingsPath -Raw | ConvertFrom-Json
         
         # Add or update the font family setting
-        $fontFace = "$FontName NF"
+        $fontFace = Get-FontFaceName -Name $FontName
         $vsCodeSettings | Add-Member -Type NoteProperty -Name "terminal.integrated.fontFamily" -Value $fontFace -Force
         Write-Log "Set VS Code terminal font to: $fontFace"
         
         # Save the updated settings
-        $vsCodeSettings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath
+        $vsCodeSettings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
         
         Write-ColorOutput "VS Code has been configured to use '$fontFace' font in the integrated terminal." $SuccessColor
         Write-Log "VS Code configuration successful"
@@ -570,9 +662,9 @@ try {
     Write-ColorOutput "2. If the font doesn't look right, make sure your terminal is using a Nerd Font." $InfoColor
     Write-ColorOutput "3. Review the log file at: $logFile" $InfoColor
     
-    # Show available themes
-    $showThemes = Read-Host "`nWould you like to see available Oh My Posh themes? (y/n)"
-    if ($showThemes -eq "y") {
+    # Show available themes only when explicitly requested; unattended runs
+    # must never stop for console input.
+    if ($ShowThemes) {
         Show-OhMyPoshThemes
     }
     

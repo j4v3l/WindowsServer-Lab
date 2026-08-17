@@ -261,14 +261,37 @@ $oobeComplete =
     [int]$setupState.SetupType -eq 0 -and
     [string]::IsNullOrWhiteSpace([string]$setupState.CmdLine)
 $cloudbaseConfig = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init.conf'
+$cloudbaseUnattendConfig = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init-unattend.conf'
 $cloudbaseUnattend = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
 $cloudbaseLog = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\log\cloudbase-init.log'
 $firstBootCleanupPath = Join-Path $root 'first-boot-cleanup.ps1'
 $firstBootCleanupCompletePath = Join-Path $root 'first-boot-cleanup.complete'
+$specializationEvidencePath = Join-Path $root 'cloudbase-specialization.complete'
+$sealEvidencePath = Join-Path $root 'seal.started'
 $firstBootCleanupComplete = if (Test-Path -LiteralPath $firstBootCleanupCompletePath -PathType Leaf) {
     (Get-Content -LiteralPath $firstBootCleanupCompletePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop).status -eq 'complete'
 } else { $false }
+$sysprepUserContext = $false
+if (Test-Path -LiteralPath $sealEvidencePath -PathType Leaf) {
+    $sealEvidence = Get-Content -LiteralPath $sealEvidencePath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+    $principalProperty = $sealEvidence.PSObject.Properties['sysprepPrincipal']
+    $sidProperty = $sealEvidence.PSObject.Properties['sysprepPrincipalSid']
+    if ($principalProperty -and $sidProperty) {
+        $sysprepUserContext =
+            [string]$principalProperty.Value -match '(?i)\\LabBootstrap$' -and
+            [string]$sidProperty.Value -ne 'S-1-5-18'
+    }
+}
 $osConfigModule = Get-Module -ListAvailable -Name Microsoft.OSConfig | Sort-Object Version -Descending | Select-Object -First 1
+$windowsLicenseProducts = @(Get-CimInstance SoftwareLicensingProduct -ErrorAction Stop | Where-Object { $_.Name -like 'Windows*' -and $_.PartialProductKey })
+$windowsSetupKeyPresent = if ($manifest.os -eq 'windows-11') {
+    @($windowsLicenseProducts | Where-Object PartialProductKey -eq 'VCFB2').Count -eq 1
+}
+else {
+    @($windowsLicenseProducts | Where-Object PartialProductKey -eq 'MY832').Count -eq 1
+}
+$oobeShellCrashes = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Id = 1000 } -ErrorAction SilentlyContinue |
+    Where-Object { $_.Message -match '(?i)(Explorer\.EXE|ShellHost\.exe|CloudExperienceHost)' })
 $osConfigReady = if ($manifest.os -eq 'server-2025') {
     [bool]$osConfigModule -and
     [bool](Get-Command -Name Get-OSConfigDesiredConfiguration -ErrorAction SilentlyContinue) -and
@@ -288,6 +311,16 @@ $result = [ordered]@{
     qemuAgentAutomatic = ($qemuService.StartMode -eq 'Auto')
     cloudbaseAutomatic = ($cloudbaseService.StartMode -eq 'Auto')
     cloudbaseConfigDrive = ((Get-Content -LiteralPath $cloudbaseConfig -Raw -ErrorAction Stop) -match 'ConfigDriveService')
+    cloudbaseHostnamePluginDisabled = (
+        (Get-Content -LiteralPath $cloudbaseConfig -Raw -ErrorAction Stop) -match '(?m)^plugins\s*=' -and
+        (Get-Content -LiteralPath $cloudbaseUnattendConfig -Raw -ErrorAction Stop) -match '(?m)^plugins\s*=' -and
+        (Get-Content -LiteralPath $cloudbaseConfig -Raw -ErrorAction Stop) -notmatch 'cloudbaseinit\.plugins\.common\.sethostname\.SetHostNamePlugin' -and
+        (Get-Content -LiteralPath $cloudbaseUnattendConfig -Raw -ErrorAction Stop) -notmatch 'cloudbaseinit\.plugins\.common\.sethostname\.SetHostNamePlugin'
+    )
+    cloudbaseRebootDisabled = (
+        (Get-Content -LiteralPath $cloudbaseConfig -Raw -ErrorAction Stop) -match '(?m)^allow_reboot=false\s*$' -and
+        (Get-Content -LiteralPath $cloudbaseUnattendConfig -Raw -ErrorAction Stop) -match '(?m)^allow_reboot=false\s*$'
+    )
     cloudbaseSecretsAbsent = ((Get-Content -LiteralPath $cloudbaseUnattend -Raw -ErrorAction Stop) -notmatch '(?i)<(AutoLogon|UserAccounts|DefaultPassword|PlainText)>')
     cloudbaseLogPresent = (Test-Path -LiteralPath $cloudbaseLog -PathType Leaf)
     winRmClean = ($winRmService.StartMode -eq 'Disabled' -and -not $winRmBasic -and -not $winRmUnencrypted -and $httpsListeners.Count -eq 0)
@@ -299,8 +332,12 @@ $result = [ordered]@{
     firstBootCleanupComplete = $firstBootCleanupComplete
     firstBootCleanupScriptAbsent = (-not (Test-Path -LiteralPath $firstBootCleanupPath))
     firstBootCleanupTaskAbsent = (-not [bool](Get-ScheduledTask -TaskName 'WindowsServerLab-FirstBootCleanup' -ErrorAction SilentlyContinue))
+    specializationEvidenceAbsent = (-not (Test-Path -LiteralPath $specializationEvidencePath))
     builtInAdministratorDisabled = (-not $administrator.Enabled)
     oobeComplete = $oobeComplete
+    oobeShellCrashFree = ($oobeShellCrashes.Count -eq 0)
+    sysprepUserContext = $sysprepUserContext
+    windowsSetupKeyPresent = $windowsSetupKeyPresent
     microsoftOsConfigReady = $osConfigReady
     manifest = $manifest
 }
@@ -370,7 +407,7 @@ run_canary() {
         hostnameApplied: (($guest.hostname | ascii_upcase) == ($expectedHostname | ascii_upcase)),
         networkApplied: (($guest.ipv4 | index($expectedAddress)) != null),
         qemuAgent: ($guest.qemuAgentRunning and $guest.qemuAgentAutomatic),
-        cloudbaseInit: ($guest.cloudbaseAutomatic and $guest.cloudbaseConfigDrive and $guest.cloudbaseLogPresent),
+        cloudbaseInit: ($guest.cloudbaseAutomatic and $guest.cloudbaseConfigDrive and $guest.cloudbaseLogPresent and $guest.cloudbaseHostnamePluginDisabled and $guest.cloudbaseRebootDisabled),
         microsoftOsConfig: $guest.microsoftOsConfigReady,
         cloudbaseSecretsRemoved: $guest.cloudbaseSecretsAbsent,
         winRmBuildAccessRemoved: $guest.winRmClean,
@@ -379,9 +416,12 @@ run_canary() {
         autoLogonRemoved: $guest.autoLogonClean,
         cachedAnswerFilesRemoved: $guest.cachedAnswersAbsent,
         sealScriptRemoved: $guest.sealScriptAbsent,
-        firstBootCleanupCompleted: ($guest.firstBootCleanupComplete and $guest.firstBootCleanupScriptAbsent and $guest.firstBootCleanupTaskAbsent),
+        firstBootCleanupCompleted: ($guest.firstBootCleanupComplete and $guest.firstBootCleanupScriptAbsent and $guest.firstBootCleanupTaskAbsent and $guest.specializationEvidenceAbsent),
         builtInAdministratorDisabled: $guest.builtInAdministratorDisabled,
         oobeCompleted: $guest.oobeComplete,
+        oobeShellStable: $guest.oobeShellCrashFree,
+        sysprepRunAsUser: $guest.sysprepUserContext,
+        setupKeyInstalled: $guest.windowsSetupKeyPresent,
         imageGeneralized: ($guest.imageState == "IMAGE_STATE_COMPLETE"),
         manifestMatchesOs: ($guest.manifest.schemaVersion == 1 and $guest.manifest.os == $expectedOs),
         editionMatches: (

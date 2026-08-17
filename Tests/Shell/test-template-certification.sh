@@ -93,6 +93,12 @@ grep -Fq '/proc/uptime' "$REPO_ROOT/Tools/Proxmox/lib/common.sh"
 # shellcheck disable=SC2016
 grep -Fq '& $sysprep /generalize /oobe /shutdown' "$REPO_ROOT/packer/windows/seal-template.ps1"
 grep -Fq 'waiting for Sysprep-owned shutdown' "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq "Refusing to run Sysprep under LocalSystem" "$REPO_ROOT/packer/windows/seal-template.ps1"
+grep -Fq -- "-User 'LabBootstrap' -Password \$windowsBuildPassword" "$REPO_ROOT/packer/windows/finalize-template.ps1"
+if grep -Fq 'Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -User SYSTEM' "$REPO_ROOT/packer/windows/finalize-template.ps1"; then
+  echo 'Template sealing must not run Sysprep as LocalSystem.' >&2
+  exit 1
+fi
 if grep -Fq 'Stop-Computer' "$REPO_ROOT/packer/windows/seal-template.ps1"; then
   echo 'Template sealing must not force a competing shutdown after Sysprep starts.' >&2
   exit 1
@@ -104,7 +110,26 @@ grep -Fq "openstack\\latest\\user_data" "$REPO_ROOT/packer/windows/first-boot-cl
 grep -Fq 'Rename-Computer -NewName $desiredHostname' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
 grep -Fq 'Restart-Computer -Force' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
 grep -Fq 'TotalSeconds -ge 120' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
+grep -Fq 'cloudbase-init-unattend.conf' "$REPO_ROOT/packer/windows/prepare-template.ps1"
+grep -Fq 'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin' "$REPO_ROOT/packer/windows/prepare-template.ps1"
+grep -Fq 'FallbackEntries $safePluginDefaults' "$REPO_ROOT/packer/windows/prepare-template.ps1"
+grep -Fq -- "-match '(?m)^plugins\\s*='" "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq "ConvertTo-IniValue -Content \$config -Name allow_reboot -Value 'false'" "$REPO_ROOT/packer/windows/prepare-template.ps1"
+grep -Fq "ConvertTo-IniValue -Content \$unattendConfig -Name allow_reboot -Value 'false'" "$REPO_ROOT/packer/windows/prepare-template.ps1"
+grep -Fq 'cloudbaseHostnamePluginDisabled' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq 'cloudbaseRebootDisabled' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq 'oobeShellStable' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq 'sysprepRunAsUser' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq 'setupKeyInstalled' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
+grep -Fq 'cloudbase-specialization.complete' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
+grep -Fq 'Recorded Cloudbase-Init completion so a late OOBE reboot can resume cleanup safely.' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
+# The PowerShell variable is matched literally.
+# shellcheck disable=SC2016
+grep -Fq 'Remove-Item -LiteralPath $specializationEvidencePath' "$REPO_ROOT/packer/windows/first-boot-cleanup.ps1"
+grep -Fq 'specializationEvidenceAbsent' "$REPO_ROOT/Tools/Proxmox/Certify-WindowsTemplate.sh"
 grep -Fq 'windows-server-lab-template-reconcile.lock' "$REPO_ROOT/Tools/Terraform/Reconcile-Template.sh"
+grep -Fq '"${build_command[@]}" 9>&-' "$REPO_ROOT/Tools/Terraform/Reconcile-Template.sh"
+grep -Fq 'Certify-WindowsTemplate.sh" --os "$os" --site "$site_file" --apply 9>&-' "$REPO_ROOT/Tools/Terraform/Reconcile-Template.sh"
 grep -Fq 'Removing safely identified stale certification canary' "$REPO_ROOT/Tools/Terraform/Reconcile-Template.sh"
 grep -Fq 'wslab-certification' "$REPO_ROOT/Tools/Terraform/Reconcile-Template.sh"
 

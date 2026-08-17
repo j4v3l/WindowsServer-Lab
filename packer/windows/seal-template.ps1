@@ -42,7 +42,28 @@ function Write-SealLog {
 }
 
 Write-SealLog 'Starting template seal and Sysprep shutdown.'
-[ordered]@{ schemaVersion = 1; status = 'started'; timestamp = (Get-Date).ToUniversalTime().ToString('o') } |
+$sealIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+try {
+    $sealPrincipal = [string]$sealIdentity.Name
+    $sealPrincipalSid = [string]$sealIdentity.User.Value
+    $sealRunsAsSystem = [bool]$sealIdentity.IsSystem
+}
+finally {
+    $sealIdentity.Dispose()
+}
+if ($sealRunsAsSystem -or $sealPrincipalSid -eq 'S-1-5-18') {
+    throw 'Refusing to run Sysprep under LocalSystem; use the dedicated LabBootstrap administrator account.'
+}
+if ($sealPrincipal -notmatch '(?i)\\LabBootstrap$') {
+    throw "Refusing to run Sysprep under unexpected account: $sealPrincipal"
+}
+[ordered]@{
+    schemaVersion = 1
+    status = 'started'
+    timestamp = (Get-Date).ToUniversalTime().ToString('o')
+    sysprepPrincipal = $sealPrincipal
+    sysprepPrincipalSid = $sealPrincipalSid
+} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $sealStartedSentinel -Encoding UTF8
 Unregister-ScheduledTask -TaskName 'WindowsServerLab-TemplateSeal' -Confirm:$false -ErrorAction SilentlyContinue
 Set-Service WinRM -StartupType Disabled
@@ -143,11 +164,11 @@ try {
 $sysprep = "$env:SystemRoot\System32\Sysprep\Sysprep.exe"
 $unattend = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
 
-# Windows 11 client editions stop at the lock screen after Sysprep unless an
-# account is available for the first OOBE sign-in. Add a one-use autologon
-# using the random build password above. first-boot-cleanup.ps1 removes these
-# XML nodes and registry values immediately after Cloudbase-Init completes, so
-# no build credential survives into the reusable image.
+# Supply a local account to the OOBE answer pass, but do not automatically
+# start a Windows 11 desktop session. On Windows 11 25H2, that session can
+# crash Explorer while User OOBE is still finalizing and cause
+# CloudExperienceHostBroker to launch the "Why did my PC restart?" recovery
+# flow. The startup cleanup task does not require an interactive sign-in.
 $unattendXml = [xml](Get-Content -LiteralPath $unattend -Raw -Encoding UTF8)
 $unattendNamespace = New-Object System.Xml.XmlNamespaceManager($unattendXml.NameTable)
 $unattendNamespace.AddNamespace('u', 'urn:schemas-microsoft-com:unattend')
@@ -165,28 +186,35 @@ if ($manifest.os -eq 'server-2025') {
     $hideLocalAccountScreen.InnerText = 'true'
 }
 
-# The initial Windows Setup answer file selects the intended edition, but
-# Sysprep runs a separate specialize/OOBE answer file. Carry the same public
-# setup key into that pass so neither Server 2025 nor Windows 11 can stop at a
-# licensing-method screen after a template clone is generalized.
+# Server 2025 needs its public setup key in the Sysprep specialize pass to
+# suppress the Server licensing-method screen. Windows 11 retains the public
+# Education setup key from the ISO installation; reapplying it here causes
+# Microsoft-Windows-Shell-Setup to request an extra immediate specialize
+# reboot, so remove that redundant setting from the client answer file.
 $specializeSettings = $unattendXml.SelectSingleNode("//u:settings[@pass='specialize']", $unattendNamespace)
 if (-not $specializeSettings) { throw 'Cloudbase-Init answer file is missing the specialize settings pass.' }
 $specializeShellSetup = $specializeSettings.SelectSingleNode("u:component[@name='Microsoft-Windows-Shell-Setup']", $unattendNamespace)
-if (-not $specializeShellSetup) {
-    $specializeShellSetup = $unattendXml.CreateElement('component', 'urn:schemas-microsoft-com:unattend')
-    $specializeShellSetup.SetAttribute('name', 'Microsoft-Windows-Shell-Setup')
-    $specializeShellSetup.SetAttribute('processorArchitecture', 'amd64')
-    $specializeShellSetup.SetAttribute('publicKeyToken', '31bf3856ad364e35')
-    $specializeShellSetup.SetAttribute('language', 'neutral')
-    $specializeShellSetup.SetAttribute('versionScope', 'nonSxS')
-    $specializeSettings.AppendChild($specializeShellSetup) | Out-Null
+if ($manifest.os -eq 'server-2025') {
+    if (-not $specializeShellSetup) {
+        $specializeShellSetup = $unattendXml.CreateElement('component', 'urn:schemas-microsoft-com:unattend')
+        $specializeShellSetup.SetAttribute('name', 'Microsoft-Windows-Shell-Setup')
+        $specializeShellSetup.SetAttribute('processorArchitecture', 'amd64')
+        $specializeShellSetup.SetAttribute('publicKeyToken', '31bf3856ad364e35')
+        $specializeShellSetup.SetAttribute('language', 'neutral')
+        $specializeShellSetup.SetAttribute('versionScope', 'nonSxS')
+        $specializeSettings.AppendChild($specializeShellSetup) | Out-Null
+    }
+    $specializeProductKey = $specializeShellSetup.SelectSingleNode('u:ProductKey', $unattendNamespace)
+    if (-not $specializeProductKey) {
+        $specializeProductKey = $unattendXml.CreateElement('ProductKey', 'urn:schemas-microsoft-com:unattend')
+        $specializeShellSetup.AppendChild($specializeProductKey) | Out-Null
+    }
+    $specializeProductKey.InnerText = $WindowsSetupKey
 }
-$specializeProductKey = $specializeShellSetup.SelectSingleNode('u:ProductKey', $unattendNamespace)
-if (-not $specializeProductKey) {
-    $specializeProductKey = $unattendXml.CreateElement('ProductKey', 'urn:schemas-microsoft-com:unattend')
-    $specializeShellSetup.AppendChild($specializeProductKey) | Out-Null
+elseif ($specializeShellSetup) {
+    $specializeProductKey = $specializeShellSetup.SelectSingleNode('u:ProductKey', $unattendNamespace)
+    if ($specializeProductKey) { $specializeShellSetup.RemoveChild($specializeProductKey) | Out-Null }
 }
-$specializeProductKey.InnerText = $WindowsSetupKey
 $userAccounts = $shellSetup.SelectSingleNode('u:UserAccounts', $unattendNamespace)
 if (-not $userAccounts) {
     $userAccounts = $unattendXml.CreateElement('UserAccounts', 'urn:schemas-microsoft-com:unattend')
@@ -238,38 +266,43 @@ if (-not $displayName) {
 }
 $displayName.InnerText = 'Lab Bootstrap'
 $autoLogon = $shellSetup.SelectSingleNode('u:AutoLogon', $unattendNamespace)
-if (-not $autoLogon) {
-    $autoLogon = $unattendXml.CreateElement('AutoLogon', 'urn:schemas-microsoft-com:unattend')
-    $shellSetup.AppendChild($autoLogon) | Out-Null
-}
-$autoPassword = $autoLogon.SelectSingleNode('u:Password', $unattendNamespace)
-if (-not $autoPassword) {
-    $autoPassword = $unattendXml.CreateElement('Password', 'urn:schemas-microsoft-com:unattend')
-    $autoLogon.AppendChild($autoPassword) | Out-Null
-}
-$autoPasswordValue = $autoPassword.SelectSingleNode('u:Value', $unattendNamespace)
-if (-not $autoPasswordValue) {
-    $autoPasswordValue = $unattendXml.CreateElement('Value', 'urn:schemas-microsoft-com:unattend')
-    $autoPassword.AppendChild($autoPasswordValue) | Out-Null
-}
-$autoPasswordValue.InnerText = $randomPasswordPlain.ToString()
-$autoPlainText = $autoPassword.SelectSingleNode('u:PlainText', $unattendNamespace)
-if (-not $autoPlainText) {
-    $autoPlainText = $unattendXml.CreateElement('PlainText', 'urn:schemas-microsoft-com:unattend')
-    $autoPassword.AppendChild($autoPlainText) | Out-Null
-}
-$autoPlainText.InnerText = 'true'
-foreach ($entry in @(
-    @{ Name = 'Enabled'; Value = 'true' },
-    @{ Name = 'LogonCount'; Value = '1' },
-    @{ Name = 'Username'; Value = 'LabBootstrap' }
-)) {
-    $node = $autoLogon.SelectSingleNode("u:$($entry.Name)", $unattendNamespace)
-    if (-not $node) {
-        $node = $unattendXml.CreateElement($entry.Name, 'urn:schemas-microsoft-com:unattend')
-        $autoLogon.AppendChild($node) | Out-Null
+if ($manifest.os -eq 'server-2025') {
+    if (-not $autoLogon) {
+        $autoLogon = $unattendXml.CreateElement('AutoLogon', 'urn:schemas-microsoft-com:unattend')
+        $shellSetup.AppendChild($autoLogon) | Out-Null
     }
-    $node.InnerText = $entry.Value
+    $autoPassword = $autoLogon.SelectSingleNode('u:Password', $unattendNamespace)
+    if (-not $autoPassword) {
+        $autoPassword = $unattendXml.CreateElement('Password', 'urn:schemas-microsoft-com:unattend')
+        $autoLogon.AppendChild($autoPassword) | Out-Null
+    }
+    $autoPasswordValue = $autoPassword.SelectSingleNode('u:Value', $unattendNamespace)
+    if (-not $autoPasswordValue) {
+        $autoPasswordValue = $unattendXml.CreateElement('Value', 'urn:schemas-microsoft-com:unattend')
+        $autoPassword.AppendChild($autoPasswordValue) | Out-Null
+    }
+    $autoPasswordValue.InnerText = $randomPasswordPlain.ToString()
+    $autoPlainText = $autoPassword.SelectSingleNode('u:PlainText', $unattendNamespace)
+    if (-not $autoPlainText) {
+        $autoPlainText = $unattendXml.CreateElement('PlainText', 'urn:schemas-microsoft-com:unattend')
+        $autoPassword.AppendChild($autoPlainText) | Out-Null
+    }
+    $autoPlainText.InnerText = 'true'
+    foreach ($entry in @(
+        @{ Name = 'Enabled'; Value = 'true' },
+        @{ Name = 'LogonCount'; Value = '1' },
+        @{ Name = 'Username'; Value = 'LabBootstrap' }
+    )) {
+        $node = $autoLogon.SelectSingleNode("u:$($entry.Name)", $unattendNamespace)
+        if (-not $node) {
+            $node = $unattendXml.CreateElement($entry.Name, 'urn:schemas-microsoft-com:unattend')
+            $autoLogon.AppendChild($node) | Out-Null
+        }
+        $node.InnerText = $entry.Value
+    }
+}
+elseif ($autoLogon) {
+    $shellSetup.RemoveChild($autoLogon) | Out-Null
 }
 $unattendXml.Save($unattend)
 $randomPasswordPlain.Clear() | Out-Null

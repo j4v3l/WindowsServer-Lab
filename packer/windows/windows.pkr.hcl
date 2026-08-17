@@ -163,7 +163,8 @@ build {
 
   provisioner "powershell" {
     environment_vars = [
-      "WSLAB_WINDOWS_SETUP_KEY=${var.windows_setup_key}"
+      "WSLAB_WINDOWS_SETUP_KEY=${var.windows_setup_key}",
+      "WSLAB_WINDOWS_BUILD_PASSWORD=${var.windows_password}"
     ]
     script  = "${path.root}/finalize-template.ps1"
     timeout = "30m"

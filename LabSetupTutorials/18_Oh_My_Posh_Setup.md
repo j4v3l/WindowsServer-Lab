@@ -28,6 +28,9 @@ The simplest way to set up Oh My Posh is by running our automated setup script:
 
 # Run with Windows Terminal and VS Code configuration
 .\Scripts\Setup-OhMyPosh.ps1 -ConfigureWindowsTerminal -ConfigureVSCode
+
+# Optional: list available themes after setup
+.\Scripts\Setup-OhMyPosh.ps1 -ShowThemes
 ```
 
 ## 🛠️ Manual Installation
@@ -51,7 +54,7 @@ If you prefer to install Oh My Posh manually, follow these steps:
    oh-my-posh font list
 
    # Install a font
-   oh-my-posh font install MesloLGM
+   oh-my-posh font install meslo
    ```
 
 3. **Configure PowerShell Profile**
@@ -64,7 +67,7 @@ If you prefer to install Oh My Posh manually, follow these steps:
    notepad $PROFILE
 
    # Add this line to your profile
-   oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\jandedobbeleer.omp.json" | Invoke-Expression
+   oh-my-posh init pwsh --config "jandedobbeleer" | Invoke-Expression
    ```
 
 ## 🎨 Customizing Oh My Posh
@@ -120,7 +123,7 @@ You can create custom themes by:
 ```json
 "defaults": {
     "font": {
-        "face": "MesloLGM NF"
+        "face": "MesloLGM Nerd Font"
     }
 }
 ```
@@ -129,7 +132,7 @@ You can create custom themes by:
 
 1. Open Settings (Ctrl+,)
 2. Search for "terminal font"
-3. Set "Terminal > Integrated: Font Family" to `MesloLGM NF`
+3. Set "Terminal > Integrated: Font Family" to `MesloLGM Nerd Font`
 
 ## ❓ Troubleshooting
 

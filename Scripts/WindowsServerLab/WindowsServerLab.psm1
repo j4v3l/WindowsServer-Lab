@@ -313,11 +313,23 @@ function Set-LabDhcpService {
     if (-not (Get-DhcpServerv4Scope -ScopeId $scopeId -ErrorAction Ignore)) {
         Add-DhcpServerv4Scope -Name "$($Definition.displayName) clients" -StartRange "$prefix.100" -EndRange "$prefix.199" -SubnetMask 255.255.255.0 -State Active -ErrorAction Stop
     }
-    $activeDnsServers = @($clientNetwork.dnsServers | Where-Object {
-        Test-NetConnection -ComputerName $_ -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue
-    })
+    $configuredDnsServers = @($clientNetwork.dnsServers)
+    $activeDnsServers = @()
+    for ($dnsAttempt = 1; $dnsAttempt -le 20; $dnsAttempt++) {
+        $activeDnsServers = @($configuredDnsServers | Where-Object {
+            Test-NetConnection -ComputerName $_ -Port 53 -InformationLevel Quiet -WarningAction SilentlyContinue
+        })
+        $dnsReady = if ($RequireAllDnsServers) {
+            $activeDnsServers.Count -eq $configuredDnsServers.Count
+        }
+        else {
+            $activeDnsServers.Count -gt 0
+        }
+        if ($dnsReady) { break }
+        if ($dnsAttempt -lt 20) { Start-Sleep -Seconds 15 }
+    }
     if ($activeDnsServers.Count -eq 0) { throw 'No configured lab DNS server is currently reachable on TCP port 53.' }
-    if ($RequireAllDnsServers -and $activeDnsServers.Count -ne @($clientNetwork.dnsServers).Count) {
+    if ($RequireAllDnsServers -and $activeDnsServers.Count -ne $configuredDnsServers.Count) {
         throw 'Not every configured lab DNS server is ready for the final DHCP option reconciliation.'
     }
     Set-DhcpServerv4OptionValue -ScopeId $scopeId -Router $clientNetwork.gateway -DnsServer $activeDnsServers -DnsDomain $domain.DNSRoot -ErrorAction Stop
@@ -357,8 +369,11 @@ function Set-LabSecurityBaseline {
             Set-OSConfigDesiredConfiguration -Scenario 'LAPS/WindowsServer/2025/MemberServer' -Default -ErrorAction Stop
         }
         if ($EnableAppControl) {
-            Set-OSConfigDesiredConfiguration -Scenario 'AppControl\WS2025\DefaultPolicy\Audit' -Default -ErrorAction Stop
-            Set-OSConfigDesiredConfiguration -Scenario 'AppControl\WS2025\AppBlockList\Audit' -Default -ErrorAction Stop
+            # Microsoft.OSConfig 1.4.3 metadata names these scenarios with the
+            # canonical WindowsServer/2025 path. The older WS2025 alias shown
+            # in earlier documentation is rejected as an invalid scenario.
+            Set-OSConfigDesiredConfiguration -Scenario 'AppControl/WindowsServer/2025/DefaultPolicy/Audit' -Default -ErrorAction Stop
+            Set-OSConfigDesiredConfiguration -Scenario 'AppControl/WindowsServer/2025/AppBlockList/Audit' -Default -ErrorAction Stop
         }
     }
     else {
@@ -484,8 +499,14 @@ function Test-LabGuestCompliance {
                     $baseline = @(Get-OSConfigDesiredConfiguration -Scenario $scenario -ErrorAction Stop)
                     $noncompliant = @($baseline | Where-Object { $_.Compliance.Status -ne 'Compliant' })
                     & $add 'server-2025-osconfig-baseline' $true ($baseline.Count -gt 0 -and $noncompliant.Count -eq 0) "$($noncompliant.Count) noncompliant settings" 'Reapply the role-aware OSConfig baseline and resolve drift.'
-                    $appControl = @(Get-OSConfigDesiredConfiguration -Scenario 'AppControl\WS2025\DefaultPolicy\Audit' -ErrorAction Stop)
-                    & $add 'app-control-audit' $true ($appControl.Count -gt 0 -and @($appControl | Where-Object { $_.Compliance.Status -ne 'Compliant' }).Count -eq 0) 'App Control default policy audit scenario' 'Apply App Control for Business in audit mode and resolve drift.'
+                    # App Control policy payloads are write-only in OSConfig
+                    # 1.4.3. Verify both effective audit policies through the
+                    # supported Code Integrity policy inventory instead.
+                    $appControlInventory = (& citool.exe -lp 2>&1) -join "`n"
+                    $appControlExitCode = $LASTEXITCODE
+                    $expectedAppControlPolicies = @('AllowMicrosoft_WS2025_Audit', 'BlockUMCI_Microsoft_WS2025_Audit')
+                    $missingAppControlPolicies = @($expectedAppControlPolicies | Where-Object { $appControlInventory -notmatch [regex]::Escape($_) })
+                    & $add 'app-control-audit' $true ($appControlExitCode -eq 0 -and $missingAppControlPolicies.Count -eq 0) "Missing policies: $($missingAppControlPolicies -join ', ')" 'Apply both Windows Server 2025 App Control policies in audit mode and resolve drift.'
                 }
                 else {
                     & $add 'server-2025-osconfig-baseline' $true $false 'Microsoft.OSConfig is unavailable' 'Install Microsoft.OSConfig and apply the role-aware baseline.'

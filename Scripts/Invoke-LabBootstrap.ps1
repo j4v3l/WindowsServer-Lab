@@ -163,12 +163,15 @@ try {
       }
     }
 
-    if ($Role -eq 'management-server' -and $computerSystem.PartOfDomain) {
-        & (Join-Path $root 'Scripts\Enable-LabEventForwarding.ps1') -Confirm:$false
-    }
-
     if ($computerSystem.PartOfDomain) {
         Enable-LabRemotingWithRetry
+    }
+
+    # The event collector subscription is source-initiated and requires the
+    # domain-scoped WinRM firewall exception. Establish remoting first so a
+    # repeatable bootstrap does not leave an inactive WEC subscription.
+    if ($Role -eq 'management-server' -and $computerSystem.PartOfDomain) {
+        & (Join-Path $root 'Scripts\Enable-LabEventForwarding.ps1') -Confirm:$false
     }
 
     if ($isDomainController -and $ntdsService.Status -eq 'Running' -and $DefaultUserPassword) {

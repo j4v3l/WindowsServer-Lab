@@ -207,13 +207,16 @@ if [[ -r "$job/status" ]]; then
   printf 'done:%s\n' "$(cat "$job/status")"
 elif systemctl is-active --quiet "$unit"; then
   printf 'running\n'
-else
+elif systemctl show "$unit" -p LoadState --value 2>/dev/null | grep -Fxq loaded; then
   printf 'starting\n'
+else
+  printf 'missing\n'
 fi
 REMOTE_POLL
 )"; then
       case "$poll_result" in
         running|starting) ;;
+        missing) die 'Remote guest job disappeared before producing a status result' ;;
         done:*)
           set +e
           ssh "${ssh_options[@]}" "$target" bash -s -- "$remote_job" <<'REMOTE_RESULT'

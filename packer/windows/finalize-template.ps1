@@ -41,6 +41,10 @@ $windowsSetupKey = [string]$env:WSLAB_WINDOWS_SETUP_KEY
 if ($windowsSetupKey -notmatch '^[A-Za-z0-9]{5}(?:-[A-Za-z0-9]{5}){4}$') {
     throw 'The runtime Windows setup key is missing or invalid.'
 }
+$windowsBuildPassword = [string]$env:WSLAB_WINDOWS_BUILD_PASSWORD
+if ([string]::IsNullOrWhiteSpace($windowsBuildPassword) -or $windowsBuildPassword.Length -lt 12) {
+    throw 'The runtime Windows build password is missing or invalid.'
+}
 
 [ordered]@{
     schemaVersion = 1
@@ -56,7 +60,18 @@ $sealStartedSentinel, $sealFailedSentinel | ForEach-Object {
 $taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ProgramData\WindowsServerLab\seal-template.ps1 -WindowsSetupKey $windowsSetupKey"
 $taskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(15)
 $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 45) -StartWhenAvailable
-Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -User SYSTEM -RunLevel Highest -Force | Out-Null
+# Sysprep under LocalSystem is unsupported on Windows 11 24H2/25H2 and
+# Windows Server 2025. It skips XAML AppX registration and can leave deployed
+# clones with a crashing Explorer/ShellHost. Run the detached seal task as the
+# dedicated administrator account so Packer can release WinRM before Sysprep
+# shuts down the builder without changing the Sysprep security context.
+try {
+    Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -User 'LabBootstrap' -Password $windowsBuildPassword -RunLevel Highest -Force | Out-Null
+}
+finally {
+    Remove-Item Env:WSLAB_WINDOWS_BUILD_PASSWORD -ErrorAction SilentlyContinue
+    $windowsBuildPassword = $null
+}
 Start-ScheduledTask -TaskName $taskName
 $sealDeadline = (Get-Date).AddMinutes(5)
 while (-not (Test-Path -LiteralPath $sealStartedSentinel -PathType Leaf)) {

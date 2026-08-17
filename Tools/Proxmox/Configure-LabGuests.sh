@@ -51,6 +51,8 @@ payloads=(
   "Scripts/Set-LabSecurityBaseline.ps1|C:\ProgramData\WindowsServerLab\Scripts\Set-LabSecurityBaseline.ps1"
   "Scripts/Set-LabClientSecurityBaseline.ps1|C:\ProgramData\WindowsServerLab\Scripts\Set-LabClientSecurityBaseline.ps1"
   "Scripts/Test-LabCompliance.ps1|C:\ProgramData\WindowsServerLab\Scripts\Test-LabCompliance.ps1"
+  "Scripts/Test-LabGroupPolicyRefresh.ps1|C:\ProgramData\WindowsServerLab\Scripts\Test-LabGroupPolicyRefresh.ps1"
+  "Scripts/Test-LabAccessControl.ps1|C:\ProgramData\WindowsServerLab\Scripts\Test-LabAccessControl.ps1"
 )
 
 if [[ "$apply" == "false" ]]; then
@@ -115,21 +117,21 @@ done
 secret_value=""
 
 qga_exec() {
-  local vmid="$1" script="$2" stdin_value="${3-}" encoded result exit_code started elapsed transport_warned="false"
+  local vmid="$1" script="$2" stdin_value="${3-}" failure_mode="${4:-fatal}" request_timeout="${5:-$timeout_seconds}" encoded result exit_code started elapsed transport_warned="false"
   encoded="$(printf '%s' "$script" | iconv -f UTF-8 -t UTF-16LE | base64 -w 0)"
   started="$(awk '{print int($1)}' /proc/uptime)"
   while true; do
     result=""
     if [[ -n "$stdin_value" ]]; then
-      if result="$(printf '%s' "$stdin_value" | qm guest exec "$vmid" --pass-stdin 1 --timeout "$timeout_seconds" -- powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "$encoded" 2>/dev/null)"; then
+      if result="$(printf '%s' "$stdin_value" | qm guest exec "$vmid" --pass-stdin 1 --timeout "$request_timeout" -- powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "$encoded" 2>/dev/null)"; then
         break
       fi
-    elif result="$(qm guest exec "$vmid" --timeout "$timeout_seconds" -- powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "$encoded" 2>/dev/null)"; then
+    elif result="$(qm guest exec "$vmid" --timeout "$request_timeout" -- powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "$encoded" 2>/dev/null)"; then
       break
     fi
 
     elapsed="$(( $(awk '{print int($1)}' /proc/uptime) - started ))"
-    ((elapsed < timeout_seconds)) || wslab_die "Guest-agent transport for VM $vmid did not recover within ${timeout_seconds}s"
+    ((elapsed < request_timeout)) || wslab_die "Guest-agent transport for VM $vmid did not recover within ${request_timeout}s"
     if [[ "$transport_warned" == "false" ]]; then
       wslab_log WARN "Guest-agent transport for VM $vmid is temporarily unavailable; waiting for recovery"
       transport_warned="true"
@@ -137,9 +139,26 @@ qga_exec() {
     sleep 5
   done
 
-  jq -e 'type == "object" and (.exitcode | type == "number")' >/dev/null <<<"$result" || wslab_die "VM $vmid returned an invalid redacted guest-agent response"
+  if ! jq -e 'type == "object" and (.exitcode | type == "number")' >/dev/null <<<"$result"; then
+    elapsed="$(( $(awk '{print int($1)}' /proc/uptime) - started ))"
+    ((elapsed < request_timeout)) || wslab_die "VM $vmid returned an invalid redacted guest-agent response after ${request_timeout}s"
+    if [[ "$transport_warned" == "false" ]]; then
+      wslab_log WARN "Guest-agent response for VM $vmid was malformed; waiting for recovery"
+      transport_warned="true"
+    fi
+    sleep 5
+    continue
+  fi
   exit_code="$(jq -r '.exitcode // -1' <<<"$result")"
-  [[ "$exit_code" -eq 0 ]] || wslab_die "Guest phase failed on VM $vmid with redacted exit code $exit_code"
+  if [[ "$exit_code" -ne 0 ]]; then
+    if [[ "$failure_mode" == "return" ]]; then
+      jq -r '[(."out-data" // ""), (."err-data" // "")] | join("\n")' <<<"$result" |
+        tr -d '\r' |
+        tail -n 12 >&2 || true
+      return 1
+    fi
+    wslab_die "Guest phase failed on VM $vmid with redacted exit code $exit_code"
+  fi
   jq -r '."out-data" // empty' <<<"$result" | tr -d '\r'
 }
 
@@ -195,8 +214,16 @@ if (-not (Test-Path -LiteralPath \$directory)) { New-Item -Path \$directory -Ite
 if (\$actual -ne '$digest') { throw 'Transferred payload hash verification failed.' }
 POWERSHELL
   payload="$(base64 -w 0 "$source_path")"
-  qga_exec "$vmid" "$transfer_script" "$payload" >/dev/null
+  for transfer_attempt in 1 2 3; do
+    if qga_exec "$vmid" "$transfer_script" "$payload" return >/dev/null; then
+      payload=""
+      return 0
+    fi
+    wslab_log WARN "Payload transfer to VM $vmid did not complete on attempt $transfer_attempt; retrying"
+    sleep 5
+  done
   payload=""
+  wslab_die "Checksum-verified payload transfer to VM $vmid did not converge after three attempts"
 }
 
 restart_guest() {
@@ -305,10 +332,57 @@ while IFS= read -r vm; do
   else
     baseline_role="MemberServer"
     [[ "$role" == "primary-dc" || "$role" == "secondary-dc" ]] && baseline_role="DomainController"
-    baseline_script="& 'C:\ProgramData\WindowsServerLab\Scripts\Set-LabSecurityBaseline.ps1' -ServerRole '$baseline_role' -EnableAppControlAudit -Confirm:\$false | Out-Null"
+    # Key the marker to the security-baseline entry point only. Other module
+    # functions (for example DHCP readiness) can change without requiring a
+    # full OSConfig/App Control replay on every server.
+    baseline_revision="$(sha256sum "$WSLAB_ROOT/Scripts/Set-LabSecurityBaseline.ps1" | awk '{print $1}')"
+    legacy_baseline_revision='30cb877968757416ed22d5a716d866147ed90c0009328334b1dbeb9817dd8819'
+    legacy_script_revision='3a96717d3b64736b9b3d5d28ab2e786e693b7f47adf22e79fa5d4a58dfb3606d'
+    read -r -d '' baseline_script <<POWERSHELL || true
+\$ErrorActionPreference = 'Stop'
+\$marker = 'C:\ProgramData\WindowsServerLab\Reports\security-baseline-${baseline_role}-${baseline_revision}.complete'
+\$legacyMarker = 'C:\ProgramData\WindowsServerLab\Reports\security-baseline-${baseline_role}-${legacy_baseline_revision}.complete'
+\$lockPath = "\$marker.lock"
+if (Test-Path -LiteralPath \$marker -PathType Leaf) { exit 0 }
+if ('${baseline_revision}' -eq '${legacy_script_revision}' -and (Test-Path -LiteralPath \$legacyMarker -PathType Leaf)) {
+    New-Item -Path \$marker -ItemType File -Force | Out-Null
+    exit 0
+}
+\$lock = \$null
+try {
+    for (\$lockAttempt = 1; \$lockAttempt -le 720 -and \$null -eq \$lock; \$lockAttempt++) {
+        if (Test-Path -LiteralPath \$marker -PathType Leaf) { exit 0 }
+        if ('${baseline_revision}' -eq '${legacy_script_revision}' -and (Test-Path -LiteralPath \$legacyMarker -PathType Leaf)) {
+            New-Item -Path \$marker -ItemType File -Force | Out-Null
+            exit 0
+        }
+        try {
+            \$lock = [IO.File]::Open(\$lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+        }
+        catch {
+            Start-Sleep -Seconds 5
+        }
+    }
+    if (\$null -eq \$lock) { throw 'Timed out waiting for the security-baseline lock.' }
+    if (Test-Path -LiteralPath \$marker -PathType Leaf) { exit 0 }
+    & 'C:\ProgramData\WindowsServerLab\Scripts\Set-LabSecurityBaseline.ps1' -ServerRole '${baseline_role}' -EnableAppControlAudit -Confirm:\$false | Out-Null
+    New-Item -Path \$marker -ItemType File -Force | Out-Null
+}
+finally {
+    if (\$null -ne \$lock) {
+        \$lock.Dispose()
+        Remove-Item -LiteralPath \$lockPath -Force -ErrorAction SilentlyContinue
+    }
+}
+POWERSHELL
   fi
   wslab_log INFO "Applying the verified security baseline to VM $vmid"
-  qga_exec "$vmid" "$baseline_script" >/dev/null
+  # OSConfig/App Control can reboot a Windows Server guest and leave QGA
+  # unavailable while policy providers settle. Give this phase a dedicated
+  # recovery window without making ordinary guest operations wait an hour.
+  baseline_timeout_seconds="$timeout_seconds"
+  ((baseline_timeout_seconds < 3600)) && baseline_timeout_seconds=3600
+  qga_exec "$vmid" "$baseline_script" "" fatal "$baseline_timeout_seconds" >/dev/null
 done < <(wslab_virtual_machines "$definition_file")
 
 primary_id="$(wslab_virtual_machines "$definition_file" | jq -r 'select(.role == "primary-dc") | .id')"
@@ -317,7 +391,16 @@ management_id="$(wslab_virtual_machines "$definition_file" | jq -r 'select(.role
 
 wslab_log INFO "Reconciling final DHCP DNS options after both domain controllers are ready"
 dhcp_script="Import-Module 'C:\ProgramData\WindowsServerLab\Modules\WindowsServerLab\WindowsServerLab.psd1' -Force -ErrorAction Stop; \$definition = Import-LabDefinition -Path 'C:\ProgramData\WindowsServerLab\LabConfig\lab.json'; Set-LabDhcpService -Definition \$definition -RequireAllDnsServers -Confirm:\$false"
-qga_exec "$primary_id" "$dhcp_script" >/dev/null
+dhcp_converged="false"
+for dhcp_attempt in 1 2 3; do
+  if qga_exec "$primary_id" "$dhcp_script" "" return >/dev/null; then
+    dhcp_converged="true"
+    break
+  fi
+  wslab_log WARN "Final DHCP/DNS reconciliation on VM $primary_id did not converge on attempt $dhcp_attempt; retrying"
+  sleep 15
+done
+[[ "$dhcp_converged" == "true" ]] || wslab_die "Final DHCP/DNS reconciliation on VM $primary_id did not converge after three attempts"
 
 branding_script="& 'C:\ProgramData\WindowsServerLab\Scripts\New-LabAsgardBranding.ps1' -Confirm:\$false | Out-Null"
 qga_exec "$file_id" "$branding_script" >/dev/null
@@ -333,17 +416,40 @@ done < <(wslab_virtual_machines "$definition_file" | jq -c 'select(.role == "cli
 
 read -r -d '' policy_script <<POWERSHELL || true
 \$ErrorActionPreference = 'Stop'
-\$wallpaper = '\\HEIMDALL-FS01.$domain_name\Branding\asgard-wallpaper.bmp'
+\$wallpaper = '\\\\HEIMDALL-FS01.$domain_name\Branding\asgard-wallpaper.bmp'
 & 'C:\ProgramData\WindowsServerLab\Scripts\Set-LabDomainPolicy.ps1' -ConfigureLaps -ConfigureAccessControls -ConfigurePrintPolicy -WallpaperPath \$wallpaper -Confirm:\$false | Out-Null
 & 'C:\ProgramData\WindowsServerLab\Scripts\Set-LabFileSharePolicy.ps1' -ShareName AsgardData -Initialize -DefaultReadForDomainUsers -Confirm:\$false | Out-Null
 $client_policy_commands
 POWERSHELL
-qga_exec "$primary_id" "$policy_script" >/dev/null
-client_policy_check="if ((Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\Policies\Microsoft\Camera' -Name AllowCamera -ErrorAction Ignore) -eq 0 -and (Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices' -Name Deny_All -ErrorAction Ignore) -eq 1) { 'effective' } else { 'pending' }"
+policy_converged="false"
+for policy_attempt in 1 2 3 4 5 6; do
+  if qga_exec "$primary_id" "$policy_script" "" return >/dev/null; then
+    policy_converged="true"
+    break
+  fi
+  wslab_log WARN "Domain, access, print, and file policy reconciliation on VM $primary_id did not converge on attempt $policy_attempt; waiting for AD replication"
+  sleep 30
+done
+[[ "$policy_converged" == "true" ]] || wslab_die "Domain, access, print, and file policy reconciliation on VM $primary_id did not converge after six attempts"
+read -r -d '' client_policy_script <<'POWERSHELL' || true
+$ErrorActionPreference = 'Stop'
+for ($attempt = 0; $attempt -lt 12; $attempt++) {
+    $allowCamera = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\Policies\Microsoft\Camera' -Name AllowCamera -ErrorAction Ignore
+    $denyUsbStorage = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices' -Name Deny_All -ErrorAction Ignore
+    if ($allowCamera -eq 0 -and $denyUsbStorage -eq 1) { 'effective'; exit 0 }
+    if ($attempt -eq 0) { & gpupdate.exe /force /wait:0 | Out-Null }
+    Start-Sleep -Seconds 15
+}
+throw 'Camera and USB-storage policy remained pending after twelve checks.'
+POWERSHELL
+wait_for_client_policy() {
+  local vmid="$1"
+  qga_exec "$vmid" "$client_policy_script" "" return 240 >/dev/null
+}
 while IFS= read -r client_id; do
-  if [[ "$(qga_exec "$client_id" "$client_policy_check" | tail -n 1)" != "effective" ]]; then
+  if ! wait_for_client_policy "$client_id"; then
     restart_guest "$client_id"
-    [[ "$(qga_exec "$client_id" "$client_policy_check" | tail -n 1)" == "effective" ]] || wslab_die "Camera and USB-storage policy did not become effective on VM $client_id"
+    wait_for_client_policy "$client_id" || wslab_die "Camera and USB-storage policy did not become effective on VM $client_id"
   fi
 done < <(wslab_virtual_machines "$definition_file" | jq -r 'select(.role == "client") | .id')
 

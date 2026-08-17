@@ -48,14 +48,23 @@ $xml = @"
 "@
 try {
     Set-Content -LiteralPath $subscriptionPath -Value $xml -Encoding UTF8
-    $existingSubscriptions = @(& wecutil.exe es)
+    # wecutil emits a UTF-8 BOM on some Server 2025 builds. Normalize it
+    # before comparing names so repeated Terraform applies take the update
+    # path instead of attempting to create an existing subscription.
+    $existingSubscriptions = @(
+        & wecutil.exe es |
+            ForEach-Object { ([string]$_).Trim([char]0xFEFF).Trim() } |
+            Where-Object { $_ }
+    )
     if ($LASTEXITCODE -ne 0) { throw "wecutil could not enumerate subscriptions (exit code $LASTEXITCODE)" }
     if ($SubscriptionName -in $existingSubscriptions) {
-        & wecutil.exe ds $SubscriptionName | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "wecutil could not replace subscription $SubscriptionName (exit code $LASTEXITCODE)" }
+        wecutil.exe ss /c:$subscriptionPath
+        if ($LASTEXITCODE -ne 0) { throw "wecutil could not update subscription $SubscriptionName (exit code $LASTEXITCODE)" }
     }
-    wecutil.exe cs $subscriptionPath
-    if ($LASTEXITCODE -ne 0) { throw "wecutil failed with exit code $LASTEXITCODE" }
+    else {
+        wecutil.exe cs $subscriptionPath
+        if ($LASTEXITCODE -ne 0) { throw "wecutil could not create subscription $SubscriptionName (exit code $LASTEXITCODE)" }
+    }
 }
 finally {
     Remove-Item -LiteralPath $subscriptionPath -Force -ErrorAction Ignore

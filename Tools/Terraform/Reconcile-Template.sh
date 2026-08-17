@@ -18,7 +18,9 @@ wslab_require_command flock
 
 # Template builds share one temporary address and one certification VM ID, so
 # serialize the complete status/build/certification transaction. The lock is
-# released automatically if Terraform or SSH is interrupted.
+# released automatically if Terraform or SSH is interrupted. Close the lock
+# descriptor in long-running children so QEMU/swtpm cannot inherit it and keep
+# a stale lock alive after an interrupted remote session.
 exec 9>/run/lock/windows-server-lab-template-reconcile.lock
 flock -n 9 || wslab_die 'Another Windows template reconciliation is already running'
 export WSLAB_TEMPLATE_RECONCILE_LOCK_HELD=true
@@ -110,6 +112,6 @@ build_command=(
 if [[ -n "$setup_keys_file" ]]; then
   build_command+=(--setup-keys "$setup_keys_file")
 fi
-"${build_command[@]}"
-"$SCRIPT_DIR/../Proxmox/Certify-WindowsTemplate.sh" --os "$os" --site "$site_file" --apply
+"${build_command[@]}" 9>&-
+"$SCRIPT_DIR/../Proxmox/Certify-WindowsTemplate.sh" --os "$os" --site "$site_file" --apply 9>&-
 wslab_log PASS "Template $template_id for $os was built and certified"

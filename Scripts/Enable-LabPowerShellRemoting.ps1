@@ -45,6 +45,15 @@ try {
     $currentPolicy = Get-ItemProperty -LiteralPath $winRmServiceRegistryPath -ErrorAction Stop
     $currentListeners = @(Get-ChildItem -LiteralPath $winRmListenerRegistryPath -ErrorAction SilentlyContinue)
     $currentDomainRule = Get-NetFirewallRule -Name 'WINRM-HTTP-In-TCP' -ErrorAction SilentlyContinue
+    $currentDomainRuleProfile = if ($currentDomainRule) { [string]$currentDomainRule.Profile } else { '' }
+    # Domain-joined guests can briefly report the Private profile while NLA
+    # finishes establishing the domain trust. WEC validates the effective
+    # firewall exception rather than the rule's profile bitmask, so the
+    # narrowly scoped LocalSubnet rule uses Any profile to remain reliable
+    # across reboots and first-boot timing.
+    $currentDomainRuleCoversLabProfiles =
+        $currentDomainRuleProfile -match 'Any' -or
+        ($currentDomainRuleProfile -match 'Domain' -and $currentDomainRuleProfile -match 'Private')
     $currentRemoteAddresses = @($currentDomainRule |
         Get-NetFirewallAddressFilter -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty RemoteAddress)
@@ -71,7 +80,7 @@ try {
         -not $authNegotiate -and
         $currentDomainRule -and
         $currentDomainRule.Enabled -eq 'True' -and
-        $currentDomainRule.Profile -eq 'Domain' -and
+        $currentDomainRuleCoversLabProfiles -and
         $currentDomainRule.Action -eq 'Allow' -and
         $currentDomainRule.Direction -eq 'Inbound' -and
         $currentRemoteAddresses.Count -eq 1 -and
@@ -97,7 +106,7 @@ try {
         Set-Item -Path WSMan:\localhost\Service\Auth\Kerberos -Value $true -Force -ErrorAction Stop
 
         $domainRule = Get-NetFirewallRule -Name 'WINRM-HTTP-In-TCP' -ErrorAction Stop
-        Set-NetFirewallRule -Name $domainRule.Name -Enabled True -Profile Domain -Action Allow -Direction Inbound -ErrorAction Stop
+        Set-NetFirewallRule -Name $domainRule.Name -Enabled True -Profile Any -Action Allow -Direction Inbound -ErrorAction Stop
         Get-NetFirewallRule -Name $domainRule.Name -ErrorAction Stop |
             Get-NetFirewallAddressFilter -ErrorAction Stop |
             Set-NetFirewallAddressFilter -RemoteAddress LocalSubnet -ErrorAction Stop
@@ -121,6 +130,14 @@ try {
 
         $service = Get-Service -Name WinRM -ErrorAction Stop
         if ($service.Status -ne 'Running' -or $service.StartType -ne 'Automatic' -or $listener.Count -eq 0) { throw 'WinRM service or listener verification failed.' }
+        $effectiveDomainRule = Get-NetFirewallRule -PolicyStore ActiveStore -Name $domainRule.Name -ErrorAction Stop
+        $effectiveProfile = [string]$effectiveDomainRule.Profile
+        $effectiveCoversLabProfiles =
+            $effectiveProfile -match 'Any' -or
+            ($effectiveProfile -match 'Domain' -and $effectiveProfile -match 'Private')
+        if ($effectiveDomainRule.Enabled -ne 'True' -or $effectiveDomainRule.Action -ne 'Allow' -or $effectiveDomainRule.Direction -ne 'Inbound' -or -not $effectiveCoversLabProfiles) {
+            throw 'The effective WinRM firewall rule does not cover all profiles.'
+        }
         $winRmServicePolicy = Get-ItemProperty -LiteralPath $winRmServiceRegistryPath -ErrorAction Stop
         $verifiedAllowUnencrypted = Get-RegistryBooleanValue -RegistryItem $winRmServicePolicy -Name 'allow_unencrypted'
         $verifiedAuthBasic = Get-RegistryBooleanValue -RegistryItem $winRmServicePolicy -Name 'auth_basic'

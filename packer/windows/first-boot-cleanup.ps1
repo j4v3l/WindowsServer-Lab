@@ -8,6 +8,7 @@ Set-StrictMode -Version Latest
 $root = 'C:\ProgramData\WindowsServerLab'
 $logPath = "$root\Logs\first-boot-cleanup.log"
 $completionPath = "$root\first-boot-cleanup.complete"
+$specializationEvidencePath = "$root\cloudbase-specialization.complete"
 $cloudbaseLog = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\log\cloudbase-init.log'
 $cloudbaseUnattend = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\Unattend.xml'
 $taskName = 'WindowsServerLab-FirstBootCleanup'
@@ -57,7 +58,16 @@ try {
             [string]::IsNullOrWhiteSpace([string]$setupState.CmdLine)
         $lastBootUtc = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime.ToUniversalTime()
         $cloudbaseService = Get-CimInstance Win32_Service -Filter "Name='cloudbase-init'" -ErrorAction Stop
-        $cloudbaseComplete = (Test-Path -LiteralPath $cloudbaseLog -PathType Leaf) -and (Get-Item -LiteralPath $cloudbaseLog -ErrorAction Stop).LastWriteTimeUtc -ge $lastBootUtc -and [bool](Select-String -LiteralPath $cloudbaseLog -SimpleMatch 'Plugins execution done' -Quiet)
+        $cloudbaseCompleteThisBoot = (Test-Path -LiteralPath $cloudbaseLog -PathType Leaf) -and (Get-Item -LiteralPath $cloudbaseLog -ErrorAction Stop).LastWriteTimeUtc -ge $lastBootUtc -and [bool](Select-String -LiteralPath $cloudbaseLog -SimpleMatch 'Plugins execution done' -Quiet)
+        if ($cloudbaseCompleteThisBoot -and -not (Test-Path -LiteralPath $specializationEvidencePath -PathType Leaf)) {
+            [ordered]@{
+                schemaVersion = 1
+                status = 'complete'
+                timestamp = (Get-Date).ToUniversalTime().ToString('o')
+            } | ConvertTo-Json | Set-Content -LiteralPath $specializationEvidencePath -Encoding UTF8
+            Write-CleanupLog 'Recorded Cloudbase-Init completion so a late OOBE reboot can resume cleanup safely.'
+        }
+        $cloudbaseComplete = $cloudbaseCompleteThisBoot -or (Test-Path -LiteralPath $specializationEvidencePath -PathType Leaf)
 
         $specializationCandidate = $env:COMPUTERNAME -ne 'WSLAB-BUILD' -and $imageState -eq 'IMAGE_STATE_COMPLETE' -and $oobeComplete -and $cloudbaseService.State -eq 'Stopped' -and $cloudbaseComplete
         if ($specializationCandidate) {
@@ -76,11 +86,12 @@ try {
 
 if (-not $specialized) { throw 'Cloudbase-Init specialization did not reach a completed, stopped state within 20 minutes.' }
 
-# On current Windows 11 builds the final OOBE Computer Name plugin can run
-# after Cloudbase-Init and replace its ConfigDrive hostname with DESKTOP-*.
-# Apply the declared identity only after OOBE is genuinely complete, then let
-# this startup task resume hardening after the required rename reboot. Server
-# builds that already retained the declared name take the no-op path.
+# Cloudbase-Init's hostname plugin is disabled because its requested reboot can
+# interrupt Windows 11 OOBE and launch the "Why did my PC restart?" recovery
+# page. Apply the declared ConfigDrive identity only after OOBE is genuinely
+# complete, then let this startup task resume hardening after the required
+# rename reboot. Server builds that already retained the declared name take
+# the no-op path.
 $desiredHostname = Get-ConfigDriveHostname
 if ($env:COMPUTERNAME -ne $desiredHostname) {
     Write-CleanupLog "Applying post-OOBE ConfigDrive hostname '$desiredHostname' over '$env:COMPUTERNAME'."
@@ -167,10 +178,10 @@ if ($builtInAdministrator -and $builtInAdministrator.Enabled) {
     Disable-LocalUser -Name $builtInAdministrator.Name
 }
 
-# The seal step adds a random, one-use autologon credential so Windows 11 can
-# finish OOBE. Remove both the autologon and local-account password nodes from
-# Cloudbase-Init's answer file after OOBE has completed; leaving them in the
-# reusable image would retain a build credential.
+# The seal step supplies a random local-account password to OOBE and retains a
+# one-use autologon only for Server 2025. Remove both possible credential nodes
+# after OOBE has completed; leaving either in the reusable image would retain a
+# build credential.
 if (Test-Path -LiteralPath $cloudbaseUnattend -PathType Leaf) {
     $unattendXml = [xml](Get-Content -LiteralPath $cloudbaseUnattend -Raw -Encoding UTF8)
     $unattendNamespace = New-Object System.Xml.XmlNamespaceManager($unattendXml.NameTable)
@@ -213,6 +224,7 @@ if ($winRmService.StartMode -ne 'Disabled' -or $cachedAnswersRemain.Count -ne 0 
     removedListenerCertificateCount = $listenerCertificateThumbprints.Count
 } | ConvertTo-Json | Set-Content -LiteralPath $completionPath -Encoding UTF8
 
+Remove-Item -LiteralPath $specializationEvidencePath -Force -ErrorAction SilentlyContinue
 Write-CleanupLog 'First-boot hardening is complete.'
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Stop
 Remove-Item -LiteralPath $PSCommandPath -Force

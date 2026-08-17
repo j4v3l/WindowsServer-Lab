@@ -218,13 +218,27 @@ try {
 
         $refreshTarget = $target.Workstation
         if (-not $refreshTarget -and $selected.scope -eq 'User') {
-            $mappedVm = @($definition.virtualMachines | Where-Object { $_.user -and $_.user.samAccountName -ieq $target.Object.SamAccountName })
+            $mappedVm = @($definition.virtualMachines | Where-Object {
+                $_.role -eq 'client' -and
+                $_.PSObject.Properties.Name -contains 'user' -and
+                $_.user -and
+                $_.user.samAccountName -ieq $target.Object.SamAccountName
+            })
             if ($mappedVm.Count -eq 1) { $refreshTarget = $mappedVm[0].name }
         }
         $refreshResult = 'not-requested'
         if ($RefreshPolicy -and $refreshTarget -and $PSCmdlet.ShouldProcess($refreshTarget, 'Run remote Group Policy refresh')) {
-            Invoke-GPUpdate -Computer $refreshTarget -RandomDelayInMinutes 0 -Force -ErrorAction Stop | Out-Null
-            $refreshResult = 'requested'
+            try {
+                Invoke-GPUpdate -Computer $refreshTarget -RandomDelayInMinutes 0 -Force -ErrorAction Stop | Out-Null
+                $refreshResult = 'requested'
+            }
+            catch {
+                # Remote scheduled-task RPC is not guaranteed by the guest baseline;
+                # the caller verifies effective policy through QEMU Guest Agent and
+                # can restart the client when an immediate refresh is unavailable.
+                $refreshResult = 'deferred'
+                Write-LabLog -Level Warning -Message 'Remote Group Policy refresh deferred' -Data @{ Target = $refreshTarget; Error = $_.Exception.Message }
+            }
         }
         elseif ($RefreshPolicy -and -not $refreshTarget) { $refreshResult = 'no-canonical-workstation' }
 

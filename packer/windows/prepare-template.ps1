@@ -27,24 +27,112 @@ $bootstrapResult = Get-Content -LiteralPath $bootstrapComplete -Raw -Encoding UT
 if ($bootstrapResult.status -ne 'complete') { throw 'The template bootstrap completion sentinel is invalid.' }
 
 $cloudbaseConfig = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init.conf'
-if (-not (Test-Path -LiteralPath $cloudbaseConfig)) {
-    throw 'Cloudbase-Init was not installed by bootstrap.ps1.'
+$cloudbaseUnattendConfig = 'C:\Program Files\Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init-unattend.conf'
+foreach ($requiredConfig in @($cloudbaseConfig, $cloudbaseUnattendConfig)) {
+    if (-not (Test-Path -LiteralPath $requiredConfig -PathType Leaf)) {
+        throw "Cloudbase-Init configuration is missing: $requiredConfig"
+    }
 }
 
 function ConvertTo-IniValue {
     param([Parameter(Mandatory)][string[]]$Content, [Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][string]$Value)
     $replacement = "$Name=$Value"
-    if (@($Content | Where-Object { $_ -match "^$([Regex]::Escape($Name))=" }).Count -gt 0) {
-        return @($Content | ForEach-Object { if ($_ -match "^$([Regex]::Escape($Name))=") { $replacement } else { $_ } })
+    if (@($Content | Where-Object { $_ -match "^$([Regex]::Escape($Name))\s*=" }).Count -gt 0) {
+        return @($Content | ForEach-Object { if ($_ -match "^$([Regex]::Escape($Name))\s*=") { $replacement } else { $_ } })
     }
     return @($Content) + $replacement
 }
+
+function Set-IniListWithoutEntry {
+    param(
+        [Parameter(Mandatory)][string[]]$Content,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Entry,
+        [string[]]$FallbackEntries = @()
+    )
+
+    $startIndexes = @(0..($Content.Count - 1) | Where-Object { $Content[$_] -match "^$([Regex]::Escape($Name))\s*=" })
+    if ($startIndexes.Count -gt 1) {
+        throw "Expected no more than one '$Name' setting, found $($startIndexes.Count)."
+    }
+    if ($startIndexes.Count -eq 0) {
+        $filteredFallback = @($FallbackEntries | Where-Object { $_ -and $_ -ne $Entry } | Select-Object -Unique)
+        if ($filteredFallback.Count -eq 0) {
+            throw "Cloudbase-Init '$Name' is absent and no safe explicit fallback was supplied."
+        }
+        return @($Content) + "$Name=$($filteredFallback -join ',')"
+    }
+
+    $start = $startIndexes[0]
+    $end = $start + 1
+    while ($end -lt $Content.Count -and $Content[$end] -match '^\s+\S') { $end++ }
+
+    $firstValue = $Content[$start] -replace "^$([Regex]::Escape($Name))\s*=\s*", ''
+    $rawValues = @($firstValue)
+    if ($end -gt ($start + 1)) {
+        $rawValues += @($Content[($start + 1)..($end - 1)])
+    }
+    $combinedValues = $rawValues -join ','
+    $values = @($combinedValues -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $filteredValues = @($values | Where-Object { $_ -ne $Entry })
+    if ($filteredValues.Count -eq 0) { throw "Removing '$Entry' would leave '$Name' empty." }
+
+    $result = [System.Collections.Generic.List[string]]::new()
+    for ($index = 0; $index -lt $Content.Count; $index++) {
+        if ($index -eq $start) {
+            $result.Add("$Name=$($filteredValues -join ',')")
+            $index = $end - 1
+        }
+        else {
+            $result.Add($Content[$index])
+        }
+    }
+    return $result.ToArray()
+}
+
+$hostnamePlugin = 'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin'
+# Cloudbase-Init 1.1.8 defaults to this list when a config omits `plugins`.
+# Make it explicit so removing SetHostNamePlugin cannot silently fall back to
+# the default list and request a disruptive reboot during Windows OOBE.
+$cloudbaseDefaultPlugins = @(
+    'cloudbaseinit.plugins.common.mtu.MTUPlugin',
+    'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin',
+    $hostnamePlugin,
+    'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
+    'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin',
+    'cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin',
+    'cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin',
+    'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
+    'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
+    'cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin',
+    'cloudbaseinit.plugins.windows.winrmlistener.ConfigWinRMListenerPlugin',
+    'cloudbaseinit.plugins.windows.winrmcertificateauth.ConfigWinRMCertificateAuthPlugin',
+    'cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin'
+)
 
 $config = @(Get-Content -LiteralPath $cloudbaseConfig)
 $config = ConvertTo-IniValue -Content $config -Name metadata_services -Value 'cloudbaseinit.metadata.services.configdrive.ConfigDriveService'
 $config = ConvertTo-IniValue -Content $config -Name username -Value 'LabBootstrap'
 $config = ConvertTo-IniValue -Content $config -Name first_logon_behaviour -Value 'no'
+$config = ConvertTo-IniValue -Content $config -Name allow_reboot -Value 'false'
+$config = Set-IniListWithoutEntry -Content $config -Name plugins -Entry $hostnamePlugin -FallbackEntries $cloudbaseDefaultPlugins
 Set-Content -LiteralPath $cloudbaseConfig -Value $config -Encoding Ascii
+
+$explicitPluginSettings = @($config | Where-Object { $_ -match '^plugins\s*=' })
+if ($explicitPluginSettings.Count -ne 1) {
+    throw "Expected one normalized Cloudbase-Init plugins setting, found $($explicitPluginSettings.Count)."
+}
+$safePluginDefaults = @(
+    ($explicitPluginSettings[0] -replace '^plugins\s*=\s*', '') -split ',' |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -and $_ -ne $hostnamePlugin }
+)
+if ($safePluginDefaults.Count -eq 0) { throw 'The safe Cloudbase-Init plugin list is empty.' }
+
+$unattendConfig = @(Get-Content -LiteralPath $cloudbaseUnattendConfig)
+$unattendConfig = ConvertTo-IniValue -Content $unattendConfig -Name allow_reboot -Value 'false'
+$unattendConfig = Set-IniListWithoutEntry -Content $unattendConfig -Name plugins -Entry $hostnamePlugin -FallbackEntries $safePluginDefaults
+Set-Content -LiteralPath $cloudbaseUnattendConfig -Value $unattendConfig -Encoding Ascii
 
 # Windows 11's inbox OneDriveSync AppX package can block Sysprep/OOBE and
 # leave Cloudbase-Init waiting forever at GeneralizationState 4.  Remove both

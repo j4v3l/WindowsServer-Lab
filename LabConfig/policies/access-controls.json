@@ -50,7 +50,7 @@
       "settings": [
         { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\ActiveDesktop", "name": "NoChangingWallPaper", "type": "DWord", "value": 1 },
         { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "Wallpaper", "type": "String", "value": "{WALLPAPER_PATH}", "requiresWallpaperPath": true },
-        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "WallpaperStyle", "type": "String", "value": "10", "requiresWallpaperPath": true }
+        { "key": "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "WallpaperStyle", "type": "String", "value": "10" }
       ]
     },
     {
